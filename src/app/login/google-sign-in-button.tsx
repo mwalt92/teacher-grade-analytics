@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import styles from "./login.module.css";
 
 export function GoogleSignInButton() {
   const [error, setError] = useState<string | null>(null);
@@ -25,11 +26,11 @@ export function GoogleSignInButton() {
   }
 
   return (
-    <div className="login-actions">
+    <div className={styles.actions}>
       <button className="primary-button" type="button" onClick={signIn} disabled={loading}>
         {loading ? "Opening Google…" : "Sign in with Google"}
       </button>
-      {error ? <p className="login-error" role="alert">{error}</p> : null}
+      {error ? <p className={styles.error} role="alert">{error}</p> : null}
     </div>
   );
 }
