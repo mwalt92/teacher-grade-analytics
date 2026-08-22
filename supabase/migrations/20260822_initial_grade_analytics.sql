@@ -191,7 +191,7 @@ create policy grade_attempts_teacher_insert on public.grade_attempts for insert 
   (select private.is_teacher_for_section((select private.grade_record_section(grade_record_id)))));
 create policy grade_attempts_teacher_update on public.grade_attempts for update to authenticated using (
   (select private.is_teacher_for_section((select private.grade_record_section(grade_record_id))))) with check (
-  (select private.is_teacher_for_section((select private.grade_record_section(grade_record_id))));
+  (select private.is_teacher_for_section((select private.grade_record_section(grade_record_id)))));
 create policy grade_changes_student_or_teacher_select on public.grade_changes for select to authenticated using (exists(
   select 1 from public.grade_records gr where gr.id=grade_record_id and
   (gr.student_id=(select auth.uid()) or (select private.is_teacher_for_section((select private.grade_record_section(gr.id)))))));
@@ -203,7 +203,7 @@ create policy grade_issues_student_insert on public.grade_issue_reports for inse
   student_id=(select auth.uid()) and exists(select 1 from public.grade_records gr where gr.id=grade_record_id and gr.student_id=(select auth.uid())));
 create policy grade_issues_teacher_update on public.grade_issue_reports for update to authenticated using (
   (select private.is_teacher_for_section((select private.grade_record_section(grade_record_id))))) with check (
-  (select private.is_teacher_for_section((select private.grade_record_section(grade_record_id))));
+  (select private.is_teacher_for_section((select private.grade_record_section(grade_record_id)))));
 create policy powerschool_teacher_select on public.power_school_snapshots for select to authenticated using ((select private.is_teacher_for_section(section_id)));
 create policy powerschool_teacher_insert on public.power_school_snapshots for insert to authenticated with check ((select private.is_teacher_for_section(section_id)));
 
