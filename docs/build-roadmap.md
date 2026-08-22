@@ -11,11 +11,17 @@
 - [x] Active/inactive enrollment preservation
 - [x] Initial grade-engine tests
 - [x] Safe simulation module with configurable category late penalties
-- [ ] Supabase project connection
-- [ ] Authentication plumbing
-- [ ] Row Level Security policies
-- [ ] Database migrations
-- [ ] Replace demo persistence with repository/service layer
+- [x] Supabase project connection
+- [x] Supabase browser/server client plumbing
+- [x] Row Level Security policy baseline
+- [x] Source-controlled database migration baseline
+- [x] Google OAuth application/callback scaffolding
+- [ ] Configure Google OAuth provider in Google Cloud + Supabase
+- [ ] Complete first authenticated teacher sign-in
+- [ ] Promote/bootstrap first teacher account and assign section
+- [ ] Verify teacher/student authorization boundaries end to end
+- [ ] Replace dashboard demo persistence with Supabase data loader
+- [ ] Verify inactive enrollments are hidden by default but remain queryable
 
 ## Stage 2 — Assignment and grade entry
 
