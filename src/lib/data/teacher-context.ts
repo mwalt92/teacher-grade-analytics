@@ -13,36 +13,51 @@ export type TeacherSectionSummary = {
 export async function getTeacherSections(): Promise<TeacherSectionSummary[]> {
   const supabase = await createClient();
   const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
+  const teacherId = claimsData?.claims?.sub;
 
-  if (claimsError || !claimsData?.claims?.sub) return [];
+  if (claimsError || typeof teacherId !== "string") return [];
 
-  const { data, error } = await supabase
+  const { data: links, error: linksError } = await supabase
     .from("teacher_sections")
-    .select("section_id, sections(id,name,course_id,school_year_id,courses(id,name,code),school_years(id,label))")
-    .eq("teacher_id", claimsData.claims.sub);
+    .select("section_id")
+    .eq("teacher_id", teacherId);
 
-  if (error || !data) return [];
+  if (linksError || !links?.length) return [];
+  const sectionIds = links.map((row) => row.section_id);
 
-  return data.flatMap((row) => {
-    const section = row.sections as unknown as {
-      id: string;
-      name: string;
-      course_id: string;
-      school_year_id: string;
-      courses: { id: string; name: string; code: string | null } | null;
-      school_years: { id: string; label: string } | null;
-    } | null;
+  const { data: sections, error: sectionsError } = await supabase
+    .from("sections")
+    .select("id,name,course_id,school_year_id")
+    .in("id", sectionIds);
 
-    if (!section?.courses || !section.school_years) return [];
+  if (sectionsError || !sections?.length) return [];
+
+  const courseIds = [...new Set(sections.map((section) => section.course_id))];
+  const schoolYearIds = [...new Set(sections.map((section) => section.school_year_id))];
+
+  const [{ data: courses, error: coursesError }, { data: schoolYears, error: yearsError }] = await Promise.all([
+    supabase.from("courses").select("id,name,code").in("id", courseIds),
+    supabase.from("school_years").select("id,label").in("id", schoolYearIds),
+  ]);
+
+  if (coursesError || yearsError || !courses || !schoolYears) return [];
+
+  const coursesById = new Map(courses.map((course) => [course.id, course]));
+  const yearsById = new Map(schoolYears.map((year) => [year.id, year]));
+
+  return sections.flatMap((section) => {
+    const course = coursesById.get(section.course_id);
+    const schoolYear = yearsById.get(section.school_year_id);
+    if (!course || !schoolYear) return [];
 
     return [{
       sectionId: section.id,
       sectionName: section.name,
-      courseId: section.courses.id,
-      courseName: section.courses.name,
-      courseCode: section.courses.code,
-      schoolYearId: section.school_years.id,
-      schoolYearLabel: section.school_years.label,
+      courseId: course.id,
+      courseName: course.name,
+      courseCode: course.code,
+      schoolYearId: schoolYear.id,
+      schoolYearLabel: schoolYear.label,
     }];
   });
 }
