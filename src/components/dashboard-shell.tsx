@@ -14,7 +14,21 @@ import { demoAssignments, demoStudents } from "@/lib/demo-data";
 
 const navItems = ["Dashboard", "Students", "Assignments", "Gradebook", "Analytics", "Settings"];
 
-export function DashboardShell() {
+type DashboardShellProps = {
+  courseName?: string;
+  schoolYear?: string;
+  sectionName?: string;
+  studentCount?: number;
+  dataMode?: string;
+};
+
+export function DashboardShell({
+  courseName = "ACP Calculus I M211",
+  schoolYear = "2026–2027",
+  sectionName = "Semester 1",
+  studentCount = demoStudents.length,
+  dataMode = "Demo data only",
+}: DashboardShellProps) {
   const [activeNav, setActiveNav] = useState("Dashboard");
   const [period, setPeriod] = useState("Q1");
 
@@ -32,8 +46,8 @@ export function DashboardShell() {
       <header className="topbar">
         <div>
           <p className="eyebrow">Teacher Grade Analytics</p>
-          <h1>ACP Calculus I M211</h1>
-          <p className="subtle">2026–2027 • Semester 1 • {period}</p>
+          <h1>{courseName}</h1>
+          <p className="subtle">{schoolYear} • {sectionName} • {period}</p>
         </div>
         <div className="toolbar-group">
           <select aria-label="Select grading period" value={period} onChange={(e) => setPeriod(e.target.value)}>
@@ -63,11 +77,11 @@ export function DashboardShell() {
             <p className="eyebrow">{activeNav}</p>
             <h2>What needs your attention?</h2>
           </div>
-          <span className="save-indicator">● Demo data only</span>
+          <span className="save-indicator">● {dataMode}</span>
         </div>
 
         <section className="metric-grid" aria-label="Class snapshot">
-          <MetricCard icon={<Users size={20} />} label="Students" value={String(demoStudents.length)} />
+          <MetricCard icon={<Users size={20} />} label="Students" value={String(studentCount)} />
           <MetricCard icon={<BookOpenCheck size={20} />} label="Class Average" value={`${classAverage.toFixed(1)}%`} />
           <MetricCard icon={<AlertTriangle size={20} />} label="Missing Work" value={String(missingCount)} />
           <MetricCard icon={<RotateCcw size={20} />} label="Retakes" value={String(retakeCount)} />
