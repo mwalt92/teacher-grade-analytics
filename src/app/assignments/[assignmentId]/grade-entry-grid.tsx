@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Check, CircleEllipsis, TriangleAlert } from "lucide-react";
 import { saveGradeEntry } from "./grade-entry-actions";
+import styles from "./grade-entry.module.css";
 
 type StudentRow = {
   studentId: string;
@@ -13,7 +14,6 @@ type StudentRow = {
 };
 
 type SaveState = "idle" | "saving" | "saved" | "error";
-
 type LocalRow = StudentRow & { value: string; saveState: SaveState; error?: string };
 
 export function GradeEntryGrid({ assignmentId, pointsPossible, students }: { assignmentId: string; pointsPossible: number; students: StudentRow[] }) {
@@ -59,30 +59,30 @@ export function GradeEntryGrid({ assignmentId, pointsPossible, students }: { ass
     void persist(studentId, "0", true);
   }
 
-  return <div className="grade-entry-shell">
-    <div className="grade-entry-summary">
+  return <div className={styles.shell}>
+    <div className={styles.summary}>
       <div><strong>{savedCount}/{rows.length}</strong><span>entered</span></div>
       <div><strong>{missingCount}</strong><span>missing</span></div>
       <p>Scores autosave after you stop typing. A real score automatically clears Missing.</p>
     </div>
-    <div className="grade-entry-table" role="table" aria-label="Grade entry">
-      <div className="grade-entry-row grade-entry-head" role="row"><span>Student</span><span>Student #</span><span>Score</span><span>Status</span><span></span></div>
-      {rows.map((row) => <div className={row.missing ? "grade-entry-row is-missing" : "grade-entry-row"} role="row" key={row.studentId}>
+    <div className={styles.table} role="table" aria-label="Grade entry">
+      <div className={`${styles.row} ${styles.head}`} role="row"><span>Student</span><span>Student #</span><span>Score</span><span>Status</span><span></span></div>
+      {rows.map((row) => <div className={`${styles.row} ${row.missing ? styles.missingRow : ""}`} role="row" key={row.studentId}>
         <strong>{row.displayName}</strong>
-        <span className="subtle-inline">{row.externalStudentKey ?? "—"}</span>
-        <label className="score-field"><input aria-label={`Score for ${row.displayName}`} type="number" min="0" step="0.01" value={row.value} onChange={(event) => changeScore(row.studentId, event.target.value)} onBlur={() => row.value.trim() !== "" && void persist(row.studentId, row.value, false)}/><span>/ {pointsPossible}</span></label>
+        <span className={styles.muted}>{row.externalStudentKey ?? "—"}</span>
+        <label className={styles.scoreField}><input aria-label={`Score for ${row.displayName}`} type="number" min="0" step="0.01" value={row.value} onChange={(event) => changeScore(row.studentId, event.target.value)} onBlur={() => row.value.trim() !== "" && void persist(row.studentId, row.value, false)}/><span>/ {pointsPossible}</span></label>
         <SaveBadge state={row.saveState} missing={row.missing}/>
-        <button type="button" className={row.missing ? "missing-button active" : "missing-button"} onClick={() => markMissing(row.studentId)}><TriangleAlert size={15}/> Missing</button>
-        {row.error ? <div className="row-save-error"><AlertCircle size={14}/>{row.error}</div> : null}
+        <button type="button" className={`${styles.missingButton} ${row.missing ? styles.missingButtonActive : ""}`} onClick={() => markMissing(row.studentId)}><TriangleAlert size={15}/> Missing</button>
+        {row.error ? <div className={styles.rowError}><AlertCircle size={14}/>{row.error}</div> : null}
       </div>)}
     </div>
   </div>;
 }
 
 function SaveBadge({ state, missing }: { state: SaveState; missing: boolean }) {
-  if (state === "saving") return <span className="row-save-state saving"><CircleEllipsis size={14}/> Saving…</span>;
-  if (state === "error") return <span className="row-save-state error"><AlertCircle size={14}/> Error</span>;
-  if (missing) return <span className="row-save-state missing"><TriangleAlert size={14}/> Missing · 0</span>;
-  if (state === "saved") return <span className="row-save-state saved"><Check size={14}/> Saved</span>;
-  return <span className="row-save-state idle">Not entered</span>;
+  if (state === "saving") return <span className={`${styles.saveState} ${styles.saving}`}><CircleEllipsis size={14}/> Saving…</span>;
+  if (state === "error") return <span className={`${styles.saveState} ${styles.error}`}><AlertCircle size={14}/> Error</span>;
+  if (missing) return <span className={`${styles.saveState} ${styles.missing}`}><TriangleAlert size={14}/> Missing · 0</span>;
+  if (state === "saved") return <span className={`${styles.saveState} ${styles.saved}`}><Check size={14}/> Saved</span>;
+  return <span className={`${styles.saveState} ${styles.idle}`}>Not entered</span>;
 }
