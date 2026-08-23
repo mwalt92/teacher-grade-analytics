@@ -133,7 +133,8 @@ export async function parsePowerSchoolWorkbook(file: File): Promise<RosterPrevie
   if (file.size > 5 * 1024 * 1024) throw new Error("Roster files must be 5 MB or smaller.");
 
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(Buffer.from(await file.arrayBuffer()));
+  const excelBuffer = Buffer.from(await file.arrayBuffer()) as unknown as Parameters<typeof workbook.xlsx.load>[0];
+  await workbook.xlsx.load(excelBuffer);
   const worksheet = workbook.worksheets[0];
   if (!worksheet) throw new Error("The workbook does not contain a worksheet.");
 
