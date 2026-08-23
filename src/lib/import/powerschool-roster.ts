@@ -28,7 +28,7 @@ export type RosterPreview = {
 const HEADER_ALIASES = {
   name: ["name", "student name", "student"],
   course: ["course", "class", "course name", "section"],
-  studentNumber: ["student number", "student id", "studentid", "student #", "student no", "local id", "local student id"],
+  studentNumber: ["id", "student number", "student id", "studentid", "student #", "student no", "local id", "local student id"],
   email: ["email", "school email", "student email"],
 } as const;
 
