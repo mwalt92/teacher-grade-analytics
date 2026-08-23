@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { AlertTriangle, CheckCircle2, FileSpreadsheet, Upload } from "lucide-react";
 import {
   importRosterBatch,
@@ -17,19 +17,32 @@ type SectionOption = { id: string; label: string };
 export function RosterImportPreview({ sectionId, sections }: { sectionId: string; sections: SectionOption[] }) {
   const [state, previewAction, previewPending] = useActionState(previewRosterImport, initialPreviewState);
   const [commitState, commitAction, commitPending] = useActionState(importRosterBatch, initialCommitState);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
 
   return (
     <div className="import-preview">
       <form action={previewAction} className="import-form">
         <input type="hidden" name="sectionId" value={sectionId} />
-        <label className="file-drop">
-          <FileSpreadsheet size={24} />
-          <span><strong>Choose PowerSchool roster</strong><small>.xlsx • up to 5 MB</small></span>
-          <input name="rosterFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required />
+        <label className={selectedFileName ? "file-drop file-selected" : "file-drop"}>
+          {selectedFileName ? <CheckCircle2 size={24} /> : <FileSpreadsheet size={24} />}
+          <span>
+            <strong>{selectedFileName ? "Roster file ready" : "Choose PowerSchool roster"}</strong>
+            <small>{selectedFileName ?? ".xlsx • up to 5 MB"}</small>
+          </span>
+          <input
+            name="rosterFile"
+            type="file"
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            required
+            onChange={(event) => setSelectedFileName(event.target.files?.[0]?.name ?? null)}
+          />
         </label>
-        <button className="primary-button" type="submit" disabled={previewPending}><Upload size={17}/>{previewPending ? "Reading roster…" : "Preview import"}</button>
+        <button className="primary-button" type="submit" disabled={previewPending || !selectedFileName}>
+          <Upload size={17}/>{previewPending ? "Reading roster…" : "Preview import"}
+        </button>
       </form>
 
+      {selectedFileName && !previewPending ? <div className="file-ready-message"><CheckCircle2 size={16}/><span><strong>{selectedFileName}</strong> selected. Click Preview import when ready.</span></div> : null}
       {state.error ? <div className="import-message danger"><AlertTriangle size={18}/><span>{state.error}</span></div> : null}
 
       {state.groups && state.batchId ? <section className="preview-results">

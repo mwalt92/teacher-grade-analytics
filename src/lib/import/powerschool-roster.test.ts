@@ -37,6 +37,25 @@ describe("PowerSchool roster parser", () => {
     expect(preview.rows[0].course).toBe("Period 1");
   });
 
+  it("recognizes the PowerSchool roster report Id header", () => {
+    const preview = parsePowerSchoolRows([
+      ["Name", "Id", "Course"],
+      ["Doe, Jane", 456789, "4(A) Calculus / M211"],
+    ]);
+
+    expect(preview.hasStudentNumbers).toBe(true);
+    expect(preview.rows[0].studentNumber).toBe("456789");
+  });
+
+  it("normalizes punctuation and underscores in student-number headers", () => {
+    const preview = parsePowerSchoolRows([
+      ["Name", "Student_Number", "Course"],
+      ["Doe, Jane", 123456, "Period 1"],
+    ]);
+
+    expect(preview.rows[0].studentNumber).toBe("123456");
+  });
+
   it("splits Last, First display names for later account matching", () => {
     expect(splitPowerSchoolName("Walter, Matthew")).toEqual({ firstName: "Matthew", lastName: "Walter" });
     expect(splitPowerSchoolName("SingleName")).toEqual({ firstName: null, lastName: null });
