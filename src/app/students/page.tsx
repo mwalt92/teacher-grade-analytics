@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Upload, UserPlus } from "lucide-react";
+import { ArrowLeft, UserPlus } from "lucide-react";
 import { getSectionRoster } from "@/lib/data/roster";
 import { getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import { addStudent, setEnrollmentActive } from "./actions";
+import { RosterImportPreview } from "./roster-import-preview";
 
 export default async function StudentsPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const supabase = await createClient();
@@ -31,7 +32,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
       <div className="roster-layout">
         <article className="panel">
           <div className="panel-header"><div><p className="eyebrow">{filter} roster</p><h2>{roster.length} {roster.length === 1 ? "student" : "students"}</h2></div><span className="save-indicator">● Live Supabase data</span></div>
-          {roster.length === 0 ? <div className="empty-state"><UserPlus size={30}/><h3>No students here yet</h3><p className="subtle">Add a student manually for testing, or use the PowerSchool importer when it is enabled.</p></div> : <div className="roster-table">
+          {roster.length === 0 ? <div className="empty-state"><UserPlus size={30}/><h3>No students here yet</h3><p className="subtle">Add a student manually for testing, or preview a PowerSchool roster before importing.</p></div> : <div className="roster-table">
             <div className="roster-row roster-head"><span>Student</span><span>Student #</span><span>Email</span><span>Status</span><span></span></div>
             {roster.map((student) => <div className="roster-row" key={student.enrollmentId}>
               <strong>{student.displayName}</strong><span>{student.externalStudentKey ?? "—"}</span><span>{student.email ?? "Not linked yet"}</span><span className={student.active ? "status success-pill" : "status neutral-pill"}>{student.active ? "Active" : "Inactive"}</span>
@@ -43,9 +44,13 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
           <article className="panel"><p className="eyebrow">Quick add</p><h3>Add one student</h3><form className="stack-form" action={addStudent}>
             <input type="hidden" name="sectionId" value={section.sectionId}/><label>Student name<input name="displayName" required placeholder="Last, First"/></label><label>Student number<input name="studentNumber" required placeholder="PowerSchool student #"/></label><label>School email <span className="optional">optional</span><input name="schoolEmail" type="email" placeholder="student@school.org"/></label><button className="primary-button" type="submit"><UserPlus size={17}/> Add to roster</button>
           </form></article>
-          <article className="panel import-card"><span className="metric-icon"><Upload size={20}/></span><div><p className="eyebrow">PowerSchool import</p><h3>Bulk roster import</h3><p className="subtle">Designed for Student Number + Name + Course exports. Preview, matching, and duplicate review are next.</p></div><button className="secondary-button" disabled>Import roster — coming next</button></article>
         </aside>
       </div>
+
+      <article className="panel full-width import-card-live">
+        <div className="panel-header"><div><p className="eyebrow">PowerSchool import</p><h2>Preview a roster export</h2><p className="subtle">Supports multi-course .xlsx exports. Student Number is the preferred identity key; Name + Course exports are accepted but flagged for review.</p></div></div>
+        <RosterImportPreview sectionId={section.sectionId}/>
+      </article>
     </section>
   </main>;
 }
