@@ -9,9 +9,40 @@ type SaveGradeEntryInput = {
   missing: boolean;
 };
 
+type ClearGradeEntryInput = {
+  assignmentId: string;
+  studentId: string;
+};
+
 export type SaveGradeEntryResult =
   | { ok: true; savedAt: string; points: number; missing: boolean }
   | { ok: false; error: string };
+
+export type ClearGradeEntryResult =
+  | { ok: true; savedAt: string }
+  | { ok: false; error: string };
+
+async function getAuthorizedContext(assignmentId: string, studentId: string) {
+  const supabase = await createClient();
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
+  const userId = claimsData?.claims?.sub;
+  if (claimsError || typeof userId !== "string") return { ok: false as const, error: "Your session expired. Sign in again." };
+
+  const { data: assignment, error: assignmentError } = await supabase
+    .from("assignments")
+    .select("id,section_id,assignment_date")
+    .eq("id", assignmentId)
+    .maybeSingle();
+  if (assignmentError || !assignment) return { ok: false as const, error: "Assignment not found." };
+
+  const [{ data: teacherSection }, { data: enrollment }] = await Promise.all([
+    supabase.from("teacher_sections").select("section_id").eq("teacher_id", userId).eq("section_id", assignment.section_id).maybeSingle(),
+    supabase.from("enrollments").select("id").eq("section_id", assignment.section_id).eq("student_id", studentId).eq("active", true).maybeSingle(),
+  ]);
+  if (!teacherSection || !enrollment) return { ok: false as const, error: "You do not have access to enter this grade." };
+
+  return { ok: true as const, supabase, userId, assignment };
+}
 
 export async function saveGradeEntry(input: SaveGradeEntryInput): Promise<SaveGradeEntryResult> {
   const { assignmentId, studentId, missing } = input;
@@ -21,23 +52,9 @@ export async function saveGradeEntry(input: SaveGradeEntryInput): Promise<SaveGr
     return { ok: false, error: "Enter a valid non-negative score." };
   }
 
-  const supabase = await createClient();
-  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
-  const userId = claimsData?.claims?.sub;
-  if (claimsError || typeof userId !== "string") return { ok: false, error: "Your session expired. Sign in again." };
-
-  const { data: assignment, error: assignmentError } = await supabase
-    .from("assignments")
-    .select("id,section_id,assignment_date")
-    .eq("id", assignmentId)
-    .maybeSingle();
-  if (assignmentError || !assignment) return { ok: false, error: "Assignment not found." };
-
-  const [{ data: teacherSection }, { data: enrollment }] = await Promise.all([
-    supabase.from("teacher_sections").select("section_id").eq("teacher_id", userId).eq("section_id", assignment.section_id).maybeSingle(),
-    supabase.from("enrollments").select("id").eq("section_id", assignment.section_id).eq("student_id", studentId).eq("active", true).maybeSingle(),
-  ]);
-  if (!teacherSection || !enrollment) return { ok: false, error: "You do not have access to enter this grade." };
+  const context = await getAuthorizedContext(assignmentId, studentId);
+  if (!context.ok) return context;
+  const { supabase, userId, assignment } = context;
 
   const { data: existingRecord } = await supabase
     .from("grade_records")
@@ -99,4 +116,47 @@ export async function saveGradeEntry(input: SaveGradeEntryInput): Promise<SaveGr
   if (auditError) return { ok: false, error: `Grade saved, but audit logging failed: ${auditError.message}` };
 
   return { ok: true, savedAt: new Date().toISOString(), points, missing };
+}
+
+export async function clearGradeEntry(input: ClearGradeEntryInput): Promise<ClearGradeEntryResult> {
+  const { assignmentId, studentId } = input;
+  if (!assignmentId || !studentId) return { ok: false, error: "Could not identify the grade entry to clear." };
+
+  const context = await getAuthorizedContext(assignmentId, studentId);
+  if (!context.ok) return context;
+  const { supabase, userId } = context;
+
+  const { data: record } = await supabase
+    .from("grade_records")
+    .select("id,missing,exempt")
+    .eq("assignment_id", assignmentId)
+    .eq("student_id", studentId)
+    .maybeSingle();
+  if (!record) return { ok: true, savedAt: new Date().toISOString() };
+
+  const { data: attempt } = await supabase
+    .from("grade_attempts")
+    .select("id,points_earned")
+    .eq("grade_record_id", record.id)
+    .eq("attempt_number", 1)
+    .maybeSingle();
+
+  if (attempt) {
+    const { error: deleteError } = await supabase.from("grade_attempts").delete().eq("id", attempt.id);
+    if (deleteError) return { ok: false, error: deleteError.message };
+  }
+
+  const { error: recordError } = await supabase.from("grade_records").update({ missing: false, exempt: false }).eq("id", record.id);
+  if (recordError) return { ok: false, error: recordError.message };
+
+  const { error: auditError } = await supabase.from("grade_changes").insert({
+    grade_record_id: record.id,
+    changed_by: userId,
+    old_value: { missing: record.missing, points: attempt ? Number(attempt.points_earned) : null },
+    new_value: { missing: false, points: null },
+    action: "grade_entry_cleared",
+  });
+  if (auditError) return { ok: false, error: `Grade cleared, but audit logging failed: ${auditError.message}` };
+
+  return { ok: true, savedAt: new Date().toISOString() };
 }
