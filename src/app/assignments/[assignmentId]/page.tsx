@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { getSectionRoster } from "@/lib/data/roster";
 import { getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
+import { GradeEntryGrid } from "./grade-entry-grid";
 
 export default async function AssignmentGradePage({ params }: { params: Promise<{ assignmentId: string }> }) {
   const { assignmentId } = await params;
@@ -15,14 +16,29 @@ export default async function AssignmentGradePage({ params }: { params: Promise<
   const section = sections.find((item) => item.sectionId === assignment.section_id)!;
   const roster = await getSectionRoster(section.sectionId, "active");
 
+  const { data: records } = await supabase
+    .from("grade_records")
+    .select("id,student_id,missing,grade_attempts(attempt_number,points_earned)")
+    .eq("assignment_id", assignmentId);
+  const recordByStudent = new Map((records ?? []).map((record) => [record.student_id, record]));
+  const students = roster.map((student) => {
+    const record = recordByStudent.get(student.studentId);
+    const attemptOne = record?.grade_attempts?.find((attempt) => attempt.attempt_number === 1);
+    return {
+      studentId: student.studentId,
+      displayName: student.displayName,
+      externalStudentKey: student.externalStudentKey,
+      points: attemptOne ? Number(attemptOne.points_earned) : null,
+      missing: record?.missing ?? false,
+    };
+  });
+
   return <main className="app-shell">
     <header className="topbar"><div><p className="eyebrow">Grade Entry</p><h1>{assignment.title}</h1><p className="subtle">{assignment.assignment_date} • {assignment.points_possible} points • {assignment.assignment_type}</p></div><Link className="secondary-link" href="/assignments/new"><ArrowLeft size={17}/> New assignment</Link></header>
     <section className="content-wrap">
       <article className="panel">
-        <div className="panel-header"><div><p className="eyebrow">Assignment created</p><h2>{roster.length} active students ready</h2><p className="subtle">The assignment is safely stored in Supabase. This is the handoff point for the autosaving grade-entry grid.</p></div><span className="status success-pill"><CheckCircle2 size={14}/> Saved</span></div>
-        <div className="grade-entry-placeholder">
-          {roster.map((student) => <div className="grade-placeholder-row" key={student.enrollmentId}><strong>{student.displayName}</strong><span>{student.externalStudentKey}</span><span className="subtle">Score entry coming next</span></div>)}
-        </div>
+        <div className="panel-header"><div><p className="eyebrow">Active roster</p><h2>{roster.length} students</h2><p className="subtle">Enter scores directly. Changes save automatically and are recorded in grade history.</p></div><span className="status success-pill"><CheckCircle2 size={14}/> Autosave on</span></div>
+        <GradeEntryGrid assignmentId={assignmentId} pointsPossible={Number(assignment.points_possible)} students={students}/>
       </article>
     </section>
   </main>;
