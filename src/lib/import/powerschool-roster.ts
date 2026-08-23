@@ -28,17 +28,24 @@ export type RosterPreview = {
 const HEADER_ALIASES = {
   name: ["name", "student name", "student"],
   course: ["course", "class", "course name", "section"],
-  studentNumber: ["student number", "student id", "studentid", "student #", "student no", "local id"],
+  studentNumber: ["student number", "student id", "studentid", "student #", "student no", "local id", "local student id"],
   email: ["email", "school email", "student email"],
 } as const;
 
 function normalized(value: unknown) {
-  return String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_\-./#]+/g, " ")
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function headerIndex(headers: unknown[], aliases: readonly string[]) {
   const normalizedHeaders = headers.map(normalized);
-  return normalizedHeaders.findIndex((header) => aliases.includes(header));
+  const normalizedAliases = aliases.map(normalized);
+  return normalizedHeaders.findIndex((header) => normalizedAliases.includes(header));
 }
 
 export function splitPowerSchoolName(displayName: string) {
