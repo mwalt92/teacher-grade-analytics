@@ -19,6 +19,7 @@ type LocalRow = StudentRow & { value: string; saveState: SaveState; error?: stri
 export function GradeEntryGrid({ assignmentId, pointsPossible, students }: { assignmentId: string; pointsPossible: number; students: StudentRow[] }) {
   const [rows, setRows] = useState<LocalRow[]>(() => students.map((student) => ({ ...student, value: student.points == null ? "" : String(student.points), saveState: student.points == null && !student.missing ? "idle" : "saved" })));
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const scoreInputs = useRef(new Map<string, HTMLInputElement>());
 
   useEffect(() => () => timers.current.forEach((timer) => clearTimeout(timer)), []);
 
@@ -52,6 +53,22 @@ export function GradeEntryGrid({ assignmentId, pointsPossible, students }: { ass
     if (value.trim() !== "") scheduleSave(studentId, value);
   }
 
+  function handleScoreKeyDown(event: React.KeyboardEvent<HTMLInputElement>, rowIndex: number, row: LocalRow) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    const existing = timers.current.get(row.studentId);
+    if (existing) clearTimeout(existing);
+    if (row.value.trim() !== "") void persist(row.studentId, row.value, false);
+    const next = rows[rowIndex + 1];
+    if (next) {
+      requestAnimationFrame(() => {
+        const input = scoreInputs.current.get(next.studentId);
+        input?.focus();
+        input?.select();
+      });
+    }
+  }
+
   function markMissing(studentId: string) {
     const existing = timers.current.get(studentId);
     if (existing) clearTimeout(existing);
@@ -63,14 +80,14 @@ export function GradeEntryGrid({ assignmentId, pointsPossible, students }: { ass
     <div className={styles.summary}>
       <div><strong>{savedCount}/{rows.length}</strong><span>entered</span></div>
       <div><strong>{missingCount}</strong><span>missing</span></div>
-      <p>Scores autosave after you stop typing. A real score automatically clears Missing.</p>
+      <p>Scores autosave after you stop typing. Press Enter to save and move to the next student. A real score automatically clears Missing.</p>
     </div>
     <div className={styles.table} role="table" aria-label="Grade entry">
       <div className={`${styles.row} ${styles.head}`} role="row"><span>Student</span><span>Student #</span><span>Score</span><span>Status</span><span></span></div>
-      {rows.map((row) => <div className={`${styles.row} ${row.missing ? styles.missingRow : ""}`} role="row" key={row.studentId}>
+      {rows.map((row, rowIndex) => <div className={`${styles.row} ${row.missing ? styles.missingRow : ""}`} role="row" key={row.studentId}>
         <strong>{row.displayName}</strong>
         <span className={styles.muted}>{row.externalStudentKey ?? "—"}</span>
-        <label className={styles.scoreField}><input aria-label={`Score for ${row.displayName}`} type="number" min="0" step="0.01" value={row.value} onChange={(event) => changeScore(row.studentId, event.target.value)} onBlur={() => row.value.trim() !== "" && void persist(row.studentId, row.value, false)}/><span>/ {pointsPossible}</span></label>
+        <label className={styles.scoreField}><input ref={(element) => { if (element) scoreInputs.current.set(row.studentId, element); else scoreInputs.current.delete(row.studentId); }} aria-label={`Score for ${row.displayName}`} type="number" min="0" step="0.5" value={row.value} onChange={(event) => changeScore(row.studentId, event.target.value)} onKeyDown={(event) => handleScoreKeyDown(event, rowIndex, row)} onBlur={() => row.value.trim() !== "" && void persist(row.studentId, row.value, false)}/><span>/ {pointsPossible}</span></label>
         <SaveBadge state={row.saveState} missing={row.missing}/>
         <button type="button" className={`${styles.missingButton} ${row.missing ? styles.missingButtonActive : ""}`} onClick={() => markMissing(row.studentId)}><TriangleAlert size={15}/> Missing</button>
         {row.error ? <div className={styles.rowError}><AlertCircle size={14}/>{row.error}</div> : null}
