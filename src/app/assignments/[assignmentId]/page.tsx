@@ -16,14 +16,16 @@ export default async function AssignmentGradePage({ params }: { params: Promise<
   const section = sections.find((item) => item.sectionId === assignment.section_id)!;
   const roster = await getSectionRoster(section.sectionId, "active");
 
-  const { data: records } = await supabase
-    .from("grade_records")
-    .select("id,student_id,missing,grade_attempts(attempt_number,points_earned)")
-    .eq("assignment_id", assignmentId);
+  const { data: records } = await supabase.from("grade_records").select("id,student_id,missing").eq("assignment_id", assignmentId);
+  const recordIds = (records ?? []).map((record) => record.id);
+  const { data: attempts } = recordIds.length
+    ? await supabase.from("grade_attempts").select("grade_record_id,attempt_number,points_earned").in("grade_record_id", recordIds).eq("attempt_number", 1)
+    : { data: [] as { grade_record_id: string; attempt_number: number; points_earned: number }[] };
+  const attemptByRecord = new Map((attempts ?? []).map((attempt) => [attempt.grade_record_id, attempt]));
   const recordByStudent = new Map((records ?? []).map((record) => [record.student_id, record]));
   const students = roster.map((student) => {
     const record = recordByStudent.get(student.studentId);
-    const attemptOne = record?.grade_attempts?.find((attempt) => attempt.attempt_number === 1);
+    const attemptOne = record ? attemptByRecord.get(record.id) : undefined;
     return {
       studentId: student.studentId,
       displayName: student.displayName,
