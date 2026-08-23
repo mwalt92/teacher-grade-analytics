@@ -184,25 +184,34 @@ export async function importRosterBatch(
       .select("id,external_student_key")
       .in("external_student_key", studentNumbers);
     if (existingError) throw existingError;
-    const existingNumbers = new Set((existingStudents ?? []).map((student) => student.external_student_key).filter((value): value is string => Boolean(value)));
-
-    const studentPayload = [...uniqueByNumber.entries()].map(([studentNumber, row]) => ({
-      external_student_key: studentNumber,
-      display_name: row.displayName,
-      first_name: row.firstName,
-      last_name: row.lastName,
-    }));
-
-    const { data: upsertedStudents, error: studentError } = await supabase
-      .from("students")
-      .upsert(studentPayload, { onConflict: "external_student_key" })
-      .select("id,external_student_key");
-    if (studentError) throw studentError;
 
     const idByNumber = new Map<string, string>();
-    upsertedStudents?.forEach((student) => {
-      if (student.external_student_key) idByNumber.set(student.external_student_key, student.id);
+    const existingNumbers = new Set<string>();
+    existingStudents?.forEach((student) => {
+      if (student.external_student_key) {
+        existingNumbers.add(student.external_student_key);
+        idByNumber.set(student.external_student_key, student.id);
+      }
     });
+
+    const newStudentPayload = [...uniqueByNumber.entries()]
+      .filter(([studentNumber]) => !existingNumbers.has(studentNumber))
+      .map(([studentNumber, row]) => {
+        const id = crypto.randomUUID();
+        idByNumber.set(studentNumber, id);
+        return {
+          id,
+          external_student_key: studentNumber,
+          display_name: row.displayName,
+          first_name: row.firstName,
+          last_name: row.lastName,
+        };
+      });
+
+    if (newStudentPayload.length > 0) {
+      const { error: studentError } = await supabase.from("students").insert(newStudentPayload);
+      if (studentError) throw studentError;
+    }
 
     const desiredPairs = new Map<string, { student_id: string; section_id: string }>();
     for (const row of selectedRows) {
@@ -213,15 +222,19 @@ export async function importRosterBatch(
     }
 
     const desired = [...desiredPairs.values()];
-    const studentIds = [...new Set(desired.map((item) => item.student_id))];
-    const { data: existingEnrollments, error: enrollmentQueryError } = await supabase
-      .from("enrollments")
-      .select("id,student_id,section_id,active")
-      .in("student_id", studentIds)
-      .in("section_id", selectedSectionIds);
-    if (enrollmentQueryError) throw enrollmentQueryError;
+    const existingStudentIds = [...new Set((existingStudents ?? []).map((student) => student.id))];
+    let existingEnrollments: Array<{ id: string; student_id: string; section_id: string; active: boolean }> = [];
+    if (existingStudentIds.length > 0) {
+      const { data, error: enrollmentQueryError } = await supabase
+        .from("enrollments")
+        .select("id,student_id,section_id,active")
+        .in("student_id", existingStudentIds)
+        .in("section_id", selectedSectionIds);
+      if (enrollmentQueryError) throw enrollmentQueryError;
+      existingEnrollments = data ?? [];
+    }
 
-    const existingEnrollmentByPair = new Map((existingEnrollments ?? []).map((enrollment) => [`${enrollment.student_id}:${enrollment.section_id}`, enrollment]));
+    const existingEnrollmentByPair = new Map(existingEnrollments.map((enrollment) => [`${enrollment.student_id}:${enrollment.section_id}`, enrollment]));
     const newEnrollments = desired.filter((item) => !existingEnrollmentByPair.has(`${item.student_id}:${item.section_id}`));
     const inactiveEnrollmentIds = desired
       .map((item) => existingEnrollmentByPair.get(`${item.student_id}:${item.section_id}`))
@@ -241,7 +254,7 @@ export async function importRosterBatch(
 
     const summary = {
       coursesImported: mappings.length,
-      studentsCreated: studentNumbers.length - existingNumbers.size,
+      studentsCreated: newStudentPayload.length,
       studentsMatched: existingNumbers.size,
       enrollmentsCreated: newEnrollments.length,
       enrollmentsReactivated: inactiveEnrollmentIds.length,
@@ -258,6 +271,7 @@ export async function importRosterBatch(
     revalidatePath("/students");
     return { success: "Roster import completed.", summary };
   } catch (error) {
+    console.error("Roster import failed", error);
     return { error: error instanceof Error ? error.message : "Roster import failed." };
   }
 }
@@ -281,13 +295,11 @@ export async function addStudent(formData: FormData) {
     studentId = existing.id;
     await supabase.from("students").update({ display_name: displayName, school_email: schoolEmail ?? existing.school_email }).eq("id", studentId);
   } else {
-    const { data: student, error } = await supabase
+    studentId = crypto.randomUUID();
+    const { error } = await supabase
       .from("students")
-      .insert({ display_name: displayName, external_student_key: studentNumber, school_email: schoolEmail })
-      .select("id")
-      .single();
+      .insert({ id: studentId, display_name: displayName, external_student_key: studentNumber, school_email: schoolEmail });
     if (error) throw error;
-    studentId = student.id;
   }
 
   const { error: enrollmentError } = await supabase.from("enrollments").upsert({
