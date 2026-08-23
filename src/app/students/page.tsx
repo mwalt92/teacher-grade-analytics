@@ -17,6 +17,10 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   const { view } = await searchParams;
   const filter = view === "inactive" ? "inactive" : view === "all" ? "all" : "active";
   const roster = await getSectionRoster(section.sectionId, filter);
+  const sectionOptions = sections.map((item) => ({
+    id: item.sectionId,
+    label: `${item.courseCode ? `${item.courseName} ${item.courseCode}` : item.courseName} — ${item.sectionName}`,
+  }));
 
   return <main className="app-shell">
     <header className="topbar">
@@ -49,7 +53,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
 
       <article className="panel full-width import-card-live">
         <div className="panel-header"><div><p className="eyebrow">PowerSchool import</p><h2>Preview a roster export</h2><p className="subtle">Supports multi-course .xlsx exports. Student Number is the preferred identity key; Name + Course exports are accepted but flagged for review.</p></div></div>
-        <RosterImportPreview sectionId={section.sectionId}/>
+        <RosterImportPreview sectionId={section.sectionId} sections={sectionOptions}/>
       </article>
     </section>
   </main>;
