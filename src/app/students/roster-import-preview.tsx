@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, FileSpreadsheet, Upload } from "lucide-react";
 import {
   importRosterBatch,
@@ -18,6 +18,14 @@ export function RosterImportPreview({ sectionId, sections }: { sectionId: string
   const [state, previewAction, previewPending] = useActionState(previewRosterImport, initialPreviewState);
   const [commitState, commitAction, commitPending] = useActionState(importRosterBatch, initialCommitState);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [destinationByCourse, setDestinationByCourse] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    setDestinationByCourse({});
+  }, [state.batchId]);
+
+  const selectedDestinationCount = Object.values(destinationByCourse).filter(Boolean).length;
+  const canConfirm = Boolean(state.hasStudentNumbers) && selectedDestinationCount > 0 && !commitPending && !commitState.success;
 
   return (
     <div className="import-preview">
@@ -53,24 +61,36 @@ export function RosterImportPreview({ sectionId, sections }: { sectionId: string
 
         {state.warnings?.map((warning) => <div className="import-message warning" key={warning}><AlertTriangle size={17}/><span>{warning}</span></div>)}
 
+        {state.hasStudentNumbers ? <div className="import-next-step">
+          <strong>Next: choose a destination section.</strong>
+          <p className="subtle">For the PowerSchool course you want to import, select the matching website section below. Leave unrelated courses set to “Skip this PowerSchool course.”</p>
+        </div> : null}
+
+        {sections.length === 0 ? <div className="import-message danger"><AlertTriangle size={18}/><span>No destination sections are available for your account.</span></div> : null}
+
         <form action={commitAction} className="mapping-form">
           <input type="hidden" name="sectionId" value={sectionId}/>
           <input type="hidden" name="batchId" value={state.batchId}/>
 
           <div className="course-preview-list">
-            {state.groups.map((group, index) => <details className="course-preview" key={group.course} open={state.groups?.length === 1}>
+            {state.groups.map((group, index) => <details className="course-preview" key={group.course} open>
               <summary>
                 <div><strong>{group.course}</strong><span>{group.studentCount} students</span></div>
                 <div className="preview-counts"><span>{group.existingCount} existing</span><span>{group.newCount} new</span>{group.nameOnlyCount > 0 ? <span>{group.nameOnlyCount} name-only</span> : null}</div>
               </summary>
               <div className="course-mapping">
                 <label>Destination section
-                  <select name={`course-${index}`} defaultValue="" disabled={!state.hasStudentNumbers}>
+                  <select
+                    name={`course-${index}`}
+                    value={destinationByCourse[index] ?? ""}
+                    disabled={!state.hasStudentNumbers}
+                    onChange={(event) => setDestinationByCourse((current) => ({ ...current, [index]: event.target.value }))}
+                  >
                     <option value="">Skip this PowerSchool course</option>
                     {sections.map((section) => <option key={section.id} value={section.id}>{section.label}</option>)}
                   </select>
                 </label>
-                {!state.hasStudentNumbers ? <span className="mapping-note">Import is disabled until Student Number is included in the export.</span> : <span className="mapping-note">Nothing is changed until you confirm the import below.</span>}
+                {!state.hasStudentNumbers ? <span className="mapping-note">Import is disabled until Student Number is included in the export.</span> : destinationByCourse[index] ? <span className="mapping-note">This course will be imported into the selected section.</span> : <span className="mapping-note">Leave as Skip if this course does not belong in the current website setup.</span>}
               </div>
               <div className="preview-students">
                 {group.students.map((student, studentIndex) => <div className="preview-student" key={`${student.studentNumber ?? student.name}-${studentIndex}`}>
@@ -83,14 +103,20 @@ export function RosterImportPreview({ sectionId, sections }: { sectionId: string
             </details>)}
           </div>
 
-          {commitState.error ? <div className="import-message danger"><AlertTriangle size={18}/><span>{commitState.error}</span></div> : null}
+          {commitState.error && selectedDestinationCount === 0 ? <div className="import-message danger"><AlertTriangle size={18}/><span>{commitState.error}</span></div> : null}
+          {commitState.error && selectedDestinationCount > 0 ? <div className="import-message danger"><AlertTriangle size={18}/><span>{commitState.error}</span></div> : null}
           {commitState.success && commitState.summary ? <div className="import-success">
             <CheckCircle2 size={20}/><div><strong>{commitState.success}</strong><span>{commitState.summary.studentsCreated} students created • {commitState.summary.studentsMatched} matched • {commitState.summary.enrollmentsCreated} enrollments added • {commitState.summary.enrollmentsReactivated} reactivated</span></div>
           </div> : null}
 
           <div className="import-confirm-row">
-            <div><strong>Course-by-course mapping</strong><p className="subtle">A student appearing in multiple mapped courses stays one student and receives multiple enrollments.</p></div>
-            <button className="primary-button" type="submit" disabled={!state.hasStudentNumbers || commitPending || Boolean(commitState.success)}>{commitPending ? "Importing…" : commitState.success ? "Imported" : "Confirm roster import"}</button>
+            <div>
+              <strong>{selectedDestinationCount > 0 ? `${selectedDestinationCount} course${selectedDestinationCount === 1 ? "" : "s"} mapped` : "Choose at least one destination above"}</strong>
+              <p className="subtle">A student appearing in multiple mapped courses stays one student and receives multiple enrollments.</p>
+            </div>
+            <button className="primary-button" type="submit" disabled={!canConfirm}>
+              {commitPending ? "Importing…" : commitState.success ? "Imported" : selectedDestinationCount === 0 ? "Choose a destination first" : "Confirm roster import"}
+            </button>
           </div>
         </form>
       </section> : null}
