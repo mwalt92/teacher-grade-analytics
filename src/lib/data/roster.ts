@@ -7,6 +7,7 @@ export type RosterStudent = {
   studentId: string;
   displayName: string;
   email: string;
+  externalStudentKey: string | null;
   active: boolean;
   enrolledOn: string;
   exitedOn: string | null;
@@ -29,27 +30,28 @@ export async function getSectionRoster(sectionId: string, filter: RosterFilter =
   if (enrollmentError || !enrollments?.length) return [];
 
   const studentIds = enrollments.map((enrollment) => enrollment.student_id);
-  const { data: profiles, error: profileError } = await supabase
-    .from("profiles")
-    .select("id,display_name,email")
+  const { data: students, error: studentError } = await supabase
+    .from("students")
+    .select("id,display_name,school_email,external_student_key")
     .in("id", studentIds);
 
-  if (profileError || !profiles) return [];
+  if (studentError || !students) return [];
 
-  const profilesById = new Map(profiles.map((profile) => [profile.id, profile]));
+  const studentsById = new Map(students.map((student) => [student.id, student]));
 
   return enrollments.flatMap((enrollment) => {
-    const profile = profilesById.get(enrollment.student_id);
-    if (!profile) return [];
+    const student = studentsById.get(enrollment.student_id);
+    if (!student) return [];
 
     return [{
       enrollmentId: enrollment.id,
       studentId: enrollment.student_id,
-      displayName: profile.display_name,
-      email: profile.email,
+      displayName: student.display_name,
+      email: student.school_email,
+      externalStudentKey: student.external_student_key,
       active: enrollment.active,
       enrolledOn: enrollment.enrolled_on,
       exitedOn: enrollment.exited_on,
     }];
-  });
+  }).sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
