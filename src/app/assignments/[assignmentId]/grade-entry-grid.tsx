@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Check, CircleEllipsis, RotateCcw, Sparkles, TriangleAlert } from "lucide-react";
-import { clearGradeEntry, saveGradeEntriesBulk, saveGradeEntry } from "./grade-entry-actions";
+import { restoreGradeEntriesBulk } from "./bulk-undo-actions";
+import { saveGradeEntriesBulk, saveGradeEntry } from "./grade-entry-actions";
 import styles from "./grade-entry.module.css";
 
 type StudentRow = {
@@ -195,28 +196,38 @@ export function GradeEntryGrid({ assignmentId, pointsPossible, students }: { ass
     const action = undoStack.at(-1);
     if (!action) return;
     setBulkBusy(true);
-    setBulkMessage(`Undoing: ${action.label}…`);
-    action.rows.forEach((snapshot) => patchRow(snapshot.studentId, { saveState: "saving", error: undefined }));
+    setBulkMessage(`Undoing ${action.rows.length} grade${action.rows.length === 1 ? "" : "s"} together…`);
+    action.rows.forEach((snapshot) => {
+      clearTimer(snapshot.studentId);
+      patchRow(snapshot.studentId, { saveState: "saving", error: undefined });
+    });
 
-    const results = await Promise.all(action.rows.map(async (snapshot) => {
-      if (snapshot.points == null && !snapshot.missing) {
-        const result = await clearGradeEntry({ assignmentId, studentId: snapshot.studentId });
-        if (result.ok) patchRow(snapshot.studentId, { value: "", points: null, missing: false, savedMissing: false, saveState: "idle", error: undefined });
-        else patchRow(snapshot.studentId, { saveState: "error", error: result.error });
-        return result.ok;
-      }
-      const result = await saveGradeEntry({ assignmentId, studentId: snapshot.studentId, points: snapshot.points ?? 0, missing: snapshot.missing });
-      if (result.ok) patchRow(snapshot.studentId, { value: String(result.points), points: result.points, missing: result.missing, savedMissing: result.missing, saveState: "saved", error: undefined });
-      else patchRow(snapshot.studentId, { saveState: "error", error: result.error });
-      return result.ok;
-    }));
-
-    if (results.every(Boolean)) {
-      setUndoStack((current) => current.slice(0, -1));
-      setBulkMessage(`Undone: ${action.label}`);
-    } else {
-      setBulkMessage("Undo was only partially completed. Review rows marked Error.");
+    const result = await restoreGradeEntriesBulk({ assignmentId, snapshots: action.rows });
+    if (!result.ok) {
+      action.rows.forEach((snapshot) => patchRow(snapshot.studentId, { saveState: "error", error: result.error }));
+      setBulkMessage(`Undo failed: ${result.error}`);
+      setBulkBusy(false);
+      return;
     }
+
+    action.rows.forEach((snapshot) => {
+      if (snapshot.points == null && !snapshot.missing) {
+        patchRow(snapshot.studentId, { value: "", points: null, missing: false, savedMissing: false, saveState: "idle", error: undefined });
+      } else {
+        const restoredPoints = snapshot.missing ? 0 : Number(snapshot.points);
+        patchRow(snapshot.studentId, {
+          value: String(restoredPoints),
+          points: restoredPoints,
+          missing: snapshot.missing,
+          savedMissing: snapshot.missing,
+          saveState: "saved",
+          error: undefined,
+        });
+      }
+    });
+
+    setUndoStack((current) => current.slice(0, -1));
+    setBulkMessage(`Undone: ${action.label} (${result.count} grades restored in one request).`);
     setBulkBusy(false);
   }
 
