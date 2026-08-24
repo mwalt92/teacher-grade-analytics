@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Check, CircleEllipsis, RotateCcw, Sparkles, TriangleAlert } from "lucide-react";
-import { clearGradeEntry, saveGradeEntry } from "./grade-entry-actions";
+import { clearGradeEntry, saveGradeEntriesBulk, saveGradeEntry } from "./grade-entry-actions";
 import styles from "./grade-entry.module.css";
 
 type StudentRow = {
@@ -156,23 +156,38 @@ export function GradeEntryGrid({ assignmentId, pointsPossible, students }: { ass
       return;
     }
 
-    const snapshots = new Map(changedTargets.map((row) => [row.studentId, { studentId: row.studentId, points: row.points, missing: row.savedMissing }]));
+    const snapshots = changedTargets.map((row) => ({ studentId: row.studentId, points: row.points, missing: row.savedMissing }));
     setBulkBusy(true);
-    setBulkMessage(null);
+    setBulkMessage(`Saving ${changedTargets.length} grades together…`);
     changedTargets.forEach((row) => {
       clearTimer(row.studentId);
       patchRow(row.studentId, { value: String(desiredPoints), missing: desiredMissing, saveState: "saving", error: undefined });
     });
 
-    const results = await Promise.all(changedTargets.map(async (row) => ({ studentId: row.studentId, ok: await persist(row.studentId, String(desiredPoints), desiredMissing, false) })));
-    const successfulSnapshots = results.filter((item) => item.ok).map((item) => snapshots.get(item.studentId)!).filter(Boolean);
-    const failed = results.length - successfulSnapshots.length;
-    if (successfulSnapshots.length) {
-      const label = kind === "full" ? "Fill all with full credit" : kind === "score" ? `Set all scores to ${numericBulk}` : "Fill remaining blanks as Missing";
-      pushUndo({ label, rows: successfulSnapshots });
+    const result = await saveGradeEntriesBulk({
+      assignmentId,
+      entries: changedTargets.map((row) => ({ studentId: row.studentId, points: desiredPoints, missing: desiredMissing })),
+    });
+
+    if (!result.ok) {
+      changedTargets.forEach((row) => patchRow(row.studentId, { saveState: "error", error: result.error }));
+      setBulkBusy(false);
+      setBulkMessage(`Bulk save failed: ${result.error}`);
+      return;
     }
+
+    changedTargets.forEach((row) => patchRow(row.studentId, {
+      value: String(desiredPoints),
+      points: desiredPoints,
+      missing: desiredMissing,
+      savedMissing: desiredMissing,
+      saveState: "saved",
+      error: undefined,
+    }));
+    const label = kind === "full" ? "Fill all with full credit" : kind === "score" ? `Set all scores to ${numericBulk}` : "Fill remaining blanks as Missing";
+    pushUndo({ label, rows: snapshots });
     setBulkBusy(false);
-    setBulkMessage(failed ? `${successfulSnapshots.length} saved; ${failed} need attention.` : `${successfulSnapshots.length} grades updated.`);
+    setBulkMessage(`${result.count} grades updated in one bulk save.`);
   }
 
   async function undoLast() {
