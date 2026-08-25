@@ -19,19 +19,26 @@ export default async function AssignmentGradePage({ params }: { params: Promise<
   const { data: records } = await supabase.from("grade_records").select("id,student_id,missing").eq("assignment_id", assignmentId);
   const recordIds = (records ?? []).map((record) => record.id);
   const { data: attempts } = recordIds.length
-    ? await supabase.from("grade_attempts").select("grade_record_id,attempt_number,points_earned").in("grade_record_id", recordIds).eq("attempt_number", 1)
-    : { data: [] as { grade_record_id: string; attempt_number: number; points_earned: number }[] };
-  const attemptByRecord = new Map((attempts ?? []).map((attempt) => [attempt.grade_record_id, attempt]));
+    ? await supabase.from("grade_attempts").select("grade_record_id,attempt_number,points_earned,occurred_on").in("grade_record_id", recordIds).order("attempt_number", { ascending: true })
+    : { data: [] as { grade_record_id: string; attempt_number: number; points_earned: number; occurred_on: string }[] };
+  const attemptsByRecord = new Map<string, { attemptNumber: number; points: number; occurredOn: string }[]>();
+  for (const attempt of attempts ?? []) {
+    const list = attemptsByRecord.get(attempt.grade_record_id) ?? [];
+    list.push({ attemptNumber: attempt.attempt_number, points: Number(attempt.points_earned), occurredOn: attempt.occurred_on });
+    attemptsByRecord.set(attempt.grade_record_id, list);
+  }
   const recordByStudent = new Map((records ?? []).map((record) => [record.student_id, record]));
   const students = roster.map((student) => {
     const record = recordByStudent.get(student.studentId);
-    const attemptOne = record ? attemptByRecord.get(record.id) : undefined;
+    const studentAttempts = record ? attemptsByRecord.get(record.id) ?? [] : [];
+    const attemptOne = studentAttempts.find((attempt) => attempt.attemptNumber === 1);
     return {
       studentId: student.studentId,
       displayName: student.displayName,
       externalStudentKey: student.externalStudentKey,
-      points: attemptOne ? Number(attemptOne.points_earned) : null,
+      points: attemptOne?.points ?? null,
       missing: record?.missing ?? false,
+      attempts: studentAttempts,
     };
   });
 
@@ -40,7 +47,7 @@ export default async function AssignmentGradePage({ params }: { params: Promise<
     <section className="content-wrap">
       <article className="panel">
         <div className="panel-header"><div><p className="eyebrow">Active roster</p><h2>{roster.length} students</h2><p className="subtle">Enter scores directly. Changes save automatically and are recorded in grade history.</p></div><span className="status success-pill"><CheckCircle2 size={14}/> Autosave on</span></div>
-        <GradeEntryGrid assignmentId={assignmentId} pointsPossible={Number(assignment.points_possible)} students={students}/>
+        <GradeEntryGrid assignmentId={assignmentId} pointsPossible={Number(assignment.points_possible)} allowRetakes={assignment.allow_retakes} students={students}/>
       </article>
     </section>
   </main>;
