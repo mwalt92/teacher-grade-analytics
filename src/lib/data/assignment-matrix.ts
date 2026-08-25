@@ -15,6 +15,7 @@ export type AssignmentMatrixAssignment = {
 export type AssignmentMatrixCell = {
   assignmentId: string;
   status: "counted" | "dropped" | "missing" | "unentered" | "exempt";
+  missing: boolean;
   earned: number | null;
   possible: number;
   percent: number | null;
@@ -128,6 +129,7 @@ export async function getAssignmentMatrix(
       allowRetakes: Boolean(assignment.allow_retakes),
     };
   });
+  const matrixAssignmentById = new Map(matrixAssignments.map((assignment) => [assignment.id, assignment]));
 
   const totals = { entered: 0, missing: 0, dropped: 0, exempt: 0, unentered: 0 };
   const students: AssignmentMatrixStudent[] = studentIds.map((studentId) => {
@@ -158,26 +160,27 @@ export async function getAssignmentMatrix(
     const result = calculateGrade(records, rules);
     const cells: Record<string, AssignmentMatrixCell> = {};
     for (const line of result.audit) {
-      const assignment = matrixAssignments.find((item) => item.id === line.assignmentId);
+      const assignment = matrixAssignmentById.get(line.assignmentId);
       if (!assignment) continue;
-      const countedAttempt = line.attempts.find((attempt) => attempt.counted) ?? null;
+      const selectedAttempt = line.countedAttemptId
+        ? line.attempts.find((attempt) => attempt.attemptId === line.countedAttemptId) ?? null
+        : null;
       cells[line.assignmentId] = {
         assignmentId: line.assignmentId,
         status: line.status,
-        earned: countedAttempt?.earned ?? null,
+        missing: line.missing,
+        earned: selectedAttempt?.earned ?? null,
         possible: assignment.pointsPossible,
         percent: line.percent,
         countedAttemptNumber: line.countedAttemptNumber,
         attemptCount: line.attempts.length,
       };
 
-      if (line.status === "missing") totals.missing += 1;
-      else if (line.status === "dropped") {
-        totals.dropped += 1;
-        totals.entered += 1;
-      } else if (line.status === "exempt") totals.exempt += 1;
+      if (line.missing) totals.missing += 1;
+      if (line.status === "dropped") totals.dropped += 1;
+      if (line.status === "exempt") totals.exempt += 1;
       else if (line.status === "unentered") totals.unentered += 1;
-      else totals.entered += 1;
+      else if (!line.missing) totals.entered += 1;
     }
 
     return { studentId, cells };
