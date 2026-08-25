@@ -12,15 +12,24 @@ export type AssignmentMatrixAssignment = {
   allowRetakes: boolean;
 };
 
+export type AssignmentMatrixAttempt = {
+  id: string;
+  attemptNumber: number;
+  earned: number;
+};
+
 export type AssignmentMatrixCell = {
   assignmentId: string;
   status: "counted" | "dropped" | "missing" | "unentered" | "exempt";
   missing: boolean;
+  exempt: boolean;
   earned: number | null;
+  attemptOneEarned: number | null;
   possible: number;
   percent: number | null;
   countedAttemptNumber: number | null;
   attemptCount: number;
+  attempts: AssignmentMatrixAttempt[];
 };
 
 export type AssignmentMatrixStudent = {
@@ -31,6 +40,7 @@ export type AssignmentMatrixStudent = {
 export type AssignmentMatrix = {
   sectionId: string;
   gradingPeriod: { id: string; code: string; name: string };
+  rules: GradingRules;
   assignments: AssignmentMatrixAssignment[];
   students: AssignmentMatrixStudent[];
   totals: {
@@ -165,15 +175,19 @@ export async function getAssignmentMatrix(
       const selectedAttempt = line.countedAttemptId
         ? line.attempts.find((attempt) => attempt.attemptId === line.countedAttemptId) ?? null
         : null;
+      const attemptOne = line.attempts.find((attempt) => attempt.attemptNumber === 1) ?? null;
       cells[line.assignmentId] = {
         assignmentId: line.assignmentId,
         status: line.status,
         missing: line.missing,
+        exempt: line.exempt,
         earned: selectedAttempt?.earned ?? null,
+        attemptOneEarned: attemptOne?.earned ?? null,
         possible: assignment.pointsPossible,
         percent: line.percent,
         countedAttemptNumber: line.countedAttemptNumber,
         attemptCount: line.attempts.length,
+        attempts: line.attempts.map((attempt) => ({ id: attempt.attemptId, attemptNumber: attempt.attemptNumber, earned: attempt.earned })),
       };
 
       if (line.missing) totals.missing += 1;
@@ -186,5 +200,5 @@ export async function getAssignmentMatrix(
     return { studentId, cells };
   });
 
-  return { sectionId, gradingPeriod: period, assignments: matrixAssignments, students, totals };
+  return { sectionId, gradingPeriod: period, rules, assignments: matrixAssignments, students, totals };
 }
