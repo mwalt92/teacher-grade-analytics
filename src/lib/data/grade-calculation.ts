@@ -143,7 +143,7 @@ export async function getSectionGradebook(sectionId:string,studentIds:string[],g
   }
 
   const assignmentsByPeriodId=new Map<string,typeof assignments>();
-  for(const assignment of assignments){const list=assignmentsByPeriodId.get(assignment.grading_period_id)??[];list.push(assignment);assignmentsByPeriodId.set(assignment.grading_period_id,list);}
+  for(const assignment of assignments){if(!assignment.grading_period_id)continue;const periodId=assignment.grading_period_id;const list=assignmentsByPeriodId.get(periodId)??[];list.push(assignment);assignmentsByPeriodId.set(periodId,list);}
   const gradeRowByStudentAssignment=new Map<string,(typeof gradeRows)[number]>();
   for(const row of gradeRows)gradeRowByStudentAssignment.set(`${row.student_id}:${row.assignment_id}`,row);
   const attemptsByGradeRecordId=new Map<string,typeof attempts>();
