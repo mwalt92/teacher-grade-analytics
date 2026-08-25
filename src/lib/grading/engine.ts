@@ -13,6 +13,17 @@ function percent(attempt: GradeAttempt) {
   return (attempt.earned / attempt.possible) * 100;
 }
 
+function toAttemptAudit(attempt: GradeAttempt, counted: boolean) {
+  return {
+    attemptId: attempt.id,
+    attemptNumber: attempt.attemptNumber,
+    earned: attempt.earned,
+    possible: attempt.possible,
+    percent: percent(attempt),
+    counted,
+  };
+}
+
 function compareAttemptsForHighest(a: GradeAttempt, b: GradeAttempt) {
   const percentDifference = percent(b) - percent(a);
   if (percentDifference !== 0) return percentDifference;
@@ -52,7 +63,7 @@ export function calculateGrade(records: GradeRecord[], rules: GradingRules): Gra
         dropped: false,
         missing: record.missing,
         exempt: true,
-        attempts: record.attempts.map((attempt) => ({ ...attempt, percent: percent(attempt), counted: false })),
+        attempts: record.attempts.map((attempt) => toAttemptAudit(attempt, false)),
       });
       continue;
     }
@@ -132,11 +143,9 @@ export function calculateGrade(records: GradeRecord[], rules: GradingRules): Gra
         dropped,
         missing: entry.record.missing,
         exempt: false,
-        attempts: entry.record.attempts.map((attempt) => ({
-          ...attempt,
-          percent: percent(attempt),
-          counted: !dropped && attempt.id === selectedId,
-        })),
+        attempts: entry.record.attempts.map((attempt) =>
+          toAttemptAudit(attempt, !dropped && attempt.id === selectedId),
+        ),
       });
     }
   }
