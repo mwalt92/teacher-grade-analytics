@@ -63,7 +63,7 @@ export function studentNameKeys(value: string): string[] {
 
 export async function parsePowerSchoolFinalGradesReport(buffer: Buffer): Promise<PowerSchoolFinalGradesReport> {
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
+  await workbook.xlsx.load(buffer as never);
   const worksheet = workbook.worksheets[0];
   if (!worksheet) throw new Error("The PowerSchool workbook does not contain a worksheet.");
 
