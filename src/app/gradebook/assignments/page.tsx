@@ -55,13 +55,11 @@ export default async function AssignmentMatrixPage({ searchParams }: PageProps) 
   for (const student of matrix?.students ?? []) {
     for (const cell of Object.values(student.cells)) {
       if (!visibleAssignmentIds.has(cell.assignmentId)) continue;
-      if (cell.status === "missing") visibleTotals.missing += 1;
-      else if (cell.status === "dropped") {
-        visibleTotals.dropped += 1;
-        visibleTotals.entered += 1;
-      } else if (cell.status === "exempt") visibleTotals.exempt += 1;
+      if (cell.missing) visibleTotals.missing += 1;
+      if (cell.status === "dropped") visibleTotals.dropped += 1;
+      if (cell.status === "exempt") visibleTotals.exempt += 1;
       else if (cell.status === "unentered") visibleTotals.unentered += 1;
-      else visibleTotals.entered += 1;
+      else if (!cell.missing) visibleTotals.entered += 1;
     }
   }
 
@@ -128,14 +126,14 @@ export default async function AssignmentMatrixPage({ searchParams }: PageProps) 
                       const cell = studentRow.cells[assignment.id];
                       if (!cell) return <td key={assignment.id} className={styles.unenteredCell}><Link href={`/assignments/${assignment.id}`}>—</Link></td>;
                       const classNames = [styles.scoreCell];
-                      if (cell.status === "missing") classNames.push(styles.missingCell);
+                      if (cell.missing) classNames.push(styles.missingCell);
                       if (cell.status === "dropped") classNames.push(styles.droppedCell);
                       if (cell.status === "exempt") classNames.push(styles.exemptCell);
                       if (cell.status === "unentered") classNames.push(styles.unenteredCell);
                       if (cell.attemptCount > 1) classNames.push(styles.bestCell);
                       return <td key={assignment.id} className={classNames.join(" ")}>
                         <Link href={`/assignments/${assignment.id}`} className={styles.scoreLink}>
-                          {cell.status === "missing" ? <><strong>Missing</strong><small>0 / {cell.possible}</small></> :
+                          {cell.missing ? <><strong>Missing</strong><small>0 / {cell.possible}</small></> :
                            cell.status === "exempt" ? <><strong>Exempt</strong><small>Not counted</small></> :
                            cell.status === "unentered" ? <><strong>—</strong><small>Unentered</small></> :
                            <><strong>{cell.earned ?? 0} / {cell.possible}</strong><small>{cell.percent?.toFixed(1)}%</small></>}
