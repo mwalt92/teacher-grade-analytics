@@ -160,7 +160,7 @@ export async function getSectionGradebook(sectionId:string,studentIds:string[],g
     return {result:calculateGrade(records,rules),assignmentCount:periodAssignments.length};
   }
 
-  const rows=studentIds.map<SectionGradebookRow>(studentId=>{
+  const rows=studentIds.map((studentId):SectionGradebookRow=>{
     if(!isSemester){
       const calculation=calculateStudentPeriod(studentId,gradingPeriodCode);
       return {studentId,overallPercent:calculation.result.overallPercent,categoryPercents:calculation.result.categoryPercents,componentPercents:{},missingCount:calculation.result.audit.filter(line=>line.status==="missing").length,unenteredCount:calculation.result.audit.filter(line=>line.status==="unentered").length,assignmentCount:calculation.assignmentCount};
