@@ -5,7 +5,7 @@ import { getLatestPowerSchoolSnapshots, POWERSCHOOL_TOLERANCE } from "@/lib/data
 import { getSectionRoster } from "@/lib/data/roster";
 import { getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
-import { savePowerSchoolSnapshot } from "./actions";
+import { importPowerSchoolFinalGrades, savePowerSchoolSnapshot } from "./actions";
 import styles from "./powerschool.module.css";
 
 function formatPercent(value: number | null, digits = 2) {
@@ -18,7 +18,7 @@ function formatDifference(value: number | null) {
   return `${sign}${value.toFixed(2)} pts`;
 }
 
-type PageProps = { searchParams: Promise<{ period?: string; saved?: string }> };
+type PageProps = { searchParams: Promise<{ period?: string; saved?: string; imported?: string; unmatched?: string; skipped?: string; terms?: string }> };
 
 export default async function PowerSchoolComparisonPage({ searchParams }: PageProps) {
   const supabase = await createClient();
@@ -54,6 +54,10 @@ export default async function PowerSchoolComparisonPage({ searchParams }: PagePr
   });
   const mismatchCount = comparisons.filter(({ difference }) => Math.abs(difference) >= POWERSCHOOL_TOLERANCE).length;
   const savedCount = Number(params.saved ?? 0);
+  const importedCount = Number(params.imported ?? 0);
+  const unmatchedCount = Number(params.unmatched ?? 0);
+  const skippedCount = Number(params.skipped ?? 0);
+  const importedTerms = String(params.terms ?? "").split(",").filter(Boolean);
 
   return <main className="app-shell">
     <header className="topbar">
@@ -61,12 +65,25 @@ export default async function PowerSchoolComparisonPage({ searchParams }: PagePr
       <div className="grade-audit-header-actions"><Link className="secondary-link" href={`/gradebook${selectedPeriod ? `?period=${selectedPeriod.code}` : ""}`}>Back to Gradebook</Link><Link className="secondary-link" href="/">Dashboard</Link></div>
     </header>
     <section className={`content-wrap ${styles.content}`}>
-      <article className={`panel ${styles.controls}`}>
-        <div className="panel-header"><div><p className="eyebrow">Comparison controls</p><h3>Compare a grading period</h3></div></div>
-        <form method="get" className={styles.periodForm}><label><span>Grading period</span><select name="period" defaultValue={selectedPeriod?.code}>{selectablePeriods.map((period) => <option key={period.id} value={period.code}>{period.code} — {period.name}</option>)}</select></label><button className="primary-button" type="submit">View Comparison</button></form>
-      </article>
+      <div className={styles.controlGrid}>
+        <article className={`panel ${styles.controls}`}>
+          <div className="panel-header"><div><p className="eyebrow">Comparison controls</p><h3>Compare a grading period</h3></div></div>
+          <form method="get" className={styles.periodForm}><label><span>Grading period</span><select name="period" defaultValue={selectedPeriod?.code}>{selectablePeriods.map((period) => <option key={period.id} value={period.code}>{period.code} — {period.name}</option>)}</select></label><button className="primary-button" type="submit">View Comparison</button></form>
+        </article>
+
+        <article className={`panel ${styles.importPanel}`}>
+          <div className="panel-header"><div><p className="eyebrow">Fast import</p><h3>PowerSchool Final Grades report</h3></div></div>
+          <p className="subtle">Upload the .xlsx report directly from PowerSchool. Reporting terms and student names are matched automatically; decimal grades such as 0.94 are converted to 94%.</p>
+          <form action={importPowerSchoolFinalGrades} className={styles.importForm}>
+            <input type="hidden" name="sectionId" value={section.sectionId}/>
+            <label className={styles.fileField}><span>Final Grades report (.xlsx)</span><input type="file" name="report" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required/></label>
+            <button className="primary-button" type="submit">Import & Compare</button>
+          </form>
+        </article>
+      </div>
 
       {savedCount > 0 ? <div className={styles.savedBanner}>Saved a new comparison snapshot for {savedCount} student{savedCount === 1 ? "" : "s"}.</div> : null}
+      {importedCount > 0 ? <div className={styles.importBanner}><strong>Imported {importedCount} comparison snapshot{importedCount === 1 ? "" : "s"}{importedTerms.length ? ` across ${importedTerms.join(", ")}` : ""}.</strong>{unmatchedCount > 0 || skippedCount > 0 ? <span>{unmatchedCount > 0 ? `${unmatchedCount} report row${unmatchedCount === 1 ? "" : "s"} could not be matched to the active roster. ` : ""}{skippedCount > 0 ? `${skippedCount} row${skippedCount === 1 ? " was" : "s were"} skipped because the term was unsupported, the row was incomplete, or no website grade existed yet.` : ""}</span> : <span>All usable rows matched successfully.</span>}</div> : null}
 
       <section className={`metric-grid ${styles.metrics}`} aria-label="PowerSchool comparison summary">
         <article className="metric-card"><span className="metric-label">Compared students</span><strong>{comparisons.length}</strong></article>
@@ -78,7 +95,7 @@ export default async function PowerSchoolComparisonPage({ searchParams }: PagePr
       <form action={savePowerSchoolSnapshot}>
         <input type="hidden" name="sectionId" value={section.sectionId}/><input type="hidden" name="period" value={selectedPeriod?.code ?? "Q1"}/>
         <article className={`panel full-width ${styles.tablePanel}`}>
-          <div className="panel-header"><div><p className="eyebrow">{selectedPeriod?.code ?? "PowerSchool"}</p><h3>Website vs. PowerSchool</h3></div><div className={styles.captureActions}><span className="subtle">Saving creates a new historical snapshot; earlier snapshots are retained.</span><button className="primary-button" type="submit">Save Comparison</button></div></div>
+          <div className="panel-header"><div><p className="eyebrow">{selectedPeriod?.code ?? "PowerSchool"}</p><h3>Website vs. PowerSchool</h3></div><div className={styles.captureActions}><span className="subtle">Manual entry remains available as a fallback. Every save creates a timestamped historical snapshot.</span><button className="primary-button" type="submit">Save Comparison</button></div></div>
           <div className={styles.tableScroll}><div className={styles.table} role="table" aria-label="PowerSchool grade comparison">
             <div className={`${styles.row} ${styles.head}`} role="row"><span>Student</span><span>Website</span><span>PowerSchool</span><span>Difference</span><span>Status</span><span>Audit</span></div>
             {roster.map((student) => {
