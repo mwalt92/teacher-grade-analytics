@@ -15,6 +15,8 @@ export type StudentDashboardAssignment = {
   date: string | null;
   category: GradingCategory;
   status: "counted" | "dropped" | "missing" | "unentered" | "exempt";
+  missing: boolean;
+  dropped: boolean;
   percent: number | null;
   attemptCount: number;
   countedAttemptNumber: number | null;
@@ -73,6 +75,8 @@ export async function getStudentDashboardData(
       date: line.assignmentDate ?? null,
       category: line.category,
       status: line.status,
+      missing: line.missing,
+      dropped: line.dropped,
       percent: line.percent,
       attemptCount: line.attempts.length,
       countedAttemptNumber: line.countedAttemptNumber,
@@ -95,8 +99,8 @@ export async function getStudentDashboardData(
     semesterActiveWeight: semesterCalculation.result.activeWeight,
     categories,
     assignments,
-    missingCount: assignments.filter((assignment) => assignment.status === "missing").length,
-    droppedCount: assignments.filter((assignment) => assignment.status === "dropped").length,
+    missingCount: assignments.filter((assignment) => assignment.missing).length,
+    droppedCount: assignments.filter((assignment) => assignment.dropped).length,
     availableQuarterCodes: quarters.map((quarter) => ({ code: quarter.code, name: quarter.name })),
   };
 }
