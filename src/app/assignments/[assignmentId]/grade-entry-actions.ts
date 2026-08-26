@@ -45,10 +45,11 @@ async function getAuthorizedContext(assignmentId: string, studentId: string) {
 
   const { data: assignment, error: assignmentError } = await supabase
     .from("assignments")
-    .select("id,section_id,assignment_date")
+    .select("id,section_id,assignment_date,archived")
     .eq("id", assignmentId)
     .maybeSingle();
   if (assignmentError || !assignment) return { ok: false as const, error: "Assignment not found." };
+  if (assignment.archived) return { ok: false as const, error: "This assignment is archived. Restore it before changing grades." };
 
   const [{ data: teacherSection }, { data: enrollment }] = await Promise.all([
     supabase.from("teacher_sections").select("section_id").eq("teacher_id", userId).eq("section_id", assignment.section_id).maybeSingle(),
@@ -155,10 +156,11 @@ export async function saveGradeEntriesBulk(input: SaveGradeEntriesBulkInput): Pr
 
   const { data: assignment, error: assignmentError } = await supabase
     .from("assignments")
-    .select("id,section_id,assignment_date")
+    .select("id,section_id,assignment_date,archived")
     .eq("id", assignmentId)
     .maybeSingle();
   if (assignmentError || !assignment) return { ok: false, error: "Assignment not found." };
+  if (assignment.archived) return { ok: false, error: "This assignment is archived. Restore it before changing grades." };
 
   const [{ data: teacherSection }, { data: enrollments }] = await Promise.all([
     supabase.from("teacher_sections").select("section_id").eq("teacher_id", userId).eq("section_id", assignment.section_id).maybeSingle(),
