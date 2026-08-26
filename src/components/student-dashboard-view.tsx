@@ -58,6 +58,7 @@ export function StudentDashboardView({
   previewActionPath = "/student/preview",
 }: StudentDashboardViewProps) {
   const recentAssignments = data.assignments.slice(0, 10);
+  const previewCarryFields = hiddenFields.filter((field) => field.name !== "studentId" && field.name !== "period");
 
   return <main className={`app-shell ${styles.shell}`}>
     <header className="topbar">
@@ -74,6 +75,7 @@ export function StudentDashboardView({
         <div><span>Teacher preview</span><small>{previewLabel ?? "This is the same dashboard the selected student will see."}</small></div>
         {previewStudents.length && previewStudentId ? <form method="get" action={previewActionPath} className={styles.previewForm}>
           <input type="hidden" name="period" value={data.quarterCode}/>
+          {previewCarryFields.map((field) => <input key={field.name} type="hidden" name={field.name} value={field.value}/>)}
           <label><span>Preview student</span><select name="studentId" defaultValue={previewStudentId}>{previewStudents.map((student) => <option key={student.studentId} value={student.studentId}>{student.displayName}</option>)}</select></label>
           <button type="submit" className="secondary-link">Switch</button>
         </form> : null}
@@ -134,8 +136,11 @@ export function StudentDashboardView({
           <div className={`${styles.assignmentRow} ${styles.assignmentHead}`}><span>Assignment</span><span>Score</span><span>Status</span><span>Attempts</span></div>
           {recentAssignments.length ? recentAssignments.map((assignment) => <div className={styles.assignmentRow} key={assignment.assignmentId}>
             <span className={styles.assignmentInfo}><strong>{assignment.title}</strong><small>{assignment.date ?? "No date"} • {categoryLabels[assignment.category]}</small></span>
-            <span className={styles.assignmentScore}>{assignment.status === "missing" ? "0.0%" : formatPercent(assignment.percent)}</span>
-            <span><span className={`${styles.status} ${statusClass(assignment.status)}`}>{statusLabel(assignment.status)}</span></span>
+            <span className={styles.assignmentScore}>{assignment.missing ? "0.0%" : formatPercent(assignment.percent)}</span>
+            <span>
+              {assignment.missing ? <span className={`${styles.status} ${styles.statusMissing}`}>Missing</span> : <span className={`${styles.status} ${statusClass(assignment.status)}`}>{statusLabel(assignment.status)}</span>}
+              {assignment.missing && assignment.dropped ? <span className={`${styles.status} ${styles.statusDropped}`}>Dropped</span> : null}
+            </span>
             <span>{assignment.attemptCount > 1 ? `${assignment.attemptCount} attempts` : assignment.attemptCount === 1 ? "1 attempt" : "—"}</span>
             {assignment.attemptCount > 1 ? <details className={styles.attemptDetails}><summary>View attempt history</summary><div className={styles.attemptLine}>{assignment.attempts.map((attempt) => <span className={`${styles.attemptChip} ${attempt.counted ? styles.attemptChipCounted : ""}`} key={attempt.attemptNumber}>#{attempt.attemptNumber}: {attempt.earned}/{attempt.possible} ({attempt.percent.toFixed(1)}%){attempt.counted ? " • counts" : ""}</span>)}</div></details> : null}
           </div>) : <div className={styles.empty}>No assignments are available for this quarter yet.</div>}
