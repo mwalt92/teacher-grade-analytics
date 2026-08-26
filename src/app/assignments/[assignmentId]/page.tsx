@@ -6,8 +6,14 @@ import { getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import { GradeEntryGrid } from "./grade-entry-grid";
 
-export default async function AssignmentGradePage({ params }: { params: Promise<{ assignmentId: string }> }) {
-  const { assignmentId } = await params;
+function safeReturnPath(value: string | undefined) {
+  if (!value) return "/gradebook/assignments";
+  return value.startsWith("/gradebook/assignments") && !value.startsWith("//") ? value : "/gradebook/assignments";
+}
+
+export default async function AssignmentGradePage({ params, searchParams }: { params: Promise<{ assignmentId: string }>; searchParams: Promise<{ returnTo?: string }> }) {
+  const [{ assignmentId }, query] = await Promise.all([params, searchParams]);
+  const returnTo = safeReturnPath(query.returnTo);
   const sections = await getTeacherSections();
   if (!sections.length) redirect("/");
   const supabase = await createClient();
@@ -43,7 +49,7 @@ export default async function AssignmentGradePage({ params }: { params: Promise<
   });
 
   return <main className="app-shell">
-    <header className="topbar"><div><p className="eyebrow">Grade Entry</p><h1>{assignment.title}</h1><p className="subtle">{assignment.assignment_date} • {assignment.points_possible} points • {assignment.assignment_type}</p></div><Link className="secondary-link" href="/assignments/new"><ArrowLeft size={17}/> New assignment</Link></header>
+    <header className="topbar"><div><p className="eyebrow">Grade Entry</p><h1>{assignment.title}</h1><p className="subtle">{assignment.assignment_date} • {assignment.points_possible} points • {assignment.assignment_type}</p></div><div className="grade-audit-header-actions"><Link className="secondary-link" href={returnTo}><ArrowLeft size={17}/> Back to Assignment Gradebook</Link><Link className="secondary-link" href="/assignments/new">New assignment</Link></div></header>
     <section className="content-wrap">
       <article className="panel">
         <div className="panel-header"><div><p className="eyebrow">Active roster</p><h2>{roster.length} students</h2><p className="subtle">Enter scores directly. Changes save automatically and are recorded in grade history.</p></div><span className="status success-pill"><CheckCircle2 size={14}/> Autosave on</span></div>
