@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { StudentDashboardData } from "@/lib/data/student-dashboard";
 import styles from "./student-dashboard-view.module.css";
 
@@ -65,6 +66,7 @@ export function StudentDashboardView({
         <h1>{courseName}</h1>
         <p className="subtle">{studentName} • {sectionName} • {schoolYear}</p>
       </div>
+      {preview ? <Link className="secondary-link" href="/">Teacher Dashboard</Link> : null}
     </header>
 
     <section className={`content-wrap ${styles.content}`}>
