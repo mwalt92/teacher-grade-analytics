@@ -32,7 +32,7 @@ async function requireTeacherAssignment(assignmentId: string) {
 
   const { data: assignment, error: assignmentError } = await supabase
     .from("assignments")
-    .select("id,section_id,assignment_type")
+    .select("id,section_id,assignment_type,title")
     .eq("id", assignmentId)
     .maybeSingle();
   if (assignmentError || !assignment) throw new Error("Assignment not found.");
@@ -162,12 +162,15 @@ export async function restoreAssignment(formData: FormData) {
 export async function deleteEmptyAssignment(formData: FormData) {
   const assignmentId = String(formData.get("assignmentId") ?? "");
   const returnTo = safeReturnPath(formData.get("returnTo"));
+  const confirmTitle = String(formData.get("confirmTitle") ?? "").trim();
   if (!assignmentId) redirect("/assignments");
-  await requireTeacherAssignment(assignmentId);
-  const supabase = await createClient();
+  const { supabase, assignment } = await requireTeacherAssignment(assignmentId);
+  if (confirmTitle !== assignment.title) {
+    redirect(editRedirect(assignmentId, returnTo, "error", "Type the exact assignment title before permanently deleting it."));
+  }
   const { data: deleted, error } = await supabase.rpc("delete_empty_assignment", { p_assignment_id: assignmentId });
   if (error || !deleted) {
-    redirect(withQuery(returnTo, "error", "Only an assignment with no student grade records can be permanently deleted."));
+    redirect(editRedirect(assignmentId, returnTo, "error", "Only an assignment with no student grade records can be permanently deleted."));
   }
   revalidateAssignmentViews(assignmentId);
   redirect(withQuery(returnTo, "notice", "deleted"));
