@@ -27,10 +27,11 @@ export async function addRetakeAttempt(input: AddRetakeInput): Promise<AddRetake
 
   const { data: assignment, error: assignmentError } = await supabase
     .from("assignments")
-    .select("id,section_id,assignment_date,allow_retakes")
+    .select("id,section_id,assignment_date,allow_retakes,archived")
     .eq("id", input.assignmentId)
     .maybeSingle();
   if (assignmentError || !assignment) return { ok: false, error: "Assignment not found." };
+  if (assignment.archived) return { ok: false, error: "This assignment is archived. Restore it before adding a retake." };
   if (!assignment.allow_retakes) return { ok: false, error: "Retakes are not enabled for this assignment." };
 
   const [{ data: teacherSection }, { data: enrollment }] = await Promise.all([
