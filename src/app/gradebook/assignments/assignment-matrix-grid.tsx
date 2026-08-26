@@ -262,7 +262,15 @@ export function AssignmentMatrixGrid({ assignments, students: initialStudents, r
                         <span className={styles.outOf}>/ {cell.possible}</span>
                       </div>
                       <div className={styles.inlineActions}>
-                        <button type="button" className={`${styles.missingToggle} ${cell.missing ? styles.missingToggleActive : ""}`} onClick={() => void persist(studentRow.studentId, assignment.id, "0", true)}>M</button>
+                        <button
+                          type="button"
+                          className={`${styles.missingToggle} ${cell.missing ? styles.missingToggleActive : ""}`}
+                          aria-pressed={cell.missing}
+                          aria-label={`${cell.missing ? "Clear missing flag" : "Mark missing"} for ${student.displayName} on ${assignment.title}`}
+                          title={cell.missing ? "Clear Missing" : "Mark Missing"}
+                          onPointerDown={(event) => event.preventDefault()}
+                          onClick={() => void persist(studentRow.studentId, assignment.id, cell.missing ? (value.trim() || "0") : "0", !cell.missing)}
+                        >M</button>
                         <span className={`${styles.saveState} ${state === "error" ? styles.saveError : ""}`}>{state === "saving" ? "Saving…" : state === "saved" ? "Saved" : state === "error" ? "Error" : ""}</span>
                         <Link className={styles.openLink} href={`/assignments/${assignment.id}?returnTo=${encodeURIComponent(returnTo)}`}>Open</Link>
                       </div>
