@@ -8,8 +8,12 @@ type StudentDashboardViewProps = {
   schoolYear: string;
   data: StudentDashboardData;
   periodActionPath: string;
+  hiddenFields?: { name: string; value: string }[];
   preview?: boolean;
   previewLabel?: string;
+  previewStudents?: { studentId: string; displayName: string }[];
+  previewStudentId?: string;
+  previewActionPath?: string;
 };
 
 const categoryLabels = {
@@ -38,7 +42,20 @@ function statusClass(status: StudentDashboardData["assignments"][number]["status
   return styles.statusExempt;
 }
 
-export function StudentDashboardView({ studentName, courseName, sectionName, schoolYear, data, periodActionPath, preview = false, previewLabel }: StudentDashboardViewProps) {
+export function StudentDashboardView({
+  studentName,
+  courseName,
+  sectionName,
+  schoolYear,
+  data,
+  periodActionPath,
+  hiddenFields = [],
+  preview = false,
+  previewLabel,
+  previewStudents = [],
+  previewStudentId,
+  previewActionPath = "/student/preview",
+}: StudentDashboardViewProps) {
   const recentAssignments = data.assignments.slice(0, 10);
 
   return <main className={`app-shell ${styles.shell}`}>
@@ -52,13 +69,18 @@ export function StudentDashboardView({ studentName, courseName, sectionName, sch
 
     <section className={`content-wrap ${styles.content}`}>
       {preview ? <div className={styles.previewBanner}>
-        <span>Teacher preview</span>
-        <small>{previewLabel ?? "This is the same dashboard the selected student will see."}</small>
+        <div><span>Teacher preview</span><small>{previewLabel ?? "This is the same dashboard the selected student will see."}</small></div>
+        {previewStudents.length && previewStudentId ? <form method="get" action={previewActionPath} className={styles.previewForm}>
+          <input type="hidden" name="period" value={data.quarterCode}/>
+          <label><span>Preview student</span><select name="studentId" defaultValue={previewStudentId}>{previewStudents.map((student) => <option key={student.studentId} value={student.studentId}>{student.displayName}</option>)}</select></label>
+          <button type="submit" className="secondary-link">Switch</button>
+        </form> : null}
       </div> : null}
 
       <article className={`panel ${styles.controls}`}>
         <div className="panel-header"><div><p className="eyebrow">Grading period</p><h3>Choose what you want to review</h3></div></div>
         <form method="get" action={periodActionPath} className={styles.periodForm}>
+          {hiddenFields.map((field) => <input key={field.name} type="hidden" name={field.name} value={field.value}/>)}
           <label><span>Quarter</span><select name="period" defaultValue={data.quarterCode}>{data.availableQuarterCodes.map((quarter) => <option value={quarter.code} key={quarter.code}>{quarter.code} — {quarter.name}</option>)}</select></label>
           <button className="primary-button" type="submit">View Progress</button>
         </form>
