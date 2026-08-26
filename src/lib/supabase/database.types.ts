@@ -24,7 +24,9 @@ export type Database = {
       roster_import_batches: Table<{ id:string; teacher_id:string; source_filename:string; parsed_rows:Json; warnings:Json; status:string; result_summary:Json|null; created_at:string; expires_at:string; imported_at:string|null }, { id?:string; teacher_id:string; source_filename:string; parsed_rows:Json; warnings?:Json; status?:string; result_summary?:Json|null; created_at?:string; expires_at?:string; imported_at?:string|null }, { id?:string; teacher_id?:string; source_filename?:string; parsed_rows?:Json; warnings?:Json; status?:string; result_summary?:Json|null; created_at?:string; expires_at?:string; imported_at?:string|null }>;
     };
     Views: { [_ in never]: never };
-    Functions: { [_ in never]: never };
+    Functions: {
+      link_current_student_account_by_email: { Args: Record<PropertyKey, never>; Returns: string };
+    };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
   };
