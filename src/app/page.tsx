@@ -22,9 +22,7 @@ export default async function HomePage() {
     return <main className="content-wrap"><article className="panel"><p className="eyebrow">Account setup</p><h1>Finishing your profile</h1><p className="subtle">Your Google account is authenticated, but the application profile has not been created yet. Refresh once and, if this persists, review the auth bootstrap configuration.</p></article></main>;
   }
 
-  if (profile.role !== "teacher" && profile.role !== "admin") {
-    return <main className="content-wrap"><article className="panel"><p className="eyebrow">Signed in</p><h1>Teacher access is not enabled yet</h1><p className="subtle">{profile.display_name}, your account is authenticated successfully. For safety, new accounts start with student-level permissions until an administrator explicitly grants teacher access.</p></article></main>;
-  }
+  if (profile.role !== "teacher" && profile.role !== "admin") redirect("/student");
 
   const sections = await getTeacherSections();
   const section = sections[0];
