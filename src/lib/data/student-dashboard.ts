@@ -24,6 +24,15 @@ export type StudentDashboardAssignment = {
   attempts: { attemptNumber: number; earned: number; possible: number; percent: number; counted: boolean }[];
 };
 
+export type GradeSimulatorRetakeOption = {
+  assignmentId: string;
+  title: string;
+  category: "quiz" | "test";
+  pointsPossible: number;
+  currentBestPercent: number | null;
+  nextAttemptNumber: number;
+};
+
 export type GradeSimulatorData = {
   quarterCode: string;
   currentQuarterPercent: number | null;
@@ -32,6 +41,7 @@ export type GradeSimulatorData = {
   rules: GradingRules;
   lateDeductions: Record<GradingCategory, number>;
   records: GradeRecord[];
+  retakeOptions: GradeSimulatorRetakeOption[];
   semesterComponents: SemesterComponent[];
 };
 
@@ -122,6 +132,7 @@ export async function getStudentDashboardData(
 
   const lateDeductions: Record<GradingCategory, number> = { participation: 0, quiz: 0, test: 0 };
   const supabase = await createClient();
+  const assignmentIds = quarterCalculation.result.audit.map((line) => line.assignmentId);
   const { data: lateRows } = await supabase
     .from("grading_categories")
     .select("name,late_deduction")
@@ -133,6 +144,32 @@ export async function getStudentDashboardData(
       // Ignore unsupported future categories until the grading engine knows how to calculate them.
     }
   }
+
+  let retakeRows: { id: string; title: string; assignment_type: string; allow_retakes: boolean; points_possible: number | string }[] = [];
+  if (assignmentIds.length > 0) {
+    const { data } = await supabase
+      .from("assignments")
+      .select("id,title,assignment_type,allow_retakes,points_possible")
+      .eq("section_id", sectionId)
+      .eq("archived", false)
+      .eq("allow_retakes", true)
+      .in("id", assignmentIds);
+    retakeRows = data ?? [];
+  }
+  const auditByAssignmentId = new Map(quarterCalculation.result.audit.map((line) => [line.assignmentId, line]));
+  const retakeOptions: GradeSimulatorRetakeOption[] = retakeRows.flatMap((row) => {
+    const line = auditByAssignmentId.get(row.id);
+    if (!line || line.exempt || line.attempts.length === 0 || (line.category !== "quiz" && line.category !== "test")) return [];
+    const nextAttemptNumber = Math.max(...line.attempts.map((attempt) => attempt.attemptNumber)) + 1;
+    return [{
+      assignmentId: row.id,
+      title: row.title,
+      category: line.category,
+      pointsPossible: Number(row.points_possible),
+      currentBestPercent: line.percent,
+      nextAttemptNumber,
+    }];
+  }).sort((a, b) => a.title.localeCompare(b.title));
 
   return {
     quarterCode: selectedQuarter.code,
@@ -154,6 +191,7 @@ export async function getStudentDashboardData(
       rules: quarterCalculation.rules,
       lateDeductions,
       records: simulatorRecords,
+      retakeOptions,
       semesterComponents: semesterCalculation.result.components.map((component) => ({
         code: component.code,
         label: component.label,
