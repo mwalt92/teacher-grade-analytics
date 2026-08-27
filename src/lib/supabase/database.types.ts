@@ -27,6 +27,7 @@ export type Database = {
     Functions: {
       clear_assignment_scores: { Args: { p_assignment_id:string }; Returns:number };
       delete_empty_assignment: { Args: { p_assignment_id:string }; Returns:boolean };
+      link_current_student_account_by_email: { Args: never; Returns:string };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
