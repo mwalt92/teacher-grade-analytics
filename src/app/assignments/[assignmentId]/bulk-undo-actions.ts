@@ -46,10 +46,11 @@ export async function restoreGradeEntriesBulk(input: RestoreGradeEntriesBulkInpu
 
   const { data: assignment, error: assignmentError } = await supabase
     .from("assignments")
-    .select("id,section_id,assignment_date")
+    .select("id,section_id,assignment_date,archived")
     .eq("id", assignmentId)
     .maybeSingle();
   if (assignmentError || !assignment) return { ok: false, error: "Assignment not found." };
+  if (assignment.archived) return { ok: false, error: "This assignment is archived. Restore it before undoing grade changes." };
 
   const [{ data: teacherSection }, { data: enrollments }] = await Promise.all([
     supabase

@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Edit3 } from "lucide-react";
 import { getSectionRoster } from "@/lib/data/roster";
 import { getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import { GradeEntryGrid } from "./grade-entry-grid";
 
 function safeReturnPath(value: string | undefined) {
-  if (!value) return "/gradebook/assignments";
-  return value.startsWith("/gradebook/assignments") && !value.startsWith("//") ? value : "/gradebook/assignments";
+  if (!value || value.startsWith("//")) return "/gradebook/assignments";
+  if (value.startsWith("/gradebook/assignments") || value === "/assignments" || value.startsWith("/assignments?")) return value;
+  return "/gradebook/assignments";
 }
 
 export default async function AssignmentGradePage({ params, searchParams }: { params: Promise<{ assignmentId: string }>; searchParams: Promise<{ returnTo?: string }> }) {
@@ -17,8 +18,14 @@ export default async function AssignmentGradePage({ params, searchParams }: { pa
   const sections = await getTeacherSections();
   if (!sections.length) redirect("/");
   const supabase = await createClient();
-  const { data: assignment } = await supabase.from("assignments").select("id,section_id,title,assignment_type,assignment_date,points_possible,allow_retakes").eq("id", assignmentId).maybeSingle();
+  const { data: assignment } = await supabase.from("assignments").select("id,section_id,title,assignment_type,assignment_date,points_possible,allow_retakes,archived").eq("id", assignmentId).maybeSingle();
   if (!assignment || !sections.some((section) => section.sectionId === assignment.section_id)) notFound();
+  if (assignment.archived) {
+    const editUrl = new URL(`/assignments/${assignmentId}/edit`, "https://teacher-grade-analytics.local");
+    editUrl.searchParams.set("returnTo", returnTo.startsWith("/assignments") ? returnTo : "/assignments?status=archived");
+    editUrl.searchParams.set("error", "Restore this assignment before changing student grades.");
+    redirect(`${editUrl.pathname}${editUrl.search}`);
+  }
   const section = sections.find((item) => item.sectionId === assignment.section_id)!;
   const roster = await getSectionRoster(section.sectionId, "active");
 
@@ -48,8 +55,11 @@ export default async function AssignmentGradePage({ params, searchParams }: { pa
     };
   });
 
+  const backLabel = returnTo.startsWith("/assignments") ? "Back to Assignments" : "Back to Assignment Gradebook";
+  const editHref = `/assignments/${assignmentId}/edit?returnTo=${encodeURIComponent(returnTo.startsWith("/assignments") ? returnTo : "/assignments")}`;
+
   return <main className="app-shell">
-    <header className="topbar"><div><p className="eyebrow">Grade Entry</p><h1>{assignment.title}</h1><p className="subtle">{assignment.assignment_date} • {assignment.points_possible} points • {assignment.assignment_type}</p></div><div className="grade-audit-header-actions"><Link className="secondary-link" href={returnTo}><ArrowLeft size={17}/> Back to Assignment Gradebook</Link><Link className="secondary-link" href="/assignments/new">New assignment</Link></div></header>
+    <header className="topbar"><div><p className="eyebrow">Grade Entry</p><h1>{assignment.title}</h1><p className="subtle">{assignment.assignment_date} • {assignment.points_possible} points • {assignment.assignment_type}</p></div><div className="grade-audit-header-actions"><Link className="secondary-link" href={returnTo}><ArrowLeft size={17}/> {backLabel}</Link><Link className="secondary-link" href={editHref}><Edit3 size={16}/> Edit Assignment</Link><Link className="secondary-link" href="/assignments/new">New assignment</Link></div></header>
     <section className="content-wrap">
       <article className="panel">
         <div className="panel-header"><div><p className="eyebrow">Active roster</p><h2>{roster.length} students</h2><p className="subtle">Enter scores directly. Changes save automatically and are recorded in grade history.</p></div><span className="status success-pill"><CheckCircle2 size={14}/> Autosave on</span></div>

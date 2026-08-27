@@ -68,7 +68,7 @@ export async function getStudentGradeCalculation(sectionId: string, studentId: s
 
   const { categoryById, rules } = buildRules(categories);
   const { data: assignments, error: assignmentsError } = await supabase.from("assignments")
-    .select("id,category_id,title,assignment_date,points_possible").eq("section_id",sectionId).eq("grading_period_id",period.id)
+    .select("id,category_id,title,assignment_date,points_possible").eq("section_id",sectionId).eq("grading_period_id",period.id).eq("archived",false)
     .order("assignment_date",{ascending:true}).order("created_at",{ascending:true});
   if(assignmentsError||!assignments) return null;
   if(assignments.length===0) return {studentId,sectionId,gradingPeriod:period,rules,result:calculateGrade([],rules)};
@@ -126,7 +126,7 @@ export async function getSectionGradebook(sectionId:string,studentIds:string[],g
 
   const {data:assignments,error:assignmentsError}=await supabase.from("assignments")
     .select("id,category_id,grading_period_id,title,assignment_date,points_possible,created_at")
-    .eq("section_id",sectionId).in("grading_period_id",requiredPeriodIds)
+    .eq("section_id",sectionId).eq("archived",false).in("grading_period_id",requiredPeriodIds)
     .order("assignment_date",{ascending:true}).order("created_at",{ascending:true});
   if(assignmentsError||!assignments)return null;
   const assignmentIds=assignments.map(assignment=>assignment.id);

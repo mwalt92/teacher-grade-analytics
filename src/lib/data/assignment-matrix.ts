@@ -89,6 +89,7 @@ export async function getAssignmentMatrix(
     .select("id,category_id,title,assignment_date,points_possible,allow_retakes,created_at")
     .eq("section_id", sectionId)
     .eq("grading_period_id", period.id)
+    .eq("archived", false)
     .order("assignment_date", { ascending: true })
     .order("created_at", { ascending: true });
   if (assignmentsError || !assignments) return null;
