@@ -159,6 +159,21 @@ export async function restoreAssignment(formData: FormData) {
   redirect(withQuery(returnTo, "notice", "restored"));
 }
 
+export async function clearAssignmentScores(formData: FormData) {
+  const assignmentId = String(formData.get("assignmentId") ?? "");
+  const returnTo = safeReturnPath(formData.get("returnTo"));
+  if (!assignmentId) redirect("/assignments");
+
+  const { supabase } = await requireTeacherAssignment(assignmentId);
+  const { data: cleared, error } = await supabase.rpc("clear_assignment_scores", { p_assignment_id: assignmentId });
+  if (error) {
+    redirect(editRedirect(assignmentId, returnTo, "error", "Could not clear this assignment's scores."));
+  }
+
+  revalidateAssignmentViews(assignmentId);
+  redirect(editRedirect(assignmentId, returnTo, "cleared", String(Number(cleared ?? 0))));
+}
+
 export async function deleteEmptyAssignment(formData: FormData) {
   const assignmentId = String(formData.get("assignmentId") ?? "");
   const returnTo = safeReturnPath(formData.get("returnTo"));
