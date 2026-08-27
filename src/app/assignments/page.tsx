@@ -58,6 +58,7 @@ export default async function AssignmentsPage({ searchParams }: AssignmentPagePr
     return true;
   });
   const returnTo = currentReturnPath({ q, period, kind, status });
+  const filterKey = `${q}|${period}|${kind}|${status}`;
   const notice = params.notice === "archived"
     ? "Assignment archived. It no longer counts in active grade calculations."
     : params.notice === "restored"
@@ -92,7 +93,7 @@ export default async function AssignmentsPage({ searchParams }: AssignmentPagePr
 
       <article className={`panel ${styles.filtersPanel}`}>
         <div className="panel-header"><div><p className="eyebrow">Find assignments</p><h2>Filter the workspace</h2></div></div>
-        <form method="get" action="/assignments" className={styles.filterForm}>
+        <form key={filterKey} method="get" action="/assignments" className={styles.filterForm}>
           <label className={styles.searchField}><span>Search title</span><div className={styles.searchInput}><Search size={16}/><input name="q" defaultValue={q} placeholder="e.g. Unit 2 Quiz"/></div></label>
           <label><span>Grading period</span><select name="period" defaultValue={period}><option value="all">All periods</option>{data.periods.map((item) => <option value={item.code} key={item.id}>{item.code} — {item.name}</option>)}</select></label>
           <label><span>Type</span><select name="kind" defaultValue={kind}><option value="all">All types</option><option value="participation">Participation</option><option value="quiz">Quiz</option><option value="test">Test</option></select></label>
