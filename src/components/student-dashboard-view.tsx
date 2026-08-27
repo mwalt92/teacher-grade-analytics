@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { GradeSimulator } from "@/components/grade-simulator";
 import type { StudentDashboardData } from "@/lib/data/student-dashboard";
 import styles from "./student-dashboard-view.module.css";
 
@@ -125,10 +126,12 @@ export function StudentDashboardView({
           </div>
           <div className={styles.simulatorCard}>
             <strong>Grade Simulator</strong>
-            <p>Coming in a later student-dashboard milestone. It will use the same grading engine so “what if?” calculations match the real gradebook rules.</p>
+            <p>Now available below. Try future scores without changing any real grade data.</p>
           </div>
         </aside>
       </section>
+
+      <GradeSimulator data={data.simulator}/>
 
       <article className={`panel full-width ${styles.assignmentsPanel}`}>
         <div className="panel-header"><div><p className="eyebrow">Recent work</p><h3>{data.quarterCode} assignments</h3></div><span className="subtle">Most recent 10</span></div>
