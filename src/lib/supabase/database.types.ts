@@ -24,7 +24,10 @@ export type Database = {
       roster_import_batches: Table<{ id:string; teacher_id:string; source_filename:string; parsed_rows:Json; warnings:Json; status:string; result_summary:Json|null; created_at:string; expires_at:string; imported_at:string|null }, { id?:string; teacher_id:string; source_filename:string; parsed_rows:Json; warnings?:Json; status?:string; result_summary?:Json|null; created_at?:string; expires_at?:string; imported_at?:string|null }, { id?:string; teacher_id?:string; source_filename?:string; parsed_rows?:Json; warnings?:Json; status?:string; result_summary?:Json|null; created_at?:string; expires_at?:string; imported_at?:string|null }>;
     };
     Views: { [_ in never]: never };
-    Functions: { delete_empty_assignment: { Args: { p_assignment_id:string }; Returns:boolean } };
+    Functions: {
+      clear_assignment_scores: { Args: { p_assignment_id:string }; Returns:number };
+      delete_empty_assignment: { Args: { p_assignment_id:string }; Returns:boolean };
+    };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
   };
