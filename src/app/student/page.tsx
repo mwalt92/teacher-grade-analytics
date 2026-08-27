@@ -12,6 +12,7 @@ function displayCourseName(courseName: string, courseCode: string | null) {
 }
 
 function setupCopy(status: string | null, email: string) {
+  if (status === "google_required") return "This login is not a Google identity. Sign out and use your school-managed Google account to access student grade data.";
   if (status === "already_claimed") return "That roster record is already connected to another login. Ask your teacher to review the account link before trying again.";
   if (status === "no_email") return "Google did not provide an email address for this login. Sign in with your school-managed Google account or ask your teacher for help.";
   if (status === "link_failed") return "Your account matched the roster, but the link could not be completed. Ask your teacher to review the account setup.";
