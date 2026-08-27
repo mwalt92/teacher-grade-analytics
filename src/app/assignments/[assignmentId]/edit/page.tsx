@@ -5,11 +5,12 @@ import { getAssignmentManagementData } from "@/lib/data/assignment-management";
 import { getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import { archiveAssignment, deleteEmptyAssignment, restoreAssignment, updateAssignmentMetadata } from "../../management-actions";
+import { ClearAssignmentScoresButton } from "./clear-assignment-scores-button";
 import styles from "../../assignments.module.css";
 
 type EditAssignmentProps = {
   params: Promise<{ assignmentId: string }>;
-  searchParams: Promise<{ returnTo?: string; saved?: string; error?: string }>;
+  searchParams: Promise<{ returnTo?: string; saved?: string; cleared?: string; error?: string }>;
 };
 
 function safeReturnPath(value: string | undefined) {
@@ -40,6 +41,7 @@ export default async function EditAssignmentPage({ params, searchParams }: EditA
   if (!activity) notFound();
 
   const gradeHref = `/assignments/${assignmentId}?returnTo=${encodeURIComponent(returnTo)}`;
+  const clearedCount = query.cleared == null ? null : Number(query.cleared);
 
   return <main className="app-shell">
     <header className="topbar">
@@ -56,6 +58,7 @@ export default async function EditAssignmentPage({ params, searchParams }: EditA
 
     <section className={`content-wrap ${styles.content}`}>
       {query.saved === "1" ? <div className={styles.notice}>Assignment changes saved. Grade calculations now use the updated setup.</div> : null}
+      {clearedCount != null && Number.isFinite(clearedCount) ? <div className={styles.notice}>Cleared {clearedCount} student grade record{clearedCount === 1 ? "" : "s"}. This assignment is now empty and ready for permanent deletion if that is what you intended.</div> : null}
       {query.error ? <div className={styles.error}>{query.error}</div> : null}
       {assignment.archived ? <div className={styles.archivedBanner}>This assignment is archived. Its historical scores are preserved, but it is excluded from active Gradebook, audit calculations, PowerSchool comparison calculations, and student grades until restored.</div> : null}
 
@@ -96,14 +99,24 @@ export default async function EditAssignmentPage({ params, searchParams }: EditA
 
           <article className={`panel ${styles.dangerPanel}`}>
             <p className="eyebrow">Permanent removal</p><h3>Delete accidental assignment</h3>
-            {activity.gradeRecordCount === 0 ? <>
-              <p className={styles.dangerText}>Because this assignment has no student grade records, it can be permanently deleted. This cannot be undone. Type the exact title below to confirm.</p>
+            {activity.gradeRecordCount > 0 ? <>
+              <p className={styles.dangerText}>Step 1: clear this assignment&apos;s student scores. This permanently removes its {activity.gradeRecordCount} grade record{activity.gradeRecordCount === 1 ? "" : "s"}, all attempts, retakes, and grade-history rows tied to them. You will be asked to confirm before anything is cleared.</p>
+              <ClearAssignmentScoresButton
+                assignmentId={assignmentId}
+                assignmentTitle={assignment.title}
+                returnTo={returnTo}
+                gradeRecordCount={activity.gradeRecordCount}
+                retakeCount={activity.retakeCount}
+              />
+              <p className={styles.dangerText}>After the scores are cleared, this panel will change to Step 2 and allow permanent assignment deletion.</p>
+            </> : <>
+              <p className={styles.dangerText}>Step 2: this assignment has no student grade records, so it can now be permanently deleted. This cannot be undone. Type the exact title below to confirm.</p>
               <form action={deleteEmptyAssignment}>
                 <input type="hidden" name="assignmentId" value={assignmentId}/><input type="hidden" name="returnTo" value={returnTo}/>
                 <label className="stack-form">Confirm title<input name="confirmTitle" required autoComplete="off" placeholder={assignment.title}/></label>
                 <button className={styles.dangerButton} type="submit">Permanently Delete Empty Assignment</button>
               </form>
-            </> : <p className={styles.dangerText}>Permanent deletion is disabled because student grade history exists. Archive this assignment instead; its records and attempts will remain available historically.</p>}
+            </>}
           </article>
         </aside>
       </div>
