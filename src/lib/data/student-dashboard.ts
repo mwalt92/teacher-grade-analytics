@@ -1,13 +1,17 @@
-import { getSectionGradingPeriods, getStudentGradeCalculation, getStudentSemesterCalculation, gradingCategoryFromName } from "@/lib/data/grade-calculation";
-import type { GradeRecord, GradingCategory, GradingRules, SemesterComponent } from "@/lib/grading/types";
+import { getSectionGradingPeriods, getStudentGradeCalculation, getStudentSemesterCalculation } from "@/lib/data/grade-calculation";
+import type { CategoryCalculationMethod, GradeRecord, GradingCategory, GradingRules, SemesterComponent } from "@/lib/grading/types";
 import { createClient } from "@/lib/supabase/server";
 
 export type StudentDashboardCategory = {
   category: GradingCategory;
+  label: string;
+  calculationMethod: CategoryCalculationMethod;
   averagePercent: number;
   configuredWeight: number;
   assignmentCount: number;
   droppedCount: number;
+  pointsEarned: number;
+  pointsPossible: number;
 };
 
 export type StudentDashboardAssignment = {
@@ -85,10 +89,14 @@ export async function getStudentDashboardData(
     .filter((category): category is NonNullable<typeof category> => Boolean(category))
     .map((category) => ({
       category: category.category,
+      label: category.label,
+      calculationMethod: category.calculationMethod,
       averagePercent: category.averagePercent,
       configuredWeight: category.configuredWeight,
       assignmentCount: category.assignmentCount,
       droppedCount: category.droppedCount,
+      pointsEarned: category.pointsEarned,
+      pointsPossible: category.pointsPossible,
     }));
 
   const assignments = quarterCalculation.result.audit
@@ -119,6 +127,7 @@ export async function getStudentDashboardData(
     assignmentDate: line.assignmentDate,
     gradingPeriodCode: line.gradingPeriodCode ?? selectedQuarter.code,
     category: line.category,
+    pointsPossible: line.pointsPossible,
     missing: line.missing,
     exempt: line.exempt,
     attempts: line.attempts.map((attempt) => ({
@@ -130,19 +139,15 @@ export async function getStudentDashboardData(
     })),
   }));
 
-  const lateDeductions: Record<GradingCategory, number> = { participation: 0, quiz: 0, test: 0 };
+  const lateDeductions: Record<GradingCategory, number> = {};
   const supabase = await createClient();
   const assignmentIds = quarterCalculation.result.audit.map((line) => line.assignmentId);
   const { data: lateRows } = await supabase
     .from("grading_categories")
-    .select("name,late_deduction")
+    .select("code,late_deduction")
     .eq("section_id", sectionId);
   for (const row of lateRows ?? []) {
-    try {
-      lateDeductions[gradingCategoryFromName(row.name)] = Number(row.late_deduction) || 0;
-    } catch {
-      // Ignore unsupported future categories until the grading engine knows how to calculate them.
-    }
+    lateDeductions[row.code] = Number(row.late_deduction) || 0;
   }
 
   let retakeRows: { id: string; title: string; assignment_type: string; allow_retakes: boolean; points_possible: number | string }[] = [];
