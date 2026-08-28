@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getAssignmentMatrix } from "@/lib/data/assignment-matrix";
 import { getSectionGradingPeriods } from "@/lib/data/grade-calculation";
 import { getSectionRoster } from "@/lib/data/roster";
-import { getTeacherSections } from "@/lib/data/teacher-context";
+import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import { AssignmentMatrixGrid } from "./assignment-matrix-grid";
 import styles from "./assignment-matrix.module.css";
@@ -17,8 +18,7 @@ export default async function AssignmentMatrixPage({ searchParams }: PageProps) 
   const userId = claimsData?.claims?.sub;
   if (claimsError || typeof userId !== "string") redirect("/login");
 
-  const sections = await getTeacherSections();
-  const section = sections[0];
+  const [sections, section] = await Promise.all([getTeacherSections(), getActiveTeacherSection()]);
   if (!section) return <main className="content-wrap"><article className="panel"><h1>No teacher section is available.</h1></article></main>;
 
   const [roster, periods, params, categoriesResult] = await Promise.all([
@@ -42,8 +42,9 @@ export default async function AssignmentMatrixPage({ searchParams }: PageProps) 
 
   return <main className="app-shell">
     <header className="topbar">
-      <div><p className="eyebrow">Teacher Gradebook</p><h1>Assignment matrix</h1><p className="subtle">{section.courseName} • {section.sectionName} • students × assignments</p></div>
+      <div><p className="eyebrow">Teacher Gradebook</p><h1>Assignment matrix</h1><p className="subtle">{section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName} • {section.sectionName} • students × assignments</p></div>
       <div className="grade-audit-header-actions">
+        <TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/>
         <Link className="secondary-link" href="/"><ArrowLeft size={17}/> Back to Dashboard</Link>
         <Link className="secondary-link" href={`/gradebook${selectedPeriod ? `?period=${selectedPeriod.code}` : ""}`}>Overview</Link>
         <Link className="secondary-link" href={`/gradebook/powerschool${selectedPeriod && selectedPeriod.periodRole !== "exam" ? `?period=${selectedPeriod.code}` : ""}`}>PowerSchool Comparison</Link>
