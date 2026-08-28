@@ -18,7 +18,7 @@ export default async function AssignmentGradePage({ params, searchParams }: { pa
   const sections = await getTeacherSections();
   if (!sections.length) redirect("/");
   const supabase = await createClient();
-  const { data: assignment } = await supabase.from("assignments").select("id,section_id,title,assignment_type,assignment_date,points_possible,allow_retakes,archived").eq("id", assignmentId).maybeSingle();
+  const { data: assignment } = await supabase.from("assignments").select("id,section_id,title,assignment_type,assignment_type_id,category_id,assignment_date,points_possible,allow_retakes,archived").eq("id", assignmentId).maybeSingle();
   if (!assignment || !sections.some((section) => section.sectionId === assignment.section_id)) notFound();
   if (assignment.archived) {
     const editUrl = new URL(`/assignments/${assignmentId}/edit`, "https://teacher-grade-analytics.local");
@@ -27,7 +27,13 @@ export default async function AssignmentGradePage({ params, searchParams }: { pa
     redirect(`${editUrl.pathname}${editUrl.search}`);
   }
   const section = sections.find((item) => item.sectionId === assignment.section_id)!;
-  const roster = await getSectionRoster(section.sectionId, "active");
+  const [roster, typeResult, categoryResult] = await Promise.all([
+    getSectionRoster(section.sectionId, "active"),
+    supabase.from("assignment_types").select("name").eq("id", assignment.assignment_type_id).maybeSingle(),
+    supabase.from("grading_categories").select("name").eq("id", assignment.category_id).maybeSingle(),
+  ]);
+  const assignmentTypeLabel = typeResult.data?.name ?? assignment.assignment_type;
+  const categoryLabel = categoryResult.data?.name ?? "Uncategorized";
 
   const { data: records } = await supabase.from("grade_records").select("id,student_id,missing").eq("assignment_id", assignmentId);
   const recordIds = (records ?? []).map((record) => record.id);
@@ -59,7 +65,7 @@ export default async function AssignmentGradePage({ params, searchParams }: { pa
   const editHref = `/assignments/${assignmentId}/edit?returnTo=${encodeURIComponent(returnTo.startsWith("/assignments") ? returnTo : "/assignments")}`;
 
   return <main className="app-shell">
-    <header className="topbar"><div><p className="eyebrow">Grade Entry</p><h1>{assignment.title}</h1><p className="subtle">{assignment.assignment_date} • {assignment.points_possible} points • {assignment.assignment_type}</p></div><div className="grade-audit-header-actions"><Link className="secondary-link" href={returnTo}><ArrowLeft size={17}/> {backLabel}</Link><Link className="secondary-link" href={editHref}><Edit3 size={16}/> Edit Assignment</Link><Link className="secondary-link" href="/assignments/new">New assignment</Link></div></header>
+    <header className="topbar"><div><p className="eyebrow">Grade Entry</p><h1>{assignment.title}</h1><p className="subtle">{assignment.assignment_date} • {assignment.points_possible} points • {assignmentTypeLabel} → {categoryLabel}{assignment.allow_retakes ? " • Retakes allowed" : " • Single attempt"}</p></div><div className="grade-audit-header-actions"><Link className="secondary-link" href={returnTo}><ArrowLeft size={17}/> {backLabel}</Link><Link className="secondary-link" href={editHref}><Edit3 size={16}/> Edit Assignment</Link><Link className="secondary-link" href="/assignments/new">New assignment</Link></div></header>
     <section className="content-wrap">
       <article className="panel">
         <div className="panel-header"><div><p className="eyebrow">Active roster</p><h2>{roster.length} students</h2><p className="subtle">Enter scores directly. Changes save automatically and are recorded in grade history.</p></div><span className="status success-pill"><CheckCircle2 size={14}/> Autosave on</span></div>

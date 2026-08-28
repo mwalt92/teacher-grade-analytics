@@ -67,53 +67,47 @@ export async function updateAssignmentMetadata(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const assignmentDate = String(formData.get("assignmentDate") ?? "");
   const gradingPeriodId = String(formData.get("gradingPeriodId") ?? "");
-  const kind = String(formData.get("kind") ?? "");
+  const assignmentTypeId = String(formData.get("assignmentTypeId") ?? "");
+  const categoryId = String(formData.get("categoryId") ?? "");
   const pointsPossible = Number(formData.get("pointsPossible"));
-  const requestedRetakes = String(formData.get("allowRetakes") ?? "") === "true";
+  const allowRetakes = String(formData.get("allowRetakes") ?? "") === "true";
 
   if (!assignmentId) redirect("/assignments");
-  if (!title || !assignmentDate || !gradingPeriodId || !["participation", "quiz", "test"].includes(kind) || !Number.isFinite(pointsPossible) || pointsPossible <= 0) {
+  if (!title || !assignmentDate || !gradingPeriodId || !assignmentTypeId || !categoryId || !Number.isFinite(pointsPossible) || pointsPossible <= 0) {
     redirect(editRedirect(assignmentId, returnTo, "error", "Complete all required assignment fields."));
   }
 
   const { supabase, assignment } = await requireTeacherAssignment(assignmentId);
-  const [{ data: period }, { data: categories }] = await Promise.all([
+  const [{ data: period }, { data: assignmentType }, { data: category }] = await Promise.all([
     supabase
       .from("grading_periods")
       .select("id")
       .eq("id", gradingPeriodId)
       .eq("section_id", assignment.section_id)
       .maybeSingle(),
-    supabase.from("grading_categories").select("id,name").eq("section_id", assignment.section_id),
+    supabase
+      .from("assignment_types")
+      .select("id,code")
+      .eq("id", assignmentTypeId)
+      .eq("section_id", assignment.section_id)
+      .maybeSingle(),
+    supabase
+      .from("grading_categories")
+      .select("id")
+      .eq("id", categoryId)
+      .eq("section_id", assignment.section_id)
+      .maybeSingle(),
   ]);
   if (!period) redirect(editRedirect(assignmentId, returnTo, "error", "Choose a grading period from this section."));
+  if (!assignmentType) redirect(editRedirect(assignmentId, returnTo, "error", "Choose an assignment type from this section."));
+  if (!category) redirect(editRedirect(assignmentId, returnTo, "error", "Choose a grading category from this section."));
 
-  const wantedCategory = kind === "participation" ? "participation" : kind === "quiz" ? "quizzes" : "tests";
-  const category = categories?.find((item) => item.name.trim().toLowerCase() === wantedCategory);
-  if (!category) redirect(editRedirect(assignmentId, returnTo, "error", `The ${wantedCategory} category is not configured.`));
-
-  if (kind === "participation" && assignment.assignment_type !== "participation") {
-    const { data: records } = await supabase.from("grade_records").select("id").eq("assignment_id", assignmentId);
-    const recordIds = (records ?? []).map((record) => record.id);
-    if (recordIds.length > 0) {
-      const { data: retakes } = await supabase
-        .from("grade_attempts")
-        .select("id")
-        .in("grade_record_id", recordIds)
-        .gt("attempt_number", 1)
-        .limit(1);
-      if (retakes?.length) {
-        redirect(editRedirect(assignmentId, returnTo, "error", "This assessment already has retake history, so it cannot be changed to Participation."));
-      }
-    }
-  }
-
-  const allowRetakes = kind === "participation" ? false : requestedRetakes;
   const { error } = await supabase
     .from("assignments")
     .update({
       title,
-      assignment_type: kind,
+      assignment_type_id: assignmentType.id,
+      assignment_type: assignmentType.code,
       assignment_date: assignmentDate,
       grading_period_id: gradingPeriodId,
       category_id: category.id,

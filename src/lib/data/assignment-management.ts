@@ -2,11 +2,12 @@ import { createClient } from "@/lib/supabase/server";
 
 export type AssignmentManagementPeriod = { id: string; code: string; name: string };
 export type AssignmentManagementCategory = { id: string; name: string };
+export type AssignmentManagementType = { id: string; code: string; name: string; active: boolean };
 
 export type AssignmentManagementRow = {
   id: string;
   title: string;
-  assignmentType: "participation" | "quiz" | "test";
+  assignmentType: AssignmentManagementType | null;
   assignmentDate: string;
   pointsPossible: number;
   allowRetakes: boolean;
@@ -24,31 +25,44 @@ export type AssignmentManagementData = {
   assignments: AssignmentManagementRow[];
   periods: AssignmentManagementPeriod[];
   categories: AssignmentManagementCategory[];
+  assignmentTypes: AssignmentManagementType[];
 };
+
+function legacyTypeLabel(code: string) {
+  return code.split("_").map((part) => part ? `${part[0].toUpperCase()}${part.slice(1)}` : part).join(" ");
+}
 
 export async function getAssignmentManagementData(sectionId: string): Promise<AssignmentManagementData | null> {
   const supabase = await createClient();
-  const [assignmentsResult, periodsResult, categoriesResult] = await Promise.all([
+  const [assignmentsResult, periodsResult, categoriesResult, typesResult] = await Promise.all([
     supabase
       .from("assignments")
-      .select("id,title,assignment_type,assignment_date,points_possible,allow_retakes,archived,archived_at,grading_period_id,category_id,created_at")
+      .select("id,title,assignment_type,assignment_type_id,assignment_date,points_possible,allow_retakes,archived,archived_at,grading_period_id,category_id,created_at")
       .eq("section_id", sectionId)
       .order("assignment_date", { ascending: false })
       .order("created_at", { ascending: false }),
     supabase.from("grading_periods").select("id,code,name").eq("section_id", sectionId),
     supabase.from("grading_categories").select("id,name").eq("section_id", sectionId),
+    supabase.from("assignment_types").select("id,code,name,active,sort_order").eq("section_id", sectionId).order("sort_order").order("name"),
   ]);
 
-  if (assignmentsResult.error || periodsResult.error || categoriesResult.error) return null;
+  if (assignmentsResult.error || periodsResult.error || categoriesResult.error || typesResult.error) return null;
   const assignments = assignmentsResult.data ?? [];
   const periods = periodsResult.data ?? [];
   const categories = categoriesResult.data ?? [];
+  const assignmentTypes: AssignmentManagementType[] = (typesResult.data ?? []).map((type) => ({
+    id: type.id,
+    code: type.code,
+    name: type.name,
+    active: Boolean(type.active),
+  }));
 
   const order = new Map([["Q1", 1], ["Q2", 2], ["S1", 3], ["Q3", 4], ["Q4", 5], ["S2", 6]]);
   periods.sort((a, b) => (order.get(a.code) ?? 99) - (order.get(b.code) ?? 99));
 
   const periodById = new Map(periods.map((period) => [period.id, period]));
   const categoryById = new Map(categories.map((category) => [category.id, category]));
+  const typeById = new Map(assignmentTypes.map((type) => [type.id, type]));
   const assignmentIds = assignments.map((assignment) => assignment.id);
 
   let gradeRows: { id: string; assignment_id: string; missing: boolean }[] = [];
@@ -96,9 +110,13 @@ export async function getAssignmentManagementData(sectionId: string): Promise<As
       retakeCount += recordAttempts.filter((attempt) => attempt.attempt_number > 1).length;
     }
 
-    const assignmentType = assignment.assignment_type === "quiz" || assignment.assignment_type === "test"
-      ? assignment.assignment_type
-      : "participation";
+    const configuredType = assignment.assignment_type_id ? typeById.get(assignment.assignment_type_id) ?? null : null;
+    const assignmentType = configuredType ?? (assignment.assignment_type ? {
+      id: `legacy:${assignment.assignment_type}`,
+      code: assignment.assignment_type,
+      name: legacyTypeLabel(assignment.assignment_type),
+      active: false,
+    } : null);
 
     return {
       id: assignment.id,
@@ -118,5 +136,5 @@ export async function getAssignmentManagementData(sectionId: string): Promise<As
     };
   });
 
-  return { assignments: normalizedAssignments, periods, categories };
+  return { assignments: normalizedAssignments, periods, categories, assignmentTypes };
 }
