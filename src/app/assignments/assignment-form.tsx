@@ -53,7 +53,7 @@ export function AssignmentForm({
     <input type="hidden" name="sectionId" value={sectionId}/>
     <input type="hidden" name="assignmentTypeId" value={assignmentTypeId}/>
 
-    <div className="choice-grid">
+    <div className="choice-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
       {assignmentTypes.map((type) => {
         const selected = type.id === assignmentTypeId;
         const Icon = type.code === "participation" ? ClipboardCheck : FileQuestion;
@@ -69,7 +69,10 @@ export function AssignmentForm({
       <label>Points possible<input name="pointsPossible" type="number" min="0.01" step="0.01" required value={pointsPossible} onChange={(event) => setPointsPossible(Number(event.target.value))}/></label>
       <label>Grading period<select name="gradingPeriodId" required defaultValue={quarterPeriods[0]?.id ?? ""}><option value="" disabled>Choose quarter</option>{quarterPeriods.map((period) => <option value={period.id} key={period.id}>{period.code} — {period.name}</option>)}</select></label>
       <label>Grading category<select name="categoryId" required value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>{categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select></label>
-      <label className="retake-choice"><input type="checkbox" name="allowRetakes" value="true" checked={allowRetakes} onChange={(event) => setAllowRetakes(event.target.checked)}/><span><strong>Allow future retakes</strong><small>Independent of assignment type and grading category.</small></span></label>
+      <label style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 44, color: "var(--text)" }}>
+        <input style={{ width: "auto", minHeight: "auto", flex: "none" }} type="checkbox" name="allowRetakes" value="true" checked={allowRetakes} onChange={(event) => setAllowRetakes(event.target.checked)}/>
+        <span style={{ display: "grid", gap: 2 }}><strong>Allow future retakes</strong><small style={{ color: "var(--muted)", fontWeight: 500 }}>Independent of assignment type and grading category.</small></span>
+      </label>
     </div>
 
     <div className="creation-summary">
