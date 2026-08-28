@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getSectionGradebook, getSectionGradingPeriods, type SectionGradebookCalculation } from "@/lib/data/grade-calculation";
 import { getLatestPowerSchoolSnapshots, POWERSCHOOL_TOLERANCE, type PowerSchoolSnapshot } from "@/lib/data/powerschool";
@@ -85,13 +85,13 @@ export default async function PowerSchoolComparisonPage({ searchParams }: PagePr
 
   return <main className="app-shell">
     <header className="topbar">
-      <div><p className="eyebrow">Teacher Gradebook</p><h1>PowerSchool comparison</h1><p className="subtle">{section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName} • {section.sectionName}</p></div>
-      <div className="grade-audit-header-actions"><TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/><Link className="secondary-link" href="/"><ArrowLeft size={17}/> Back to Dashboard</Link><Link className="secondary-link" href={`/gradebook${selectedPeriod ? `?period=${selectedPeriod.code}` : ""}`}>Back to Gradebook</Link></div>
+      <div><p className="eyebrow">Teacher Gradebook</p><h1>PowerSchool comparison</h1><p className="subtle">{section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName} • {section.sectionName}</p><TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/></div>
     </header>
+    <TeacherPrimaryNav/>
     <section className={`content-wrap ${styles.content}`}>
       <div className={styles.controlGrid}>
         <article className={`panel ${styles.controls}`}>
-          <div className="panel-header"><div><p className="eyebrow">Comparison controls</p><h3>Compare a grading period</h3></div></div>
+          <div className="panel-header"><div><p className="eyebrow">Comparison controls</p><h3>Compare a grading period</h3></div><Link className="secondary-link" href={`/gradebook${selectedPeriod ? `?period=${selectedPeriod.code}` : ""}`}>Gradebook Overview</Link></div>
           <form method="get" className={styles.periodForm}><label><span>Grading period</span><select name="period" defaultValue={selectedPeriod?.code}>{selectablePeriods.map((period) => <option key={period.id} value={period.code}>{period.code} — {period.name}</option>)}</select></label><button className="primary-button" type="submit">View Comparison</button></form>
         </article>
 
