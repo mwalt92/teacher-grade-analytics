@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
@@ -34,12 +35,20 @@ export default async function NewAssignmentPage() {
 
   return <main className="app-shell">
     <header className="topbar">
-      <div><p className="eyebrow">Teacher Grade Analytics</p><h1>Assignment Creation</h1><p className="subtle">{displayCourseName(section.courseName, section.courseCode)} • {section.sectionName}</p></div>
-      <div className="grade-audit-header-actions"><TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo="/assignments/new"/><Link className="secondary-link" href="/"><ArrowLeft size={17}/> Back to Dashboard</Link></div>
+      <div>
+        <p className="eyebrow">Teacher Grade Analytics</p>
+        <h1>Assignment Creation</h1>
+        <p className="subtle">{displayCourseName(section.courseName, section.courseCode)} • {section.sectionName}</p>
+        <TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo="/assignments/new"/>
+      </div>
     </header>
+    <TeacherPrimaryNav/>
     <section className="content-wrap assignment-create-wrap">
       <article className="panel">
-        <div className="panel-header"><div><p className="eyebrow">New assignment</p><h2>What are you entering?</h2><p className="subtle">Choose an assignment type, then confirm the grading category and behavior. Type and category are independent so each course can use its own structure.</p></div></div>
+        <div className="panel-header">
+          <div><p className="eyebrow">New assignment</p><h2>What are you entering?</h2><p className="subtle">Choose an assignment type, then confirm the grading category and behavior. Type and category are independent so each course can use its own structure.</p></div>
+          <Link className="secondary-link" href="/assignments"><ArrowLeft size={17}/> Back to Assignments</Link>
+        </div>
         <AssignmentForm
           sectionId={section.sectionId}
           periods={(periods ?? []).map((period) => ({ id: period.id, code: period.code, name: period.name }))}
