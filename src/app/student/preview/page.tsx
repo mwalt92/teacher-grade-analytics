@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { StudentDashboardView } from "@/components/student-dashboard-view";
 import { getSectionRoster } from "@/lib/data/roster";
 import { getStudentDashboardData } from "@/lib/data/student-dashboard";
-import { getTeacherSections } from "@/lib/data/teacher-context";
+import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 
 type PreviewPageProps = { searchParams: Promise<{ studentId?: string; period?: string; sectionId?: string }> };
@@ -22,13 +22,13 @@ export default async function StudentPreviewPage({ searchParams }: PreviewPagePr
   if (!profile) redirect("/");
   if (profile.role !== "teacher" && profile.role !== "admin") redirect("/student");
 
-  const [sections, params] = await Promise.all([getTeacherSections(), searchParams]);
-  const section = sections.find((item) => item.sectionId === params.sectionId) ?? sections[0];
+  const [sections, activeSection, params] = await Promise.all([getTeacherSections(), getActiveTeacherSection(), searchParams]);
+  const section = sections.find((item) => item.sectionId === params.sectionId) ?? activeSection;
   if (!section) redirect("/");
 
   const roster = await getSectionRoster(section.sectionId, "active");
   if (!roster.length) {
-    return <main className="content-wrap"><article className="panel"><p className="eyebrow">Student preview</p><h1>No active students are enrolled.</h1></article></main>;
+    return <main className="content-wrap"><article className="panel"><p className="eyebrow">Student preview</p><h1>No active students are enrolled.</h1><p className="subtle">Switch to a course with an active roster, or add students to this section first.</p></article></main>;
   }
 
   const student = roster.find((item) => item.studentId === params.studentId) ?? roster[0];
