@@ -1,6 +1,6 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { GradeSimulator } from "@/components/grade-simulator";
+import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import type { StudentDashboardData } from "@/lib/data/student-dashboard";
 import styles from "./student-dashboard-view.module.css";
 
@@ -66,9 +66,10 @@ export function StudentDashboardView({
         <p className="eyebrow">Student Progress</p>
         <h1>{courseName}</h1>
         <p className="subtle">{studentName} • {sectionName} • {schoolYear}</p>
+        {preview ? previewHeaderActions : null}
       </div>
-      {preview ? <div className="grade-audit-header-actions">{previewHeaderActions}<Link className="secondary-link" href="/">Teacher Dashboard</Link></div> : null}
     </header>
+    {preview ? <TeacherPrimaryNav/> : null}
 
     <section className={`content-wrap ${styles.content}`}>
       {preview ? <div className={styles.previewBanner}>
