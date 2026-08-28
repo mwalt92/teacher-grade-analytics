@@ -135,19 +135,20 @@ describe("canonical grading engine", () => {
     expect(result.categories.project.pointsPossible).toBe(60);
   });
 
-  it("computes semester grades dynamically from available components", () => {
+  it("computes configured composite periods dynamically from available components", () => {
     const current = calculateSemesterGrade([
-      { code: "Q1", label: "Quarter 1", weight: 0.4, percent: 90 },
-      { code: "Q2", label: "Quarter 2", weight: 0.4, percent: 80 },
-      { code: "EXAM", label: "Semester Exam", weight: 0.2, percent: null },
+      { code: "BLOCK_A", label: "First block", role: "standard", weight: 0.4, percent: 90 },
+      { code: "BLOCK_B", label: "Second block", role: "standard", weight: 0.4, percent: 80 },
+      { code: "CAPSTONE", label: "Capstone exam", role: "exam", weight: 0.2, percent: null },
     ]);
     expect(current.activeWeight).toBeCloseTo(0.8);
     expect(current.overallPercent).toBeCloseTo(85);
+    expect(current.components.find((component) => component.role === "exam")?.code).toBe("CAPSTONE");
 
     const complete = calculateSemesterGrade([
-      { code: "Q1", label: "Quarter 1", weight: 0.4, percent: 90 },
-      { code: "Q2", label: "Quarter 2", weight: 0.4, percent: 80 },
-      { code: "EXAM", label: "Semester Exam", weight: 0.2, percent: 100 },
+      { code: "BLOCK_A", label: "First block", role: "standard", weight: 0.4, percent: 90 },
+      { code: "BLOCK_B", label: "Second block", role: "standard", weight: 0.4, percent: 80 },
+      { code: "CAPSTONE", label: "Capstone exam", role: "exam", weight: 0.2, percent: 100 },
     ]);
     expect(complete.overallPercent).toBeCloseTo(88);
   });
