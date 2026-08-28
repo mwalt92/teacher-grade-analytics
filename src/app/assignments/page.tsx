@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Archive, ArrowLeft, Edit3, Plus, RotateCcw, Search } from "lucide-react";
+import { Archive, Edit3, Plus, RotateCcw, Search } from "lucide-react";
+import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getAssignmentManagementData } from "@/lib/data/assignment-management";
 import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
@@ -74,16 +75,19 @@ export default async function AssignmentsPage({ searchParams }: AssignmentPagePr
         <p className="eyebrow">Teacher Grade Analytics</p>
         <h1>Assignments</h1>
         <p className="subtle">{section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName} • {section.sectionName}</p>
-      </div>
-      <div className="grade-audit-header-actions">
         <TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/>
-        <Link className="secondary-link" href="/"><ArrowLeft size={17}/> Dashboard</Link>
-        <Link className="secondary-link" href="/gradebook/assignments">Assignment Gradebook</Link>
-        <Link className="primary-button" href="/assignments/new"><Plus size={17}/> New Assignment</Link>
       </div>
     </header>
+    <TeacherPrimaryNav/>
 
     <section className={`content-wrap ${styles.content}`}>
+      <div className="section-heading">
+        <div><p className="eyebrow">Assignment workspace</p><h2>Manage course assignments</h2></div>
+        <div className="grade-audit-header-actions">
+          <Link className="secondary-link" href="/gradebook/assignments">Assignment Gradebook</Link>
+          <Link className="primary-button" href="/assignments/new"><Plus size={17}/> New Assignment</Link>
+        </div>
+      </div>
       {notice ? <div className={styles.notice}>{notice}</div> : null}
       {params.error ? <div className={styles.error}>{params.error}</div> : null}
 
