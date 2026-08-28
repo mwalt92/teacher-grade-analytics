@@ -11,6 +11,11 @@ type AssignmentPageProps = {
   searchParams: Promise<{ q?: string; period?: string; kind?: string; status?: string; notice?: string; error?: string }>;
 };
 
+const assignmentGridStyle = {
+  gridTemplateColumns: "minmax(220px,1.55fr) 72px 105px 115px 105px 70px minmax(150px,.85fr) minmax(290px,1.3fr)",
+  minWidth: "1160px",
+};
+
 function currentReturnPath(params: { q: string; period: string; kind: string; status: string }) {
   const query = new URLSearchParams();
   if (params.q) query.set("q", params.q);
@@ -101,11 +106,11 @@ export default async function AssignmentsPage({ searchParams }: AssignmentPagePr
       <article className={`panel full-width ${styles.workspace}`}>
         <div className="panel-header"><div><p className="eyebrow">Assignment management</p><h2>{visibleAssignments.length} {visibleAssignments.length === 1 ? "assignment" : "assignments"}</h2><p className="subtle">Assignment type describes the workflow; grading category determines how the grade is calculated.</p></div></div>
         {visibleAssignments.length === 0 ? <div className={styles.empty}><h3>No assignments match these filters.</h3><p>Try clearing a filter or create a new assignment.</p></div> : <div className={styles.table} role="table" aria-label="Assignments">
-          <div className={`${styles.row} ${styles.head}`} role="row"><span>Assignment</span><span>Period</span><span>Type</span><span>Category</span><span>Date</span><span>Points</span><span>Grade activity</span><span>Actions</span></div>
+          <div className={`${styles.row} ${styles.head}`} role="row" style={assignmentGridStyle}><span>Assignment</span><span>Period</span><span>Type</span><span>Category</span><span>Date</span><span>Points</span><span>Grade activity</span><span>Actions</span></div>
           {visibleAssignments.map((assignment) => {
             const editHref = `/assignments/${assignment.id}/edit?returnTo=${encodeURIComponent(returnTo)}`;
             const gradeHref = `/assignments/${assignment.id}?returnTo=${encodeURIComponent(returnTo)}`;
-            return <div className={`${styles.row} ${assignment.archived ? styles.archivedRow : ""}`} role="row" key={assignment.id}>
+            return <div className={`${styles.row} ${assignment.archived ? styles.archivedRow : ""}`} role="row" key={assignment.id} style={assignmentGridStyle}>
               <span className={styles.assignmentName}><strong>{assignment.title}</strong><small>{assignment.archived ? "Archived" : assignment.allowRetakes ? "Retakes allowed" : "Single attempt"}</small></span>
               <span>{assignment.gradingPeriod?.code ?? "—"}</span>
               <span>{assignment.assignmentType?.name ?? "—"}</span>
