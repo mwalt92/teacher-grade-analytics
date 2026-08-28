@@ -37,12 +37,13 @@ export default async function AssignmentsPage({ searchParams }: AssignmentPagePr
 
   const params = await searchParams;
   const q = (params.q ?? "").trim();
-  const period = params.period ?? "all";
   const status = params.status === "archived" || params.status === "all" ? params.status : "active";
   const data = await getAssignmentManagementData(section.sectionId);
   if (!data) {
     return <main className="content-wrap"><article className="panel"><h1>Assignments</h1><p className="subtle">The assignment workspace could not be loaded.</p></article></main>;
   }
+  const validPeriodCodes = new Set(data.periods.map((item) => item.code));
+  const period = params.period && validPeriodCodes.has(params.period) ? params.period : "all";
   const validTypeCodes = new Set(data.assignmentTypes.map((type) => type.code));
   const kind = validTypeCodes.has(params.kind ?? "") ? params.kind! : "all";
 
