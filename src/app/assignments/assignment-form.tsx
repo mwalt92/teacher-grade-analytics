@@ -36,7 +36,6 @@ export function AssignmentForm({
   const [allowRetakes, setAllowRetakes] = useState(initialType?.defaultAllowRetakes ?? false);
   const selectedType = assignmentTypes.find((type) => type.id === assignmentTypeId) ?? initialType;
   const selectedCategory = categories.find((category) => category.id === categoryId) ?? null;
-  const quarterPeriods = periods.filter((period) => period.code.startsWith("Q"));
 
   function chooseType(type: AssignmentType) {
     setAssignmentTypeId(type.id);
@@ -45,8 +44,8 @@ export function AssignmentForm({
     setAllowRetakes(type.defaultAllowRetakes);
   }
 
-  if (!assignmentTypes.length || !categories.length) {
-    return <div className="import-message warning">Configure at least one assignment type and grading category before creating an assignment.</div>;
+  if (!assignmentTypes.length || !categories.length || !periods.length) {
+    return <div className="import-message warning">Configure at least one assignment type, grading category, and direct grading period before creating an assignment.</div>;
   }
 
   return <form className="assignment-create-form" action={createAssignment}>
@@ -67,7 +66,7 @@ export function AssignmentForm({
       <label className="wide-field">Assignment name<input name="title" required autoFocus placeholder={selectedType ? `e.g. ${selectedType.name} assignment` : "Assignment name"}/></label>
       <label>Date<input name="assignmentDate" type="date" required defaultValue={today}/></label>
       <label>Points possible<input name="pointsPossible" type="number" min="0.01" step="0.01" required value={pointsPossible} onChange={(event) => setPointsPossible(Number(event.target.value))}/></label>
-      <label>Grading period<select name="gradingPeriodId" required defaultValue={quarterPeriods[0]?.id ?? ""}><option value="" disabled>Choose quarter</option>{quarterPeriods.map((period) => <option value={period.id} key={period.id}>{period.code} — {period.name}</option>)}</select></label>
+      <label>Grading period<select name="gradingPeriodId" required defaultValue={periods[0]?.id ?? ""}><option value="" disabled>Choose period</option>{periods.map((period) => <option value={period.id} key={period.id}>{period.code} — {period.name}</option>)}</select></label>
       <label>Grading category<select name="categoryId" required value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>{categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select></label>
       <label style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 44, color: "var(--text)" }}>
         <input style={{ width: "auto", minHeight: "auto", flex: "none" }} type="checkbox" name="allowRetakes" value="true" checked={allowRetakes} onChange={(event) => setAllowRetakes(event.target.checked)}/>
