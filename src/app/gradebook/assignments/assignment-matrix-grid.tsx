@@ -26,7 +26,10 @@ function shortDate(value: string) {
 }
 
 function categoryLabel(category: AssignmentMatrixAssignment["category"]) {
-  return category === "participation" ? "Participation" : category === "quiz" ? "Quiz" : "Test";
+  if (category === "participation") return "Participation";
+  if (category === "quiz") return "Quiz";
+  if (category === "test") return "Test";
+  return category;
 }
 
 function keyFor(studentId: string, assignmentId: string) {
@@ -42,6 +45,7 @@ function recomputeStudent(student: AssignmentMatrixStudent, assignments: Assignm
       assignmentDate: assignment.assignmentDate,
       gradingPeriodCode: periodCode,
       category: assignment.category,
+      pointsPossible: assignment.pointsPossible,
       missing: cell?.missing ?? false,
       exempt: cell?.exempt ?? false,
       attempts: (cell?.attempts ?? []).map((attempt) => ({
