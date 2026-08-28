@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Archive, ArrowLeft, Edit3, Plus, RotateCcw, Search } from "lucide-react";
+import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getAssignmentManagementData } from "@/lib/data/assignment-management";
-import { getTeacherSections } from "@/lib/data/teacher-context";
+import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import { archiveAssignment, restoreAssignment } from "./management-actions";
 import styles from "./assignments.module.css";
@@ -31,8 +32,7 @@ export default async function AssignmentsPage({ searchParams }: AssignmentPagePr
   const { data: claims } = await supabase.auth.getClaims();
   if (typeof claims?.claims?.sub !== "string") redirect("/login");
 
-  const sections = await getTeacherSections();
-  const section = sections[0];
+  const [sections, section] = await Promise.all([getTeacherSections(), getActiveTeacherSection()]);
   if (!section) redirect("/");
 
   const params = await searchParams;
@@ -75,6 +75,7 @@ export default async function AssignmentsPage({ searchParams }: AssignmentPagePr
         <p className="subtle">{section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName} • {section.sectionName}</p>
       </div>
       <div className="grade-audit-header-actions">
+        <TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/>
         <Link className="secondary-link" href="/"><ArrowLeft size={17}/> Dashboard</Link>
         <Link className="secondary-link" href="/gradebook/assignments">Assignment Gradebook</Link>
         <Link className="primary-button" href="/assignments/new"><Plus size={17}/> New Assignment</Link>
