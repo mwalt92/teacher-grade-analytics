@@ -82,6 +82,7 @@ export type GradeResult = {
 export type SemesterComponent = {
   code: string;
   label: string;
+  role?: string;
   weight: number;
   percent: number | null;
 };
