@@ -28,7 +28,7 @@ export default async function EditAssignmentPage({ params, searchParams }: EditA
   const supabase = await createClient();
   const { data: assignment } = await supabase
     .from("assignments")
-    .select("id,section_id,title,assignment_type,assignment_date,points_possible,allow_retakes,grading_period_id,archived,archived_at")
+    .select("id,section_id,title,assignment_type,assignment_type_id,category_id,assignment_date,points_possible,allow_retakes,grading_period_id,archived,archived_at")
     .eq("id", assignmentId)
     .maybeSingle();
   if (!assignment) notFound();
@@ -42,6 +42,7 @@ export default async function EditAssignmentPage({ params, searchParams }: EditA
 
   const gradeHref = `/assignments/${assignmentId}?returnTo=${encodeURIComponent(returnTo)}`;
   const clearedCount = query.cleared == null ? null : Number(query.cleared);
+  const currentType = management.assignmentTypes.find((type) => type.id === assignment.assignment_type_id);
 
   return <main className="app-shell">
     <header className="topbar">
@@ -65,7 +66,7 @@ export default async function EditAssignmentPage({ params, searchParams }: EditA
       <div className={styles.editLayout}>
         <article className="panel">
           <div className="panel-header"><div><p className="eyebrow">Assignment setup</p><h2>Metadata and grading behavior</h2></div></div>
-          {activity.gradeRecordCount > 0 ? <div className={styles.impactNote}>This assignment already has student grade data. Changing its points possible, grading period, or type can immediately change teacher and student grade calculations. Existing score and retake history will be preserved.</div> : null}
+          {activity.gradeRecordCount > 0 ? <div className={styles.impactNote}>This assignment already has student grade data. Changing its points possible, grading period, category, or type can immediately change teacher and student grade calculations. Existing score and retake history will be preserved.</div> : null}
           <form action={updateAssignmentMetadata} className={styles.editForm}>
             <input type="hidden" name="assignmentId" value={assignmentId}/>
             <input type="hidden" name="returnTo" value={returnTo}/>
@@ -74,10 +75,11 @@ export default async function EditAssignmentPage({ params, searchParams }: EditA
               <label>Assignment date<input type="date" name="assignmentDate" required defaultValue={assignment.assignment_date}/></label>
               <label>Points possible<input type="number" min="0.01" step="0.01" name="pointsPossible" required defaultValue={Number(assignment.points_possible)}/></label>
               <label>Grading period<select name="gradingPeriodId" required defaultValue={assignment.grading_period_id ?? ""}><option value="" disabled>Select period</option>{management.periods.map((period) => <option value={period.id} key={period.id}>{period.code} — {period.name}</option>)}</select></label>
-              <label>Assignment type<select name="kind" required defaultValue={assignment.assignment_type}><option value="participation">Participation</option><option value="quiz">Quiz</option><option value="test">Test</option></select></label>
-              <label className={styles.retakeField}><input type="checkbox" name="allowRetakes" value="true" defaultChecked={assignment.allow_retakes}/> Allow future retakes for assessments</label>
+              <label>Assignment type<select name="assignmentTypeId" required defaultValue={assignment.assignment_type_id ?? ""}>{management.assignmentTypes.map((type) => <option value={type.id} key={type.id}>{type.name}{type.active ? "" : " (Inactive)"}</option>)}</select></label>
+              <label>Grading category<select name="categoryId" required defaultValue={assignment.category_id}>{management.categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select></label>
+              <label className={styles.retakeField}><input type="checkbox" name="allowRetakes" value="true" defaultChecked={assignment.allow_retakes}/> Allow future retakes</label>
             </div>
-            <div className={styles.saveRow}><span className="subtle">Participation always saves as single-attempt. Existing assessment retake history is never deleted.</span><button className="primary-button" type="submit">Save Assignment Changes</button></div>
+            <div className={styles.saveRow}><span className="subtle">Type, category, and future-retake eligibility are independent. Changing any of them never deletes existing attempt history.{currentType ? ` Current type: ${currentType.name}.` : ""}</span><button className="primary-button" type="submit">Save Assignment Changes</button></div>
           </form>
         </article>
 
