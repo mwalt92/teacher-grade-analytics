@@ -32,7 +32,7 @@ export function TeacherSectionSwitcher({
       <span>Course / section</span>
       <select
         name="sectionId"
-        value={activeSectionId}
+        defaultValue={activeSectionId}
         onChange={(event) => event.currentTarget.form?.requestSubmit()}
         aria-label="Select teacher course and section"
         style={{ minWidth: 245, background: "var(--surface)", color: "var(--text)" }}
