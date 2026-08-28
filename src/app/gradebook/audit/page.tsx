@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getSectionRoster } from "@/lib/data/roster";
 import { getSectionGradingPeriods, getStudentPeriodCalculation, type StudentPeriodCalculation } from "@/lib/data/grade-calculation";
-import { getTeacherSections } from "@/lib/data/teacher-context";
+import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import type { CategoryCalculationMethod, GradingRules } from "@/lib/grading/types";
 
@@ -15,14 +16,15 @@ type GradeAuditPageProps={searchParams:Promise<{studentId?:string;period?:string
 export default async function GradeAuditPage({searchParams}:GradeAuditPageProps){
  const supabase=await createClient(); const {data:claimsData,error:claimsError}=await supabase.auth.getClaims(); const userId=claimsData?.claims?.sub;
  if(claimsError||typeof userId!=="string")redirect("/login");
- const sections=await getTeacherSections(); const section=sections[0]; if(!section)return <main className="content-wrap"><article className="panel"><h1>No teacher section is available.</h1></article></main>;
+ const [sections,section]=await Promise.all([getTeacherSections(),getActiveTeacherSection()]); if(!section)return <main className="content-wrap"><article className="panel"><h1>No teacher section is available.</h1></article></main>;
  const [roster,periods,params]=await Promise.all([getSectionRoster(section.sectionId,"all"),getSectionGradingPeriods(section.sectionId),searchParams]);
  const selectedStudent=roster.find(student=>student.studentId===params.studentId)??roster[0];
  const selectedPeriod=periods.find(period=>period.code===params.period)??periods[0];
  const fromPeriodCode=params.fromPeriod??params.fromSemester;
  const fromPeriod=periods.find(period=>period.code===fromPeriodCode)??null;
  const calculation=selectedStudent&&selectedPeriod?await getStudentPeriodCalculation(section.sectionId,selectedStudent.studentId,selectedPeriod.code):null;
- return <main className="app-shell grade-audit-shell"><header className="topbar"><div><p className="eyebrow">Teacher Gradebook</p><h1>Grade calculation audit</h1><p className="subtle">{section.courseName} • {section.sectionName} • deterministic engine output</p></div><div className="grade-audit-header-actions"><Link className="secondary-link" href="/"><ArrowLeft size={17}/> Back to Dashboard</Link>{selectedStudent&&calculation&&fromPeriod?<Link className="secondary-link" href={`?studentId=${selectedStudent.studentId}&period=${fromPeriod.code}`}>Back to {fromPeriod.code} audit</Link>:null}<Link className="secondary-link" href="/gradebook">Back to Gradebook</Link></div></header>
+ const returnTo=selectedStudent&&selectedPeriod?`/gradebook/audit?studentId=${encodeURIComponent(selectedStudent.studentId)}&period=${encodeURIComponent(selectedPeriod.code)}`:"/gradebook/audit";
+ return <main className="app-shell grade-audit-shell"><header className="topbar"><div><p className="eyebrow">Teacher Gradebook</p><h1>Grade calculation audit</h1><p className="subtle">{section.courseCode?`${section.courseName} ${section.courseCode}`:section.courseName} • {section.sectionName} • deterministic engine output</p></div><div className="grade-audit-header-actions"><TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/><Link className="secondary-link" href="/"><ArrowLeft size={17}/> Back to Dashboard</Link>{selectedStudent&&calculation&&fromPeriod?<Link className="secondary-link" href={`?studentId=${selectedStudent.studentId}&period=${fromPeriod.code}`}>Back to {fromPeriod.code} audit</Link>:null}<Link className="secondary-link" href="/gradebook">Back to Gradebook</Link></div></header>
  <section className="content-wrap grade-audit-content"><article className="panel grade-audit-controls"><div className="panel-header"><div><p className="eyebrow">Audit controls</p><h3>Choose a student and grading period</h3></div></div><form method="get" className="grade-audit-form"><label><span>Student</span><select name="studentId" defaultValue={selectedStudent?.studentId} aria-label="Select student">{roster.map(student=><option key={student.studentId} value={student.studentId}>{student.displayName}{student.active?"":" (Inactive)"}</option>)}</select></label><label><span>Grading period</span><select name="period" defaultValue={selectedPeriod?.code} aria-label="Select grading period">{periods.map(period=><option key={period.id} value={period.code}>{period.code} — {period.name}</option>)}</select></label><button className="primary-button grade-audit-submit" type="submit">View Calculation</button></form></article>
  {selectedStudent&&calculation?calculation.mode==="composite"?<CompositeAudit studentName={selectedStudent.displayName} calculation={calculation}/>:<DirectAudit studentName={selectedStudent.displayName} calculation={calculation} fromPeriod={fromPeriod}/>:<article className="panel full-width"><p className="subtle">No calculation data is available for this selection.</p></article>}
  </section></main>;
