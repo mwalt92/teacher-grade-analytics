@@ -30,19 +30,20 @@ export function simulateGrade(
     if (change.possible <= 0) throw new Error("Points possible must be greater than zero.");
 
     const rawPercent = (change.earned / change.possible) * 100;
-    const adjustedPercent = change.late
-      ? applyLateDeduction(rawPercent, lateWorkRules[record.category].deductionRate)
-      : rawPercent;
+    const deductionRate = lateWorkRules[record.category]?.deductionRate ?? 0;
+    const adjustedPercent = change.late ? applyLateDeduction(rawPercent, deductionRate) : rawPercent;
+    const adjustedEarned = (adjustedPercent / 100) * change.possible;
 
     return {
       ...structuredClone(record),
+      pointsPossible: change.possible,
       missing: false,
       attempts: [
         ...record.attempts,
         {
           id: `simulation-${record.assignmentId}`,
-          earned: adjustedPercent,
-          possible: 100,
+          earned: adjustedEarned,
+          possible: change.possible,
           attemptNumber: Math.max(0, ...record.attempts.map((attempt) => attempt.attemptNumber)) + 1,
           occurredAt: "simulation",
         },

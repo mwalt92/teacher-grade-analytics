@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getSectionGradebook, getSectionGradingPeriods } from "@/lib/data/grade-calculation";
-import { getLatestPowerSchoolSnapshots, POWERSCHOOL_TOLERANCE } from "@/lib/data/powerschool";
+import { getSectionGradebook, getSectionGradingPeriods, type SectionGradebookCalculation } from "@/lib/data/grade-calculation";
+import { getLatestPowerSchoolSnapshots, POWERSCHOOL_TOLERANCE, type PowerSchoolSnapshot } from "@/lib/data/powerschool";
 import { getSectionRoster } from "@/lib/data/roster";
 import { getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
@@ -16,6 +16,20 @@ function formatDifference(value: number | null) {
   if (value === null) return "—";
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(2)} pts`;
+}
+
+function diagnosticStats(calculation: SectionGradebookCalculation | null, snapshots: PowerSchoolSnapshot[]) {
+  const rowByStudent = new Map(calculation?.rows.map((row) => [row.studentId, row]) ?? []);
+  const differences = snapshots.flatMap((snapshot) => {
+    const website = rowByStudent.get(snapshot.studentId)?.overallPercent ?? null;
+    return website === null ? [] : [website - snapshot.powerSchoolPercent];
+  });
+  if (!differences.length) return { count: 0, meanAbsoluteError: null as number | null, mismatchCount: 0 };
+  return {
+    count: differences.length,
+    meanAbsoluteError: differences.reduce((sum, difference) => sum + Math.abs(difference), 0) / differences.length,
+    mismatchCount: differences.filter((difference) => Math.abs(difference) >= POWERSCHOOL_TOLERANCE).length,
+  };
 }
 
 type PageProps = { searchParams: Promise<{ period?: string; saved?: string; imported?: string; unmatched?: string; skipped?: string; terms?: string }> };
@@ -37,12 +51,16 @@ export default async function PowerSchoolComparisonPage({ searchParams }: PagePr
   ]);
   const selectablePeriods = periods.filter((period) => /^(Q[1-4]|S[12])$/.test(period.code));
   const selectedPeriod = selectablePeriods.find((period) => period.code === params.period) ?? selectablePeriods[0];
-  const calculation = selectedPeriod
-    ? await getSectionGradebook(section.sectionId, roster.map((student) => student.studentId), selectedPeriod.code)
-    : null;
-  const snapshots = selectedPeriod
-    ? await getLatestPowerSchoolSnapshots(section.sectionId, selectedPeriod.id, roster.map((student) => student.studentId))
-    : [];
+  const studentIds = roster.map((student) => student.studentId);
+
+  const [calculation, equalCalculation, totalPointsCalculation, snapshots] = selectedPeriod
+    ? await Promise.all([
+        getSectionGradebook(section.sectionId, studentIds, selectedPeriod.code),
+        getSectionGradebook(section.sectionId, studentIds, selectedPeriod.code, { calculationMethodOverride: "equal_assignment_percentage" }),
+        getSectionGradebook(section.sectionId, studentIds, selectedPeriod.code, { calculationMethodOverride: "total_points" }),
+        getLatestPowerSchoolSnapshots(section.sectionId, selectedPeriod.id, studentIds),
+      ])
+    : [null, null, null, [] as PowerSchoolSnapshot[]];
 
   const rowByStudent = new Map(calculation?.rows.map((row) => [row.studentId, row]) ?? []);
   const snapshotByStudent = new Map(snapshots.map((snapshot) => [snapshot.studentId, snapshot]));
@@ -53,6 +71,10 @@ export default async function PowerSchoolComparisonPage({ searchParams }: PagePr
     return [{ difference: website - snapshot.powerSchoolPercent }];
   });
   const mismatchCount = comparisons.filter(({ difference }) => Math.abs(difference) >= POWERSCHOOL_TOLERANCE).length;
+  const configuredStats = diagnosticStats(calculation, snapshots);
+  const equalStats = diagnosticStats(equalCalculation, snapshots);
+  const totalPointsStats = diagnosticStats(totalPointsCalculation, snapshots);
+
   const savedCount = Number(params.saved ?? 0);
   const importedCount = Number(params.imported ?? 0);
   const unmatchedCount = Number(params.unmatched ?? 0);
@@ -91,6 +113,16 @@ export default async function PowerSchoolComparisonPage({ searchParams }: PagePr
         <article className="metric-card"><span className="metric-label">Needs review</span><strong>{mismatchCount}</strong></article>
         <article className="metric-card"><span className="metric-label">Not yet captured</span><strong>{roster.length - snapshots.length}</strong></article>
       </section>
+
+      <article className={`panel full-width ${styles.diagnosticPanel}`}>
+        <div className="panel-header"><div><p className="eyebrow">Calculation-method diagnostic</p><h3>Which category arithmetic is closest to PowerSchool?</h3><p className="subtle">The same current grades are recalculated three ways. This does not change any official website grade or category setting.</p></div></div>
+        <div className={styles.diagnosticGrid}>
+          <div className={styles.diagnosticCard}><span>Configured method</span><strong>{configuredStats.meanAbsoluteError === null ? "—" : `${configuredStats.meanAbsoluteError.toFixed(2)} pts MAE`}</strong><small>{configuredStats.count} compared • {configuredStats.mismatchCount} outside tolerance</small></div>
+          <div className={styles.diagnosticCard}><span>Force equal assignment %</span><strong>{equalStats.meanAbsoluteError === null ? "—" : `${equalStats.meanAbsoluteError.toFixed(2)} pts MAE`}</strong><small>{equalStats.count} compared • {equalStats.mismatchCount} outside tolerance</small></div>
+          <div className={styles.diagnosticCard}><span>Force total points</span><strong>{totalPointsStats.meanAbsoluteError === null ? "—" : `${totalPointsStats.meanAbsoluteError.toFixed(2)} pts MAE`}</strong><small>{totalPointsStats.count} compared • {totalPointsStats.mismatchCount} outside tolerance</small></div>
+        </div>
+        <p className={styles.diagnosticNote}><strong>Important:</strong> use these numbers only when the PowerSchool snapshot and website contain the same assignments and scores. Older snapshots can look worse simply because the development gradebook changed after capture. Once we create differently sized test assignments in both systems, this panel can distinguish equal weighting from total-points behavior directly.</p>
+      </article>
 
       <form action={savePowerSchoolSnapshot}>
         <input type="hidden" name="sectionId" value={section.sectionId}/><input type="hidden" name="period" value={selectedPeriod?.code ?? "Q1"}/>

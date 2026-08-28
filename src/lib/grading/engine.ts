@@ -1,4 +1,5 @@
 import type {
+  CategoryCalculationMethod,
   GradeAttempt,
   GradeRecord,
   GradeResult,
@@ -44,11 +45,37 @@ export function selectCountedAttempt(
   return [...record.attempts].sort(compareAttemptsForHighest)[0];
 }
 
+type CategoryEntry = {
+  record: GradeRecord;
+  countedAttempt: GradeAttempt | null;
+  percent: number;
+  earned: number;
+  possible: number;
+};
+
+function calculateCategoryPercent(entries: CategoryEntry[], method: CategoryCalculationMethod) {
+  if (method === "total_points") {
+    const earned = entries.reduce((sum, entry) => sum + entry.earned, 0);
+    const possible = entries.reduce((sum, entry) => sum + entry.possible, 0);
+    if (possible <= 0) throw new Error("Counted category points possible must be greater than zero.");
+    return { percent: (earned / possible) * 100, earned, possible };
+  }
+
+  const earned = entries.reduce((sum, entry) => sum + entry.earned, 0);
+  const possible = entries.reduce((sum, entry) => sum + entry.possible, 0);
+  const average = entries.reduce((sum, entry) => sum + entry.percent, 0) / entries.length;
+  return { percent: average, earned, possible };
+}
+
 export function calculateGrade(records: GradeRecord[], rules: GradingRules): GradeResult {
-  const byCategory = new Map<GradingCategory, { record: GradeRecord; countedAttempt: GradeAttempt | null; percent: number }[]>();
+  const byCategory = new Map<GradingCategory, CategoryEntry[]>();
   const audit: GradeResult["audit"] = [];
 
   for (const record of records) {
+    if (!Number.isFinite(record.pointsPossible) || record.pointsPossible <= 0) {
+      throw new Error(`Assignment ${record.assignmentId} must have points possible greater than zero.`);
+    }
+
     if (record.exempt) {
       audit.push({
         assignmentId: record.assignmentId,
@@ -57,6 +84,9 @@ export function calculateGrade(records: GradeRecord[], rules: GradingRules): Gra
         gradingPeriodCode: record.gradingPeriodCode,
         category: record.category,
         status: "exempt",
+        pointsPossible: record.pointsPossible,
+        countedEarned: null,
+        countedPossible: null,
         percent: null,
         countedAttemptId: null,
         countedAttemptNumber: null,
@@ -79,6 +109,9 @@ export function calculateGrade(records: GradeRecord[], rules: GradingRules): Gra
         gradingPeriodCode: record.gradingPeriodCode,
         category: record.category,
         status: "unentered",
+        pointsPossible: record.pointsPossible,
+        countedEarned: null,
+        countedPossible: null,
         percent: null,
         countedAttemptId: null,
         countedAttemptNumber: null,
@@ -90,8 +123,12 @@ export function calculateGrade(records: GradeRecord[], rules: GradingRules): Gra
       continue;
     }
 
+    const earned = countedAttempt?.earned ?? 0;
+    const possible = countedAttempt?.possible ?? record.pointsPossible;
+    if (possible <= 0) throw new Error(`Assignment ${record.assignmentId} must have points possible greater than zero.`);
+
     const list = byCategory.get(record.category) ?? [];
-    list.push({ record, countedAttempt, percent: countedPercent });
+    list.push({ record, countedAttempt, percent: countedPercent, earned, possible });
     byCategory.set(record.category, list);
   }
 
@@ -111,20 +148,28 @@ export function calculateGrade(records: GradeRecord[], rules: GradingRules): Gra
     });
     const droppedIds = new Set(ordered.slice(0, dropCount).map((entry) => entry.record.assignmentId));
     const countedEntries = entries.filter((entry) => !droppedIds.has(entry.record.assignmentId));
-    const average = countedEntries.reduce((sum, entry) => sum + entry.percent, 0) / countedEntries.length;
+    const calculationMethod = rules.calculationMethods[category] ?? "equal_assignment_percentage";
+    const categoryCalculation = calculateCategoryPercent(countedEntries, calculationMethod);
     const configuredWeight = rules.categoryWeights[category];
+    if (!Number.isFinite(configuredWeight)) {
+      throw new Error(`No category weight is configured for ${category}.`);
+    }
 
-    categoryPercents[category] = average;
-    weightedTotal += average * configuredWeight;
+    categoryPercents[category] = categoryCalculation.percent;
+    weightedTotal += categoryCalculation.percent * configuredWeight;
     activeWeight += configuredWeight;
     categories[category] = {
       category,
+      label: rules.categoryLabels?.[category] ?? category,
+      calculationMethod,
       configuredWeight,
       activeWeight: configuredWeight,
-      averagePercent: average,
-      weightedContribution: average * configuredWeight,
+      averagePercent: categoryCalculation.percent,
+      weightedContribution: categoryCalculation.percent * configuredWeight,
       assignmentCount: countedEntries.length,
       droppedCount: dropCount,
+      pointsEarned: categoryCalculation.earned,
+      pointsPossible: categoryCalculation.possible,
     };
 
     for (const entry of entries) {
@@ -137,6 +182,9 @@ export function calculateGrade(records: GradeRecord[], rules: GradingRules): Gra
         gradingPeriodCode: entry.record.gradingPeriodCode,
         category,
         status: dropped ? "dropped" : entry.record.missing ? "missing" : "counted",
+        pointsPossible: entry.record.pointsPossible,
+        countedEarned: entry.earned,
+        countedPossible: entry.possible,
         percent: entry.percent,
         countedAttemptId: selectedId,
         countedAttemptNumber: entry.countedAttempt?.attemptNumber ?? null,

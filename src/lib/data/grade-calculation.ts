@@ -1,5 +1,6 @@
 import { calculateGrade, calculateSemesterGrade } from "@/lib/grading/engine";
-import type { GradeRecord, GradeResult, GradingCategory, GradingRules, SemesterGradeResult } from "@/lib/grading/types";
+import { buildRulesFromCategories, normalizeCategoryCode } from "@/lib/grading/config";
+import type { CategoryCalculationMethod, GradeRecord, GradeResult, GradingCategory, GradingRules, SemesterGradeResult } from "@/lib/grading/types";
 import { createClient } from "@/lib/supabase/server";
 
 export type GradingPeriodSummary = { id: string; code: string; name: string };
@@ -16,7 +17,7 @@ export type StudentSemesterCalculation = {
 export type SectionGradebookRow = {
   studentId: string;
   overallPercent: number | null;
-  categoryPercents: Partial<Record<GradingCategory, number>>;
+  categoryPercents: Record<GradingCategory, number>;
   componentPercents: Record<string, number | null>;
   missingCount: number;
   unenteredCount: number;
@@ -30,24 +31,25 @@ export type SectionGradebookCalculation = {
   rows: SectionGradebookRow[];
 };
 
+type CalculationOptions = { calculationMethodOverride?: CategoryCalculationMethod };
+
+type CategoryRow = {
+  id: string;
+  name: string;
+  code: string;
+  weight: number | string;
+  drop_lowest: number | string;
+  calculation_method: string;
+  sort_order: number | string;
+};
+
 export function gradingCategoryFromName(name: string): GradingCategory {
   const normalized = name.trim().toLowerCase();
-  if (normalized === "participation") return "participation";
-  if (normalized === "quiz" || normalized === "quizzes") return "quiz";
-  if (normalized === "test" || normalized === "tests") return "test";
-  throw new Error(`Unsupported grading category: ${name}`);
-}
-
-function buildRules(categories: { id: string; name: string; weight: number | string; drop_lowest: number | string }[]) {
-  const categoryById = new Map<string,{category:GradingCategory;weight:number;dropLowest:number}>();
-  const rules: GradingRules = { categoryWeights:{participation:0,quiz:0,test:0}, dropLowest:{}, retakePolicy:"highest" };
-  for (const row of categories) {
-    const category=gradingCategoryFromName(row.name), weight=Number(row.weight), dropLowest=Number(row.drop_lowest);
-    categoryById.set(row.id,{category,weight,dropLowest});
-    rules.categoryWeights[category]=weight;
-    if(dropLowest>0) rules.dropLowest[category]=dropLowest;
-  }
-  return { categoryById, rules };
+  if (normalized === "quizzes") return "quiz";
+  if (normalized === "tests") return "test";
+  if (normalized === "assessments") return "assessment";
+  if (normalized === "projects") return "project";
+  return normalizeCategoryCode(name);
 }
 
 export async function getSectionGradingPeriods(sectionId: string): Promise<GradingPeriodSummary[]> {
@@ -58,15 +60,32 @@ export async function getSectionGradingPeriods(sectionId: string): Promise<Gradi
   return data.sort((a,b)=>(order.get(a.code)??99)-(order.get(b.code)??99));
 }
 
-export async function getStudentGradeCalculation(sectionId: string, studentId: string, gradingPeriodCode: string): Promise<StudentGradeCalculation | null> {
+async function loadCategoryRules(sectionId: string, options?: CalculationOptions) {
   const supabase = await createClient();
-  const [{ data: period, error: periodError }, { data: categories, error: categoriesError }] = await Promise.all([
-    supabase.from("grading_periods").select("id,code,name").eq("section_id",sectionId).eq("code",gradingPeriodCode).maybeSingle(),
-    supabase.from("grading_categories").select("id,name,weight,drop_lowest").eq("section_id",sectionId),
-  ]);
-  if (periodError || categoriesError || !period || !categories?.length) return null;
+  const { data, error } = await supabase
+    .from("grading_categories")
+    .select("id,name,code,weight,drop_lowest,calculation_method,sort_order")
+    .eq("section_id", sectionId)
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+  if (error || !data?.length) return null;
+  return buildRulesFromCategories(data as CategoryRow[], options?.calculationMethodOverride);
+}
 
-  const { categoryById, rules } = buildRules(categories);
+export async function getStudentGradeCalculation(
+  sectionId: string,
+  studentId: string,
+  gradingPeriodCode: string,
+  options?: CalculationOptions,
+): Promise<StudentGradeCalculation | null> {
+  const supabase = await createClient();
+  const [{ data: period, error: periodError }, categoryRules] = await Promise.all([
+    supabase.from("grading_periods").select("id,code,name").eq("section_id",sectionId).eq("code",gradingPeriodCode).maybeSingle(),
+    loadCategoryRules(sectionId, options),
+  ]);
+  if (periodError || !period || !categoryRules) return null;
+
+  const { categoryById, rules } = categoryRules;
   const { data: assignments, error: assignmentsError } = await supabase.from("assignments")
     .select("id,category_id,title,assignment_date,points_possible").eq("section_id",sectionId).eq("grading_period_id",period.id).eq("archived",false)
     .order("assignment_date",{ascending:true}).order("created_at",{ascending:true});
@@ -87,17 +106,22 @@ export async function getStudentGradeCalculation(sectionId: string, studentId: s
   const records:GradeRecord[]=assignments.map(assignment=>{
     const config=categoryById.get(assignment.category_id); if(!config) throw new Error(`Assignment ${assignment.id} references an unknown grading category.`);
     const row=gradeRowByAssignmentId.get(assignment.id), attempts=row?attemptsByGradeRecordId.get(row.id)??[]:[], possible=Number(assignment.points_possible);
-    return {assignmentId:assignment.id,assignmentTitle:assignment.title,assignmentDate:assignment.assignment_date,gradingPeriodCode:period.code,category:config.category,missing:row?.missing??false,exempt:row?.exempt??false,attempts:attempts.map(a=>({id:a.id,earned:Number(a.points_earned),possible,attemptNumber:a.attempt_number,occurredAt:a.occurred_on}))};
+    return {assignmentId:assignment.id,assignmentTitle:assignment.title,assignmentDate:assignment.assignment_date,gradingPeriodCode:period.code,category:config.category,pointsPossible:possible,missing:row?.missing??false,exempt:row?.exempt??false,attempts:attempts.map(a=>({id:a.id,earned:Number(a.points_earned),possible,attemptNumber:a.attempt_number,occurredAt:a.occurred_on}))};
   });
   return {studentId,sectionId,gradingPeriod:period,rules,result:calculateGrade(records,rules)};
 }
 
-export async function getStudentSemesterCalculation(sectionId:string,studentId:string,semesterCode:"S1"|"S2"):Promise<StudentSemesterCalculation>{
+export async function getStudentSemesterCalculation(
+  sectionId:string,
+  studentId:string,
+  semesterCode:"S1"|"S2",
+  options?: CalculationOptions,
+):Promise<StudentSemesterCalculation>{
   const quarterCodes=semesterCode==="S1"?["Q1","Q2"]:["Q3","Q4"];
   const [firstQuarter,secondQuarter,examCalculation]=await Promise.all([
-    getStudentGradeCalculation(sectionId,studentId,quarterCodes[0]),
-    getStudentGradeCalculation(sectionId,studentId,quarterCodes[1]),
-    getStudentGradeCalculation(sectionId,studentId,semesterCode),
+    getStudentGradeCalculation(sectionId,studentId,quarterCodes[0],options),
+    getStudentGradeCalculation(sectionId,studentId,quarterCodes[1],options),
+    getStudentGradeCalculation(sectionId,studentId,semesterCode,options),
   ]);
   const quarterCalculations=[firstQuarter,secondQuarter].filter((value):value is StudentGradeCalculation=>value!==null);
   const result=calculateSemesterGrade([
@@ -108,15 +132,20 @@ export async function getStudentSemesterCalculation(sectionId:string,studentId:s
   return {studentId,sectionId,semesterCode,semesterName:semesterCode==="S1"?"Semester 1":"Semester 2",quarterCalculations,examCalculation,result};
 }
 
-export async function getSectionGradebook(sectionId:string,studentIds:string[],gradingPeriodCode:string):Promise<SectionGradebookCalculation|null>{
+export async function getSectionGradebook(
+  sectionId:string,
+  studentIds:string[],
+  gradingPeriodCode:string,
+  options?: CalculationOptions,
+):Promise<SectionGradebookCalculation|null>{
   const supabase=await createClient();
-  const [{data:periods,error:periodsError},{data:categories,error:categoriesError}]=await Promise.all([
+  const [{data:periods,error:periodsError}, categoryRules]=await Promise.all([
     supabase.from("grading_periods").select("id,code,name").eq("section_id",sectionId),
-    supabase.from("grading_categories").select("id,name,weight,drop_lowest").eq("section_id",sectionId),
+    loadCategoryRules(sectionId, options),
   ]);
-  if(periodsError||categoriesError||!periods||!categories?.length)return null;
+  if(periodsError||!periods||!categoryRules)return null;
   const selectedPeriod=periods.find(period=>period.code===gradingPeriodCode); if(!selectedPeriod)return null;
-  const {categoryById,rules}=buildRules(categories);
+  const {categoryById,rules}=categoryRules;
   const isSemester=gradingPeriodCode==="S1"||gradingPeriodCode==="S2";
   const quarterCodes=gradingPeriodCode==="S1"?["Q1","Q2"]:gradingPeriodCode==="S2"?["Q3","Q4"]:[];
   const requiredCodes=isSemester?[...quarterCodes,gradingPeriodCode]:[gradingPeriodCode];
@@ -155,7 +184,7 @@ export async function getSectionGradebook(sectionId:string,studentIds:string[],g
     const records:GradeRecord[]=periodAssignments.map(assignment=>{
       const config=categoryById.get(assignment.category_id); if(!config)throw new Error(`Assignment ${assignment.id} references an unknown grading category.`);
       const row=gradeRowByStudentAssignment.get(`${studentId}:${assignment.id}`), rowAttempts=row?attemptsByGradeRecordId.get(row.id)??[]:[], possible=Number(assignment.points_possible);
-      return {assignmentId:assignment.id,assignmentTitle:assignment.title,assignmentDate:assignment.assignment_date,gradingPeriodCode:code,category:config.category,missing:row?.missing??false,exempt:row?.exempt??false,attempts:rowAttempts.map(attempt=>({id:attempt.id,earned:Number(attempt.points_earned),possible,attemptNumber:attempt.attempt_number,occurredAt:attempt.occurred_on}))};
+      return {assignmentId:assignment.id,assignmentTitle:assignment.title,assignmentDate:assignment.assignment_date,gradingPeriodCode:code,category:config.category,pointsPossible:possible,missing:row?.missing??false,exempt:row?.exempt??false,attempts:rowAttempts.map(attempt=>({id:attempt.id,earned:Number(attempt.points_earned),possible,attemptNumber:attempt.attempt_number,occurredAt:attempt.occurred_on}))};
     });
     return {result:calculateGrade(records,rules),assignmentCount:periodAssignments.length};
   }

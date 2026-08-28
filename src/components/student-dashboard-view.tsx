@@ -18,12 +18,6 @@ type StudentDashboardViewProps = {
   previewActionPath?: string;
 };
 
-const categoryLabels = {
-  participation: "Participation",
-  quiz: "Quizzes",
-  test: "Tests",
-} as const;
-
 function formatPercent(value: number | null, digits = 1) {
   return value === null ? "—" : `${value.toFixed(digits)}%`;
 }
@@ -60,6 +54,7 @@ export function StudentDashboardView({
 }: StudentDashboardViewProps) {
   const recentAssignments = data.assignments.slice(0, 10);
   const previewCarryFields = hiddenFields.filter((field) => field.name !== "studentId" && field.name !== "period");
+  const categoryLabel = (category: string) => data.simulator.rules.categoryLabels?.[category] ?? category;
 
   return <main className={`app-shell ${styles.shell}`}>
     <header className="topbar">
@@ -110,7 +105,7 @@ export function StudentDashboardView({
           <div className={styles.panelBody}>
             <div className={styles.categoryList}>
               {data.categories.length ? data.categories.map((category) => <div className={styles.categoryRow} key={category.category}>
-                <span className={styles.categoryName}><strong>{categoryLabels[category.category]}</strong><small>{Math.round(category.configuredWeight * 100)}% course weight • {category.assignmentCount} counting</small></span>
+                <span className={styles.categoryName}><strong>{category.label}</strong><small>{Math.round(category.configuredWeight * 100)}% course weight • {category.assignmentCount} counting</small></span>
                 <span className={styles.barTrack} aria-hidden="true"><span className={styles.barFill} style={{ width: `${Math.max(0, Math.min(100, category.averagePercent))}%` }}/></span>
                 <span className={styles.categoryScore}>{formatPercent(category.averagePercent)}{category.droppedCount ? <small>{category.droppedCount} dropped</small> : null}</span>
               </div>) : <div className={styles.empty}>No category grades have been entered for this quarter yet.</div>}
@@ -138,7 +133,7 @@ export function StudentDashboardView({
         <div className={styles.assignmentList}>
           <div className={`${styles.assignmentRow} ${styles.assignmentHead}`}><span>Assignment</span><span>Score</span><span>Status</span><span>Attempts</span></div>
           {recentAssignments.length ? recentAssignments.map((assignment) => <div className={styles.assignmentRow} key={assignment.assignmentId}>
-            <span className={styles.assignmentInfo}><strong>{assignment.title}</strong><small>{assignment.date ?? "No date"} • {categoryLabels[assignment.category]}</small></span>
+            <span className={styles.assignmentInfo}><strong>{assignment.title}</strong><small>{assignment.date ?? "No date"} • {categoryLabel(assignment.category)}</small></span>
             <span className={styles.assignmentScore}>{assignment.missing ? "0.0%" : formatPercent(assignment.percent)}</span>
             <span>
               {assignment.missing ? <span className={`${styles.status} ${styles.statusMissing}`}>Missing</span> : <span className={`${styles.status} ${statusClass(assignment.status)}`}>{statusLabel(assignment.status)}</span>}
