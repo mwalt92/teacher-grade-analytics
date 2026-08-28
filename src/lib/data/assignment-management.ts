@@ -41,14 +41,14 @@ export async function getAssignmentManagementData(sectionId: string): Promise<As
       .eq("section_id", sectionId)
       .order("assignment_date", { ascending: false })
       .order("created_at", { ascending: false }),
-    supabase.from("grading_periods").select("id,code,name").eq("section_id", sectionId),
+    supabase.from("grading_periods").select("id,code,name,sort_order").eq("section_id", sectionId).eq("calculation_mode", "direct").order("sort_order").order("code"),
     supabase.from("grading_categories").select("id,name").eq("section_id", sectionId),
     supabase.from("assignment_types").select("id,code,name,active,sort_order").eq("section_id", sectionId).order("sort_order").order("name"),
   ]);
 
   if (assignmentsResult.error || periodsResult.error || categoriesResult.error || typesResult.error) return null;
   const assignments = assignmentsResult.data ?? [];
-  const periods = periodsResult.data ?? [];
+  const periods: AssignmentManagementPeriod[] = (periodsResult.data ?? []).map((period) => ({ id: period.id, code: period.code, name: period.name }));
   const categories = categoriesResult.data ?? [];
   const assignmentTypes: AssignmentManagementType[] = (typesResult.data ?? []).map((type) => ({
     id: type.id,
@@ -56,9 +56,6 @@ export async function getAssignmentManagementData(sectionId: string): Promise<As
     name: type.name,
     active: Boolean(type.active),
   }));
-
-  const order = new Map([["Q1", 1], ["Q2", 2], ["S1", 3], ["Q3", 4], ["Q4", 5], ["S2", 6]]);
-  periods.sort((a, b) => (order.get(a.code) ?? 99) - (order.get(b.code) ?? 99));
 
   const periodById = new Map(periods.map((period) => [period.id, period]));
   const categoryById = new Map(categories.map((category) => [category.id, category]));
