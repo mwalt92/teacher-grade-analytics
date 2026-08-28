@@ -6,6 +6,11 @@ import type { GradeRecord, GradingRules } from "./types";
 const rules: GradingRules = {
   categoryWeights: { participation: 0.1, quiz: 0.3, test: 0.6 },
   dropLowest: {},
+  calculationMethods: {
+    participation: "equal_assignment_percentage",
+    quiz: "equal_assignment_percentage",
+    test: "equal_assignment_percentage",
+  },
   retakePolicy: "highest",
 };
 
@@ -14,6 +19,7 @@ describe("simulateGrade", () => {
     const records: GradeRecord[] = [{
       assignmentId: "p1",
       category: "participation",
+      pointsPossible: 10,
       missing: true,
       attempts: [],
     }];
@@ -31,6 +37,7 @@ describe("simulateGrade", () => {
     const records: GradeRecord[] = [{
       assignmentId: "q1",
       category: "quiz",
+      pointsPossible: 20,
       missing: true,
       attempts: [],
     }];
