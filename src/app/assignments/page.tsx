@@ -11,12 +11,6 @@ type AssignmentPageProps = {
   searchParams: Promise<{ q?: string; period?: string; kind?: string; status?: string; notice?: string; error?: string }>;
 };
 
-function assignmentTypeLabel(kind: string) {
-  if (kind === "quiz") return "Quiz";
-  if (kind === "test") return "Test";
-  return "Participation";
-}
-
 function currentReturnPath(params: { q: string; period: string; kind: string; status: string }) {
   const query = new URLSearchParams();
   if (params.q) query.set("q", params.q);
@@ -39,12 +33,13 @@ export default async function AssignmentsPage({ searchParams }: AssignmentPagePr
   const params = await searchParams;
   const q = (params.q ?? "").trim();
   const period = params.period ?? "all";
-  const kind = ["participation", "quiz", "test"].includes(params.kind ?? "") ? params.kind! : "all";
   const status = params.status === "archived" || params.status === "all" ? params.status : "active";
   const data = await getAssignmentManagementData(section.sectionId);
   if (!data) {
     return <main className="content-wrap"><article className="panel"><h1>Assignments</h1><p className="subtle">The assignment workspace could not be loaded.</p></article></main>;
   }
+  const validTypeCodes = new Set(data.assignmentTypes.map((type) => type.code));
+  const kind = validTypeCodes.has(params.kind ?? "") ? params.kind! : "all";
 
   const activeCount = data.assignments.filter((assignment) => !assignment.archived).length;
   const archivedCount = data.assignments.length - activeCount;
@@ -53,7 +48,7 @@ export default async function AssignmentsPage({ searchParams }: AssignmentPagePr
     if (status === "active" && assignment.archived) return false;
     if (status === "archived" && !assignment.archived) return false;
     if (period !== "all" && assignment.gradingPeriod?.code !== period) return false;
-    if (kind !== "all" && assignment.assignmentType !== kind) return false;
+    if (kind !== "all" && assignment.assignmentType?.code !== kind) return false;
     if (normalizedSearch && !assignment.title.toLowerCase().includes(normalizedSearch)) return false;
     return true;
   });
@@ -96,7 +91,7 @@ export default async function AssignmentsPage({ searchParams }: AssignmentPagePr
         <form key={filterKey} method="get" action="/assignments" className={styles.filterForm}>
           <label className={styles.searchField}><span>Search title</span><div className={styles.searchInput}><Search size={16}/><input name="q" defaultValue={q} placeholder="e.g. Unit 2 Quiz"/></div></label>
           <label><span>Grading period</span><select name="period" defaultValue={period}><option value="all">All periods</option>{data.periods.map((item) => <option value={item.code} key={item.id}>{item.code} — {item.name}</option>)}</select></label>
-          <label><span>Type</span><select name="kind" defaultValue={kind}><option value="all">All types</option><option value="participation">Participation</option><option value="quiz">Quiz</option><option value="test">Test</option></select></label>
+          <label><span>Type</span><select name="kind" defaultValue={kind}><option value="all">All types</option>{data.assignmentTypes.map((type) => <option value={type.code} key={type.id}>{type.name}</option>)}</select></label>
           <label><span>Status</span><select name="status" defaultValue={status}><option value="active">Active</option><option value="archived">Archived</option><option value="all">Active + archived</option></select></label>
           <button className="primary-button" type="submit">Apply</button>
           <Link className="secondary-link" href="/assignments">Clear</Link>
@@ -104,16 +99,17 @@ export default async function AssignmentsPage({ searchParams }: AssignmentPagePr
       </article>
 
       <article className={`panel full-width ${styles.workspace}`}>
-        <div className="panel-header"><div><p className="eyebrow">Assignment management</p><h2>{visibleAssignments.length} {visibleAssignments.length === 1 ? "assignment" : "assignments"}</h2><p className="subtle">Edit setup, open grade entry, or archive an assignment without deleting its history.</p></div></div>
+        <div className="panel-header"><div><p className="eyebrow">Assignment management</p><h2>{visibleAssignments.length} {visibleAssignments.length === 1 ? "assignment" : "assignments"}</h2><p className="subtle">Assignment type describes the workflow; grading category determines how the grade is calculated.</p></div></div>
         {visibleAssignments.length === 0 ? <div className={styles.empty}><h3>No assignments match these filters.</h3><p>Try clearing a filter or create a new assignment.</p></div> : <div className={styles.table} role="table" aria-label="Assignments">
-          <div className={`${styles.row} ${styles.head}`} role="row"><span>Assignment</span><span>Period</span><span>Type</span><span>Date</span><span>Points</span><span>Grade activity</span><span>Actions</span></div>
+          <div className={`${styles.row} ${styles.head}`} role="row"><span>Assignment</span><span>Period</span><span>Type</span><span>Category</span><span>Date</span><span>Points</span><span>Grade activity</span><span>Actions</span></div>
           {visibleAssignments.map((assignment) => {
             const editHref = `/assignments/${assignment.id}/edit?returnTo=${encodeURIComponent(returnTo)}`;
             const gradeHref = `/assignments/${assignment.id}?returnTo=${encodeURIComponent(returnTo)}`;
             return <div className={`${styles.row} ${assignment.archived ? styles.archivedRow : ""}`} role="row" key={assignment.id}>
               <span className={styles.assignmentName}><strong>{assignment.title}</strong><small>{assignment.archived ? "Archived" : assignment.allowRetakes ? "Retakes allowed" : "Single attempt"}</small></span>
               <span>{assignment.gradingPeriod?.code ?? "—"}</span>
-              <span>{assignmentTypeLabel(assignment.assignmentType)}</span>
+              <span>{assignment.assignmentType?.name ?? "—"}</span>
+              <span>{assignment.category?.name ?? "—"}</span>
               <span>{assignment.assignmentDate}</span>
               <span>{assignment.pointsPossible}</span>
               <span className={styles.activity}><strong>{assignment.scoredCount} scored</strong>{assignment.missingCount ? <small className={styles.missing}>{assignment.missingCount} missing</small> : <small>{assignment.gradeRecordCount} grade records</small>}{assignment.retakeCount ? <small>{assignment.retakeCount} retake attempt{assignment.retakeCount === 1 ? "" : "s"}</small> : null}</span>
