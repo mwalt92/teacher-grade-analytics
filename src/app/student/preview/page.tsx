@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { StudentDashboardView } from "@/components/student-dashboard-view";
 import { getSectionRoster } from "@/lib/data/roster";
@@ -31,13 +31,13 @@ export default async function StudentPreviewPage({ searchParams }: PreviewPagePr
   const sectionSwitcher = <TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo="/student/preview"/>;
   const roster = await getSectionRoster(section.sectionId, "active");
   if (!roster.length) {
-    return <main className="app-shell"><header className="topbar"><div><p className="eyebrow">Student preview</p><h1>{displayCourseName(section.courseName, section.courseCode)}</h1><p className="subtle">{section.sectionName} • {section.schoolYearLabel}</p></div><div className="grade-audit-header-actions">{sectionSwitcher}<Link className="secondary-link" href="/">Teacher Dashboard</Link></div></header><section className="content-wrap"><article className="panel"><h2>No active students are enrolled.</h2><p className="subtle">Switch to a course with an active roster, or add students to this section first.</p></article></section></main>;
+    return <main className="app-shell"><header className="topbar"><div><p className="eyebrow">Student preview</p><h1>{displayCourseName(section.courseName, section.courseCode)}</h1><p className="subtle">{section.sectionName} • {section.schoolYearLabel}</p>{sectionSwitcher}</div></header><TeacherPrimaryNav/><section className="content-wrap"><article className="panel"><h2>No active students are enrolled.</h2><p className="subtle">Switch to a course with an active roster, or add students to this section first.</p></article></section></main>;
   }
 
   const student = roster.find((item) => item.studentId === params.studentId) ?? roster[0];
   const data = await getStudentDashboardData(section.sectionId, student.studentId, params.period);
   if (!data) {
-    return <main className="app-shell"><header className="topbar"><div><p className="eyebrow">Student preview</p><h1>{displayCourseName(section.courseName, section.courseCode)}</h1></div><div className="grade-audit-header-actions">{sectionSwitcher}<Link className="secondary-link" href="/">Teacher Dashboard</Link></div></header><section className="content-wrap"><article className="panel"><h2>No grading periods are ready yet.</h2></article></section></main>;
+    return <main className="app-shell"><header className="topbar"><div><p className="eyebrow">Student preview</p><h1>{displayCourseName(section.courseName, section.courseCode)}</h1>{sectionSwitcher}</div></header><TeacherPrimaryNav/><section className="content-wrap"><article className="panel"><h2>No grading periods are ready yet.</h2></article></section></main>;
   }
 
   return <StudentDashboardView
