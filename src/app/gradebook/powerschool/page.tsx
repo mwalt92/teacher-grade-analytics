@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { getSectionGradebook, getSectionGradingPeriods, type SectionGradebookCalculation } from "@/lib/data/grade-calculation";
 import { getLatestPowerSchoolSnapshots, POWERSCHOOL_TOLERANCE, type PowerSchoolSnapshot } from "@/lib/data/powerschool";
 import { getSectionRoster } from "@/lib/data/roster";
@@ -49,7 +50,7 @@ export default async function PowerSchoolComparisonPage({ searchParams }: PagePr
     getSectionGradingPeriods(section.sectionId),
     searchParams,
   ]);
-  const selectablePeriods = periods.filter((period) => /^(Q[1-4]|S[12])$/.test(period.code));
+  const selectablePeriods = periods.filter((period) => period.periodRole !== "exam");
   const selectedPeriod = selectablePeriods.find((period) => period.code === params.period) ?? selectablePeriods[0];
   const studentIds = roster.map((student) => student.studentId);
 
@@ -84,7 +85,7 @@ export default async function PowerSchoolComparisonPage({ searchParams }: PagePr
   return <main className="app-shell">
     <header className="topbar">
       <div><p className="eyebrow">Teacher Gradebook</p><h1>PowerSchool comparison</h1><p className="subtle">{section.courseName} • {section.sectionName}</p></div>
-      <div className="grade-audit-header-actions"><Link className="secondary-link" href={`/gradebook${selectedPeriod ? `?period=${selectedPeriod.code}` : ""}`}>Back to Gradebook</Link><Link className="secondary-link" href="/">Dashboard</Link></div>
+      <div className="grade-audit-header-actions"><Link className="secondary-link" href="/"><ArrowLeft size={17}/> Back to Dashboard</Link><Link className="secondary-link" href={`/gradebook${selectedPeriod ? `?period=${selectedPeriod.code}` : ""}`}>Back to Gradebook</Link></div>
     </header>
     <section className={`content-wrap ${styles.content}`}>
       <div className={styles.controlGrid}>
@@ -121,11 +122,11 @@ export default async function PowerSchoolComparisonPage({ searchParams }: PagePr
           <div className={styles.diagnosticCard}><span>Force equal assignment %</span><strong>{equalStats.meanAbsoluteError === null ? "—" : `${equalStats.meanAbsoluteError.toFixed(2)} pts MAE`}</strong><small>{equalStats.count} compared • {equalStats.mismatchCount} outside tolerance</small></div>
           <div className={styles.diagnosticCard}><span>Force total points</span><strong>{totalPointsStats.meanAbsoluteError === null ? "—" : `${totalPointsStats.meanAbsoluteError.toFixed(2)} pts MAE`}</strong><small>{totalPointsStats.count} compared • {totalPointsStats.mismatchCount} outside tolerance</small></div>
         </div>
-        <p className={styles.diagnosticNote}><strong>Important:</strong> use these numbers only when the PowerSchool snapshot and website contain the same assignments and scores. Older snapshots can look worse simply because the development gradebook changed after capture. Once we create differently sized test assignments in both systems, this panel can distinguish equal weighting from total-points behavior directly.</p>
+        <p className={styles.diagnosticNote}><strong>Important:</strong> use these numbers only when the PowerSchool snapshot and website contain the same assignments and scores. Older snapshots can look worse simply because the development gradebook changed after capture. Once differently sized assignments exist in both systems, this panel can distinguish equal weighting from total-points behavior directly.</p>
       </article>
 
       <form action={savePowerSchoolSnapshot}>
-        <input type="hidden" name="sectionId" value={section.sectionId}/><input type="hidden" name="period" value={selectedPeriod?.code ?? "Q1"}/>
+        <input type="hidden" name="sectionId" value={section.sectionId}/><input type="hidden" name="period" value={selectedPeriod?.code ?? ""}/>
         <article className={`panel full-width ${styles.tablePanel}`}>
           <div className="panel-header"><div><p className="eyebrow">{selectedPeriod?.code ?? "PowerSchool"}</p><h3>Website vs. PowerSchool</h3></div><div className={styles.captureActions}><span className="subtle">Manual entry remains available as a fallback. Every save creates a timestamped historical snapshot.</span><button className="primary-button" type="submit">Save Comparison</button></div></div>
           <div className={styles.tableScroll}><div className={styles.table} role="table" aria-label="PowerSchool grade comparison">
@@ -143,7 +144,7 @@ export default async function PowerSchoolComparisonPage({ searchParams }: PagePr
                 <span>{website === null ? <span className="subtle">No website grade</span> : <input className={styles.gradeInput} name={`powerschool:${student.studentId}`} type="number" min="0" max="200" step="0.01" defaultValue={powerSchool ?? ""} placeholder="Enter %" aria-label={`PowerSchool grade for ${student.displayName}`}/>}</span>
                 <strong className={mismatch ? styles.mismatchText : styles.matchText}>{formatDifference(difference)}</strong>
                 <span>{difference === null ? <span className="status neutral-pill">Not compared</span> : mismatch ? <span className="status warning-pill">Review</span> : <span className="status success-pill">Within tolerance</span>}</span>
-                <Link className="text-button" href={`/gradebook/audit?studentId=${student.studentId}&period=${selectedPeriod?.code ?? "Q1"}`}>Audit →</Link>
+                <Link className="text-button" href={`/gradebook/audit?studentId=${student.studentId}&period=${selectedPeriod?.code ?? ""}`}>Audit →</Link>
               </div>;
             })}
           </div></div>
