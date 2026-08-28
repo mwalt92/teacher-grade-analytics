@@ -16,7 +16,7 @@ export default async function NewAssignmentPage() {
   if (!section) redirect("/");
   const supabase = await createClient();
   const [{ data: periods }, { data: categories }, { data: types }] = await Promise.all([
-    supabase.from("grading_periods").select("id,code,name").eq("section_id", section.sectionId).order("code"),
+    supabase.from("grading_periods").select("id,code,name,sort_order").eq("section_id", section.sectionId).eq("calculation_mode", "direct").order("sort_order").order("code"),
     supabase.from("grading_categories").select("id,code,name,sort_order").eq("section_id", section.sectionId).order("sort_order").order("name"),
     supabase.from("assignment_types").select("id,code,name,description,default_category_id,default_points_possible,default_allow_retakes,sort_order").eq("section_id", section.sectionId).eq("active", true).order("sort_order").order("name"),
   ]);
@@ -35,14 +35,14 @@ export default async function NewAssignmentPage() {
   return <main className="app-shell">
     <header className="topbar">
       <div><p className="eyebrow">Teacher Grade Analytics</p><h1>Assignment Creation</h1><p className="subtle">{displayCourseName(section.courseName, section.courseCode)} • {section.sectionName}</p></div>
-      <Link className="secondary-link" href="/"><ArrowLeft size={17}/> Dashboard</Link>
+      <Link className="secondary-link" href="/"><ArrowLeft size={17}/> Back to Dashboard</Link>
     </header>
     <section className="content-wrap assignment-create-wrap">
       <article className="panel">
         <div className="panel-header"><div><p className="eyebrow">New assignment</p><h2>What are you entering?</h2><p className="subtle">Choose an assignment type, then confirm the grading category and behavior. Type and category are independent so each course can use its own structure.</p></div></div>
         <AssignmentForm
           sectionId={section.sectionId}
-          periods={periods ?? []}
+          periods={(periods ?? []).map((period) => ({ id: period.id, code: period.code, name: period.name }))}
           categories={(categories ?? []).map((category) => ({ id: category.id, code: category.code, name: category.name }))}
           assignmentTypes={assignmentTypes}
           today={today}

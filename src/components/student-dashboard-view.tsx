@@ -55,6 +55,7 @@ export function StudentDashboardView({
   const recentAssignments = data.assignments.slice(0, 10);
   const previewCarryFields = hiddenFields.filter((field) => field.name !== "studentId" && field.name !== "period");
   const categoryLabel = (category: string) => data.simulator.rules.categoryLabels?.[category] ?? category;
+  const hasSeparateSummary = data.summaryPeriodCode !== data.periodCode;
 
   return <main className={`app-shell ${styles.shell}`}>
     <header className="topbar">
@@ -70,7 +71,7 @@ export function StudentDashboardView({
       {preview ? <div className={styles.previewBanner}>
         <div><span>Teacher preview</span><small>{previewLabel ?? "This is the same dashboard the selected student will see."}</small></div>
         {previewStudents.length && previewStudentId ? <form method="get" action={previewActionPath} className={styles.previewForm}>
-          <input type="hidden" name="period" value={data.quarterCode}/>
+          <input type="hidden" name="period" value={data.periodCode}/>
           {previewCarryFields.map((field) => <input key={field.name} type="hidden" name={field.name} value={field.value}/>)}
           <label><span>Preview student</span><select name="studentId" defaultValue={previewStudentId}>{previewStudents.map((student) => <option key={student.studentId} value={student.studentId}>{student.displayName}</option>)}</select></label>
           <button type="submit" className="secondary-link">Switch</button>
@@ -81,22 +82,22 @@ export function StudentDashboardView({
         <div className="panel-header"><div><p className="eyebrow">Grading period</p><h3>Choose what you want to review</h3></div></div>
         <form method="get" action={periodActionPath} className={styles.periodForm}>
           {hiddenFields.map((field) => <input key={field.name} type="hidden" name={field.name} value={field.value}/>)}
-          <label><span>Quarter</span><select name="period" defaultValue={data.quarterCode}>{data.availableQuarterCodes.map((quarter) => <option value={quarter.code} key={quarter.code}>{quarter.code} — {quarter.name}</option>)}</select></label>
+          <label><span>Period</span><select name="period" defaultValue={data.periodCode}>{data.availablePeriods.map((period) => <option value={period.code} key={period.code}>{period.code} — {period.name}</option>)}</select></label>
           <button className="primary-button" type="submit">View Progress</button>
         </form>
       </article>
 
       <section className={styles.heroGrid} aria-label="Current grades">
         <article className={styles.gradeHero}>
-          <span className={styles.gradeLabel}>Current {data.quarterCode}</span>
-          <strong className={styles.gradeValue}>{formatPercent(data.quarterPercent)}</strong>
+          <span className={styles.gradeLabel}>Current {data.periodCode}</span>
+          <strong className={styles.gradeValue}>{formatPercent(data.periodPercent)}</strong>
           <p>Based only on categories and assignments that currently have grade data.</p>
         </article>
-        <article className={styles.gradeHero}>
-          <span className={styles.gradeLabel}>Current {data.semesterCode}</span>
-          <strong className={styles.gradeValue}>{formatPercent(data.semesterPercent)}</strong>
-          <p>Uses the same dynamic semester weighting as the teacher gradebook while future components are still empty.</p>
-        </article>
+        {hasSeparateSummary ? <article className={styles.gradeHero}>
+          <span className={styles.gradeLabel}>Current {data.summaryPeriodCode}</span>
+          <strong className={styles.gradeValue}>{formatPercent(data.summaryPercent)}</strong>
+          <p>{data.summaryPeriodName} uses the configured component weights and automatically excludes components that do not have grade data yet.</p>
+        </article> : null}
       </section>
 
       <section className={styles.sectionGrid}>
@@ -108,7 +109,7 @@ export function StudentDashboardView({
                 <span className={styles.categoryName}><strong>{category.label}</strong><small>{Math.round(category.configuredWeight * 100)}% course weight • {category.assignmentCount} counting</small></span>
                 <span className={styles.barTrack} aria-hidden="true"><span className={styles.barFill} style={{ width: `${Math.max(0, Math.min(100, category.averagePercent))}%` }}/></span>
                 <span className={styles.categoryScore}>{formatPercent(category.averagePercent)}{category.droppedCount ? <small>{category.droppedCount} dropped</small> : null}</span>
-              </div>) : <div className={styles.empty}>No category grades have been entered for this quarter yet.</div>}
+              </div>) : <div className={styles.empty}>No category grades have been entered for this period yet.</div>}
             </div>
           </div>
         </article>
@@ -129,7 +130,7 @@ export function StudentDashboardView({
       <GradeSimulator data={data.simulator}/>
 
       <article className={`panel full-width ${styles.assignmentsPanel}`}>
-        <div className="panel-header"><div><p className="eyebrow">Recent work</p><h3>{data.quarterCode} assignments</h3></div><span className="subtle">Most recent 10</span></div>
+        <div className="panel-header"><div><p className="eyebrow">Recent work</p><h3>{data.periodCode} assignments</h3></div><span className="subtle">Most recent 10</span></div>
         <div className={styles.assignmentList}>
           <div className={`${styles.assignmentRow} ${styles.assignmentHead}`}><span>Assignment</span><span>Score</span><span>Status</span><span>Attempts</span></div>
           {recentAssignments.length ? recentAssignments.map((assignment) => <div className={styles.assignmentRow} key={assignment.assignmentId}>
@@ -141,7 +142,7 @@ export function StudentDashboardView({
             </span>
             <span>{assignment.attemptCount > 1 ? `${assignment.attemptCount} attempts` : assignment.attemptCount === 1 ? "1 attempt" : "—"}</span>
             {assignment.attemptCount > 1 ? <details className={styles.attemptDetails}><summary>View attempt history</summary><div className={styles.attemptLine}>{assignment.attempts.map((attempt) => <span className={`${styles.attemptChip} ${attempt.counted ? styles.attemptChipCounted : ""}`} key={attempt.attemptNumber}>#{attempt.attemptNumber}: {attempt.earned}/{attempt.possible} ({attempt.percent.toFixed(1)}%){attempt.counted ? " • counts" : ""}</span>)}</div></details> : null}
-          </div>) : <div className={styles.empty}>No assignments are available for this quarter yet.</div>}
+          </div>) : <div className={styles.empty}>No assignments are available for this period yet.</div>}
         </div>
       </article>
     </section>

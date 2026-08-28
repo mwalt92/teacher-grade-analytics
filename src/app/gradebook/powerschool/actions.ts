@@ -7,14 +7,11 @@ import { parsePowerSchoolFinalGradesReport, studentNameKeys } from "@/lib/import
 import { createClient } from "@/lib/supabase/server";
 
 const INPUT_PREFIX = "powerschool:";
-const PERIOD_ORDER = ["Q1", "Q2", "S1", "Q3", "Q4", "S2"];
 
 export async function savePowerSchoolSnapshot(formData: FormData) {
   const sectionId = String(formData.get("sectionId") ?? "");
-  const periodCode = String(formData.get("period") ?? "");
-  if (!sectionId || !/^(Q[1-4]|S[12])$/.test(periodCode)) {
-    throw new Error("Choose a valid section and grading period.");
-  }
+  const periodCode = String(formData.get("period") ?? "").trim();
+  if (!sectionId || !periodCode) throw new Error("Choose a valid section and grading period.");
 
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
@@ -23,10 +20,10 @@ export async function savePowerSchoolSnapshot(formData: FormData) {
 
   const [{ data: teacherSection }, { data: period }, roster] = await Promise.all([
     supabase.from("teacher_sections").select("section_id").eq("teacher_id", userId).eq("section_id", sectionId).maybeSingle(),
-    supabase.from("grading_periods").select("id,code").eq("section_id", sectionId).eq("code", periodCode).maybeSingle(),
+    supabase.from("grading_periods").select("id,code,period_role").eq("section_id", sectionId).eq("code", periodCode).maybeSingle(),
     getSectionRoster(sectionId, "active"),
   ]);
-  if (!teacherSection || !period) throw new Error("You do not have access to that section or grading period.");
+  if (!teacherSection || !period || period.period_role === "exam") throw new Error("You do not have access to that section or reporting period.");
 
   const rosterIds = new Set(roster.map((student) => student.studentId));
   const submitted = new Map<string, number>();
@@ -36,9 +33,7 @@ export async function savePowerSchoolSnapshot(formData: FormData) {
     const text = String(rawValue).trim();
     if (!text || !rosterIds.has(studentId)) continue;
     const percent = Number(text);
-    if (!Number.isFinite(percent) || percent < 0 || percent > 200) {
-      throw new Error("PowerSchool grades must be numbers between 0 and 200.");
-    }
+    if (!Number.isFinite(percent) || percent < 0 || percent > 200) throw new Error("PowerSchool grades must be numbers between 0 and 200.");
     submitted.set(studentId, percent);
   }
 
@@ -64,7 +59,6 @@ export async function savePowerSchoolSnapshot(formData: FormData) {
   if (rows.length === 0) throw new Error("None of the entered students currently have a website grade to compare.");
   const { error } = await supabase.from("power_school_snapshots").insert(rows);
   if (error) throw error;
-
   redirect(`/gradebook/powerschool?period=${encodeURIComponent(periodCode)}&saved=${rows.length}`);
 }
 
@@ -82,13 +76,15 @@ export async function importPowerSchoolFinalGrades(formData: FormData) {
 
   const [{ data: teacherSection }, { data: periods }, roster] = await Promise.all([
     supabase.from("teacher_sections").select("section_id").eq("teacher_id", userId).eq("section_id", sectionId).maybeSingle(),
-    supabase.from("grading_periods").select("id,code").eq("section_id", sectionId),
+    supabase.from("grading_periods").select("id,code,period_role,sort_order").eq("section_id", sectionId),
     getSectionRoster(sectionId, "active"),
   ]);
   if (!teacherSection || !periods) throw new Error("You do not have access to that section.");
 
   const report = await parsePowerSchoolFinalGradesReport(Buffer.from(await upload.arrayBuffer()));
-  const periodByCode = new Map(periods.filter((period) => /^(Q[1-4]|S[12])$/.test(period.code)).map((period) => [period.code, period]));
+  const reportingPeriods = periods.filter((period) => period.period_role !== "exam").sort((a, b) => Number(a.sort_order) - Number(b.sort_order));
+  const periodByCode = new Map(reportingPeriods.map((period) => [period.code, period]));
+  const periodOrder = new Map(reportingPeriods.map((period, index) => [period.code, index]));
 
   const rosterByNameKey = new Map<string, Set<string>>();
   for (const student of roster) {
@@ -102,7 +98,6 @@ export async function importPowerSchoolFinalGrades(formData: FormData) {
   const matched = new Map<string, { studentId: string; termCode: string; powerSchoolPercent: number }>();
   let unmatchedRows = 0;
   let ignoredTermRows = 0;
-
   for (const row of report.rows) {
     const period = periodByCode.get(row.termCode);
     if (!period) {
@@ -121,11 +116,11 @@ export async function importPowerSchoolFinalGrades(formData: FormData) {
     matched.set(`${row.termCode}:${studentId}`, { studentId, termCode: row.termCode, powerSchoolPercent: row.percent });
   }
 
-  if (matched.size === 0) throw new Error("No report rows could be matched to the active roster and grading periods for this section.");
+  if (matched.size === 0) throw new Error("No report rows could be matched to the active roster and configured grading periods for this section.");
 
   const studentIds = roster.map((student) => student.studentId);
   const importedTerms = [...new Set([...matched.values()].map((entry) => entry.termCode))]
-    .sort((a, b) => PERIOD_ORDER.indexOf(a) - PERIOD_ORDER.indexOf(b));
+    .sort((a, b) => (periodOrder.get(a) ?? 999) - (periodOrder.get(b) ?? 999));
   const calculations = await Promise.all(importedTerms.map(async (termCode) => [termCode, await getSectionGradebook(sectionId, studentIds, termCode)] as const));
   const calculationByTerm = new Map(calculations);
 
@@ -152,7 +147,7 @@ export async function importPowerSchoolFinalGrades(formData: FormData) {
   const { error } = await supabase.from("power_school_snapshots").insert(snapshots);
   if (error) throw error;
 
-  const preferredPeriod = importedTerms.includes("Q1") ? "Q1" : importedTerms[0];
+  const preferredPeriod = importedTerms[0];
   const params = new URLSearchParams({
     period: preferredPeriod,
     imported: String(snapshots.length),

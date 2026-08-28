@@ -25,11 +25,8 @@ function shortDate(value: string) {
   return Number.isNaN(date.valueOf()) ? value : date.toLocaleDateString("en-US", { month: "numeric", day: "numeric" });
 }
 
-function categoryLabel(category: AssignmentMatrixAssignment["category"]) {
-  if (category === "participation") return "Participation";
-  if (category === "quiz") return "Quiz";
-  if (category === "test") return "Test";
-  return category;
+function categoryLabel(category: AssignmentMatrixAssignment["category"], rules: GradingRules) {
+  return rules.categoryLabels?.[category] ?? category;
 }
 
 function keyFor(studentId: string, assignmentId: string) {
@@ -218,7 +215,7 @@ export function AssignmentMatrixGrid({ assignments, students: initialStudents, r
           {assignments.map((assignment) => <th key={assignment.id}>
             <Link className={styles.assignmentHeader} href={`/assignments/${assignment.id}?returnTo=${encodeURIComponent(returnTo)}`}>
               <strong>{assignment.title}</strong>
-              <span>{categoryLabel(assignment.category)} • {shortDate(assignment.assignmentDate)}</span>
+              <span>{categoryLabel(assignment.category, rules)} • {shortDate(assignment.assignmentDate)}</span>
               <span>{assignment.pointsPossible} pts{assignment.allowRetakes ? " • retakes" : ""}</span>
             </Link>
           </th>)}
@@ -259,33 +256,34 @@ export function AssignmentMatrixGrid({ assignments, students: initialStudents, r
                           onKeyDown={(event) => {
                             if (event.key !== "Enter") return;
                             event.preventDefault();
-                            if (value.trim()) void persist(studentRow.studentId, assignment.id, value, false);
-                            moveDown(assignment.id, rowIndex);
+                            clearTimer(cellKey);
+                            void (async () => {
+                              const ok = value.trim() ? await persist(studentRow.studentId, assignment.id, value, false) : true;
+                              if (ok) moveDown(assignment.id, rowIndex);
+                            })();
                           }}
                         />
-                        <span className={styles.outOf}>/ {cell.possible}</span>
-                      </div>
-                      <div className={styles.inlineActions}>
+                        <span className={styles.possible}>/ {assignment.pointsPossible}</span>
                         <button
                           type="button"
-                          className={`${styles.missingToggle} ${cell.missing ? styles.missingToggleActive : ""}`}
-                          aria-pressed={cell.missing}
-                          aria-label={`${cell.missing ? "Clear missing flag" : "Mark missing"} for ${student.displayName} on ${assignment.title}`}
-                          title={cell.missing ? "Clear Missing" : "Mark Missing"}
-                          onPointerDown={(event) => event.preventDefault()}
-                          onClick={() => void persist(studentRow.studentId, assignment.id, cell.missing ? (value.trim() || "0") : "0", !cell.missing)}
+                          className={`${styles.missingButton} ${cell.missing ? styles.missingButtonActive : ""}`}
+                          title={cell.missing ? "Clear Missing flag; the stored 0 remains" : "Set score to 0 and mark Missing"}
+                          onClick={() => {
+                            clearTimer(cellKey);
+                            const nextMissing = !cell.missing;
+                            setDrafts((current) => ({ ...current, [cellKey]: "0" }));
+                            void persist(studentRow.studentId, assignment.id, "0", nextMissing);
+                          }}
                         >M</button>
-                        <span className={`${styles.saveState} ${state === "error" ? styles.saveError : ""}`}>{state === "saving" ? "Saving…" : state === "saved" ? "Saved" : state === "error" ? "Error" : ""}</span>
-                        <Link className={styles.openLink} href={`/assignments/${assignment.id}?returnTo=${encodeURIComponent(returnTo)}`}>Open</Link>
                       </div>
+                      <div className={styles.cellMeta}>
+                        <span>{cell.percent == null ? "—" : `${cell.percent.toFixed(1)}%`}</span>
+                        {cell.status === "dropped" ? <span className={styles.droppedBadge}>Dropped</span> : null}
+                        {cell.attemptCount > 1 ? <span className={styles.bestBadge}>Best A{cell.countedAttemptNumber ?? "?"} / {cell.attemptCount}</span> : null}
+                        {state === "saving" ? <span className={styles.saving}>Saving…</span> : state === "saved" ? <span className={styles.saved}>Saved</span> : state === "error" ? <span className={styles.error}>Save failed</span> : null}
+                      </div>
+                      {errors[cellKey] ? <small className={styles.errorText}>{errors[cellKey]}</small> : null}
                     </>}
-                    <span className={styles.cellBadges}>
-                      {cell.missing ? <em className={styles.missingBadge}>Missing</em> : null}
-                      {cell.status === "dropped" ? <em className={styles.droppedBadge}>Dropped</em> : null}
-                      {cell.attemptCount > 1 ? <em className={styles.bestBadge}>Best #{cell.countedAttemptNumber ?? "?"} of {cell.attemptCount}</em> : null}
-                    </span>
-                    {cell.attemptCount > 1 && cell.countedAttemptNumber !== 1 && cell.earned !== null ? <small className={styles.countedScore}>Counts: {cell.earned} / {cell.possible}</small> : null}
-                    {errors[cellKey] ? <small className={styles.cellError}>{errors[cellKey]}</small> : null}
                   </div>
                 </td>;
               })}
