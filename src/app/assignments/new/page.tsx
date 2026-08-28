@@ -15,8 +15,22 @@ export default async function NewAssignmentPage() {
   const section = sections[0];
   if (!section) redirect("/");
   const supabase = await createClient();
-  const { data: periods } = await supabase.from("grading_periods").select("id,code,name").eq("section_id", section.sectionId).order("code");
+  const [{ data: periods }, { data: categories }, { data: types }] = await Promise.all([
+    supabase.from("grading_periods").select("id,code,name").eq("section_id", section.sectionId).order("code"),
+    supabase.from("grading_categories").select("id,code,name,sort_order").eq("section_id", section.sectionId).order("sort_order").order("name"),
+    supabase.from("assignment_types").select("id,code,name,description,default_category_id,default_points_possible,default_allow_retakes,sort_order").eq("section_id", section.sectionId).eq("active", true).order("sort_order").order("name"),
+  ]);
   const today = new Date().toISOString().slice(0, 10);
+
+  const assignmentTypes = (types ?? []).map((type) => ({
+    id: type.id,
+    code: type.code,
+    name: type.name,
+    description: type.description,
+    defaultCategoryId: type.default_category_id,
+    defaultPointsPossible: Number(type.default_points_possible),
+    defaultAllowRetakes: Boolean(type.default_allow_retakes),
+  }));
 
   return <main className="app-shell">
     <header className="topbar">
@@ -25,8 +39,14 @@ export default async function NewAssignmentPage() {
     </header>
     <section className="content-wrap assignment-create-wrap">
       <article className="panel">
-        <div className="panel-header"><div><p className="eyebrow">New assignment</p><h2>What are you entering?</h2><p className="subtle">Choose the workflow first. The grade-entry screen will open immediately after creation.</p></div></div>
-        <AssignmentForm sectionId={section.sectionId} periods={periods ?? []} today={today}/>
+        <div className="panel-header"><div><p className="eyebrow">New assignment</p><h2>What are you entering?</h2><p className="subtle">Choose an assignment type, then confirm the grading category and behavior. Type and category are independent so each course can use its own structure.</p></div></div>
+        <AssignmentForm
+          sectionId={section.sectionId}
+          periods={periods ?? []}
+          categories={(categories ?? []).map((category) => ({ id: category.id, code: category.code, name: category.name }))}
+          assignmentTypes={assignmentTypes}
+          today={today}
+        />
       </article>
     </section>
   </main>;
