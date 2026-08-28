@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, UserPlus } from "lucide-react";
+import { UserPlus } from "lucide-react";
+import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getSectionRoster } from "@/lib/data/roster";
 import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
@@ -25,10 +26,15 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
 
   return <main className="app-shell">
     <header className="topbar">
-      <div><p className="eyebrow">Teacher Grade Analytics</p><h1>Roster</h1><p className="subtle">{section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName} • {section.sectionName}</p></div>
-      <div className="toolbar-group"><TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/><Link className="secondary-link" href="/"><ArrowLeft size={17}/> Dashboard</Link></div>
+      <div>
+        <p className="eyebrow">Teacher Grade Analytics</p>
+        <h1>Roster</h1>
+        <p className="subtle">{section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName} • {section.sectionName}</p>
+        <TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/>
+      </div>
     </header>
-    <nav className="main-nav" aria-label="Roster filters">
+    <TeacherPrimaryNav/>
+    <nav className="main-nav" aria-label="Roster filters" style={{ background: "var(--surface-soft)", paddingTop: 8 }}>
       <Link className={filter === "active" ? "nav-button active" : "nav-button"} href="/students">Active</Link>
       <Link className={filter === "inactive" ? "nav-button active" : "nav-button"} href="/students?view=inactive">Inactive</Link>
       <Link className={filter === "all" ? "nav-button active" : "nav-button"} href="/students?view=all">All students</Link>
