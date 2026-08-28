@@ -31,7 +31,7 @@ export type StudentDashboardAssignment = {
 export type GradeSimulatorRetakeOption = {
   assignmentId: string;
   title: string;
-  category: "quiz" | "test";
+  category: GradingCategory;
   pointsPossible: number;
   currentBestPercent: number | null;
   nextAttemptNumber: number;
@@ -150,11 +150,11 @@ export async function getStudentDashboardData(
     lateDeductions[row.code] = Number(row.late_deduction) || 0;
   }
 
-  let retakeRows: { id: string; title: string; assignment_type: string; allow_retakes: boolean; points_possible: number | string }[] = [];
+  let retakeRows: { id: string; title: string; allow_retakes: boolean; points_possible: number | string }[] = [];
   if (assignmentIds.length > 0) {
     const { data } = await supabase
       .from("assignments")
-      .select("id,title,assignment_type,allow_retakes,points_possible")
+      .select("id,title,allow_retakes,points_possible")
       .eq("section_id", sectionId)
       .eq("archived", false)
       .eq("allow_retakes", true)
@@ -164,13 +164,12 @@ export async function getStudentDashboardData(
   const auditByAssignmentId = new Map(quarterCalculation.result.audit.map((line) => [line.assignmentId, line]));
   const retakeOptions: GradeSimulatorRetakeOption[] = retakeRows.flatMap((row) => {
     const line = auditByAssignmentId.get(row.id);
-    if (!line || line.exempt || line.attempts.length === 0 || (line.category !== "quiz" && line.category !== "test")) return [];
-    const category: "quiz" | "test" = line.category;
+    if (!line || line.exempt || line.attempts.length === 0) return [];
     const nextAttemptNumber = Math.max(...line.attempts.map((attempt) => attempt.attemptNumber)) + 1;
     return [{
       assignmentId: row.id,
       title: row.title,
-      category,
+      category: line.category,
       pointsPossible: Number(row.points_possible),
       currentBestPercent: line.percent,
       nextAttemptNumber,
