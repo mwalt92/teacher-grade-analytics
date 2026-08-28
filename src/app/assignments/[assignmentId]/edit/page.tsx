@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Archive, ArrowLeft, RotateCcw } from "lucide-react";
+import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
+import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getAssignmentManagementData } from "@/lib/data/assignment-management";
 import { getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
@@ -50,14 +52,16 @@ export default async function EditAssignmentPage({ params, searchParams }: EditA
         <p className="eyebrow">Assignment Management</p>
         <h1>Edit {assignment.title}</h1>
         <p className="subtle">{section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName} • {section.sectionName}</p>
-      </div>
-      <div className="grade-audit-header-actions">
-        <Link className="secondary-link" href={returnTo}><ArrowLeft size={17}/> Back to Assignments</Link>
-        {!assignment.archived ? <Link className="secondary-link" href={gradeHref}>Open Grade Entry</Link> : null}
+        <TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo="/assignments"/>
       </div>
     </header>
+    <TeacherPrimaryNav/>
 
     <section className={`content-wrap ${styles.content}`}>
+      <div className="section-heading">
+        <div><p className="eyebrow">Assignment setup</p><h2>Edit grading behavior and metadata</h2></div>
+        <div className="grade-audit-header-actions"><Link className="secondary-link" href={returnTo}><ArrowLeft size={17}/> Back to Assignments</Link>{!assignment.archived ? <Link className="secondary-link" href={gradeHref}>Open Grade Entry</Link> : null}</div>
+      </div>
       {query.saved === "1" ? <div className={styles.notice}>Assignment changes saved. Grade calculations now use the updated setup.</div> : null}
       {clearedCount != null && Number.isFinite(clearedCount) ? <div className={styles.notice}>Cleared {clearedCount} student grade record{clearedCount === 1 ? "" : "s"}. This assignment is now empty and ready for permanent deletion if that is what you intended.</div> : null}
       {query.error ? <div className={styles.error}>{query.error}</div> : null}
