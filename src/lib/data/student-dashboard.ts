@@ -165,11 +165,12 @@ export async function getStudentDashboardData(
   const retakeOptions: GradeSimulatorRetakeOption[] = retakeRows.flatMap((row) => {
     const line = auditByAssignmentId.get(row.id);
     if (!line || line.exempt || line.attempts.length === 0 || (line.category !== "quiz" && line.category !== "test")) return [];
+    const category: "quiz" | "test" = line.category;
     const nextAttemptNumber = Math.max(...line.attempts.map((attempt) => attempt.attemptNumber)) + 1;
     return [{
       assignmentId: row.id,
       title: row.title,
-      category: line.category,
+      category,
       pointsPossible: Number(row.points_possible),
       currentBestPercent: line.percent,
       nextAttemptNumber,
