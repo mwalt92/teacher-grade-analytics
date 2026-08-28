@@ -1,4 +1,4 @@
-import { getSectionGradingPeriods, getStudentGradeCalculation, getStudentSemesterCalculation } from "@/lib/data/grade-calculation";
+import { getSectionGradingPeriods, getStudentGradeCalculation, getStudentPeriodCalculation } from "@/lib/data/grade-calculation";
 import type { CategoryCalculationMethod, GradeRecord, GradingCategory, GradingRules, SemesterComponent } from "@/lib/grading/types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -38,54 +38,60 @@ export type GradeSimulatorRetakeOption = {
 };
 
 export type GradeSimulatorData = {
-  quarterCode: string;
-  currentQuarterPercent: number | null;
-  semesterCode: "S1" | "S2";
-  currentSemesterPercent: number | null;
+  periodCode: string;
+  currentPeriodPercent: number | null;
+  summaryPeriodCode: string;
+  summaryPeriodName: string;
+  currentSummaryPercent: number | null;
   rules: GradingRules;
   lateDeductions: Record<GradingCategory, number>;
   records: GradeRecord[];
   retakeOptions: GradeSimulatorRetakeOption[];
-  semesterComponents: SemesterComponent[];
+  summaryComponents: SemesterComponent[];
 };
 
 export type StudentDashboardData = {
-  quarterCode: string;
-  quarterName: string;
-  quarterPercent: number | null;
-  semesterCode: "S1" | "S2";
-  semesterPercent: number | null;
-  semesterActiveWeight: number;
+  periodCode: string;
+  periodName: string;
+  periodPercent: number | null;
+  summaryPeriodCode: string;
+  summaryPeriodName: string;
+  summaryPercent: number | null;
+  summaryActiveWeight: number;
   categories: StudentDashboardCategory[];
   assignments: StudentDashboardAssignment[];
   missingCount: number;
   droppedCount: number;
-  availableQuarterCodes: { code: string; name: string }[];
+  availablePeriods: { code: string; name: string }[];
   simulator: GradeSimulatorData;
 };
-
-function semesterForQuarter(code: string): "S1" | "S2" {
-  return code === "Q3" || code === "Q4" ? "S2" : "S1";
-}
 
 export async function getStudentDashboardData(
   sectionId: string,
   studentId: string,
-  requestedQuarter?: string,
+  requestedPeriod?: string,
 ): Promise<StudentDashboardData | null> {
   const periods = await getSectionGradingPeriods(sectionId);
-  const quarters = periods.filter((period) => /^Q[1-4]$/.test(period.code));
-  if (!quarters.length) return null;
-  const selectedQuarter = quarters.find((period) => period.code === requestedQuarter) ?? quarters[0];
-  const semesterCode = semesterForQuarter(selectedQuarter.code);
+  const reviewPeriods = periods.filter((period) => period.calculationMode === "direct" && period.periodRole === "standard");
+  if (!reviewPeriods.length) return null;
+  const selectedPeriod = reviewPeriods.find((period) => period.code === requestedPeriod) ?? reviewPeriods[0];
+  const supabase = await createClient();
+  const { data: parentRows } = await supabase
+    .from("grading_period_components")
+    .select("parent_period_id")
+    .eq("component_period_id", selectedPeriod.id);
+  const parentIds = new Set((parentRows ?? []).map((row) => row.parent_period_id));
+  const summaryPeriod = periods.find((period) => parentIds.has(period.id) && period.calculationMode === "composite") ?? selectedPeriod;
 
-  const [quarterCalculation, semesterCalculation] = await Promise.all([
-    getStudentGradeCalculation(sectionId, studentId, selectedQuarter.code),
-    getStudentSemesterCalculation(sectionId, studentId, semesterCode),
+  const [periodCalculation, summaryCalculation] = await Promise.all([
+    getStudentGradeCalculation(sectionId, studentId, selectedPeriod.code),
+    summaryPeriod.id === selectedPeriod.id
+      ? getStudentPeriodCalculation(sectionId, studentId, selectedPeriod.code)
+      : getStudentPeriodCalculation(sectionId, studentId, summaryPeriod.code),
   ]);
-  if (!quarterCalculation) return null;
+  if (!periodCalculation || !summaryCalculation) return null;
 
-  const categories = Object.values(quarterCalculation.result.categories)
+  const categories = Object.values(periodCalculation.result.categories)
     .filter((category): category is NonNullable<typeof category> => Boolean(category))
     .map((category) => ({
       category: category.category,
@@ -99,7 +105,7 @@ export async function getStudentDashboardData(
       pointsPossible: category.pointsPossible,
     }));
 
-  const assignments = quarterCalculation.result.audit
+  const assignments = periodCalculation.result.audit
     .map((line) => ({
       assignmentId: line.assignmentId,
       title: line.assignmentTitle ?? "Assignment",
@@ -121,11 +127,11 @@ export async function getStudentDashboardData(
     }))
     .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
 
-  const simulatorRecords: GradeRecord[] = quarterCalculation.result.audit.map((line) => ({
+  const simulatorRecords: GradeRecord[] = periodCalculation.result.audit.map((line) => ({
     assignmentId: line.assignmentId,
     assignmentTitle: line.assignmentTitle,
     assignmentDate: line.assignmentDate,
-    gradingPeriodCode: line.gradingPeriodCode ?? selectedQuarter.code,
+    gradingPeriodCode: line.gradingPeriodCode ?? selectedPeriod.code,
     category: line.category,
     pointsPossible: line.pointsPossible,
     missing: line.missing,
@@ -135,20 +141,17 @@ export async function getStudentDashboardData(
       earned: attempt.earned,
       possible: attempt.possible,
       attemptNumber: attempt.attemptNumber,
-      occurredAt: line.assignmentDate ?? selectedQuarter.code,
+      occurredAt: line.assignmentDate ?? selectedPeriod.code,
     })),
   }));
 
-  const lateDeductions: Record<GradingCategory, number> = {};
-  const supabase = await createClient();
-  const assignmentIds = quarterCalculation.result.audit.map((line) => line.assignmentId);
+  const assignmentIds = periodCalculation.result.audit.map((line) => line.assignmentId);
   const { data: lateRows } = await supabase
     .from("grading_categories")
     .select("code,late_deduction")
     .eq("section_id", sectionId);
-  for (const row of lateRows ?? []) {
-    lateDeductions[row.code] = Number(row.late_deduction) || 0;
-  }
+  const lateDeductions: Record<GradingCategory, number> = {};
+  for (const row of lateRows ?? []) lateDeductions[row.code] = Number(row.late_deduction) || 0;
 
   let retakeRows: { id: string; title: string; allow_retakes: boolean; points_possible: number | string }[] = [];
   if (assignmentIds.length > 0) {
@@ -161,7 +164,7 @@ export async function getStudentDashboardData(
       .in("id", assignmentIds);
     retakeRows = data ?? [];
   }
-  const auditByAssignmentId = new Map(quarterCalculation.result.audit.map((line) => [line.assignmentId, line]));
+  const auditByAssignmentId = new Map(periodCalculation.result.audit.map((line) => [line.assignmentId, line]));
   const retakeOptions: GradeSimulatorRetakeOption[] = retakeRows.flatMap((row) => {
     const line = auditByAssignmentId.get(row.id);
     if (!line || line.exempt || line.attempts.length === 0) return [];
@@ -176,33 +179,46 @@ export async function getStudentDashboardData(
     }];
   }).sort((a, b) => a.title.localeCompare(b.title));
 
+  const summaryComponents: SemesterComponent[] = summaryCalculation.mode === "composite"
+    ? summaryCalculation.result.components.map((component) => ({
+        code: component.code,
+        label: component.label,
+        role: component.role,
+        weight: component.weight,
+        percent: component.percent,
+      }))
+    : [{
+        code: selectedPeriod.code,
+        label: selectedPeriod.name,
+        role: selectedPeriod.periodRole,
+        weight: 1,
+        percent: periodCalculation.result.overallPercent,
+      }];
+
   return {
-    quarterCode: selectedQuarter.code,
-    quarterName: selectedQuarter.name,
-    quarterPercent: quarterCalculation.result.overallPercent,
-    semesterCode,
-    semesterPercent: semesterCalculation.result.overallPercent,
-    semesterActiveWeight: semesterCalculation.result.activeWeight,
+    periodCode: selectedPeriod.code,
+    periodName: selectedPeriod.name,
+    periodPercent: periodCalculation.result.overallPercent,
+    summaryPeriodCode: summaryPeriod.code,
+    summaryPeriodName: summaryPeriod.name,
+    summaryPercent: summaryCalculation.result.overallPercent,
+    summaryActiveWeight: summaryCalculation.result.activeWeight,
     categories,
     assignments,
     missingCount: assignments.filter((assignment) => assignment.missing).length,
     droppedCount: assignments.filter((assignment) => assignment.dropped).length,
-    availableQuarterCodes: quarters.map((quarter) => ({ code: quarter.code, name: quarter.name })),
+    availablePeriods: reviewPeriods.map((period) => ({ code: period.code, name: period.name })),
     simulator: {
-      quarterCode: selectedQuarter.code,
-      currentQuarterPercent: quarterCalculation.result.overallPercent,
-      semesterCode,
-      currentSemesterPercent: semesterCalculation.result.overallPercent,
-      rules: quarterCalculation.rules,
+      periodCode: selectedPeriod.code,
+      currentPeriodPercent: periodCalculation.result.overallPercent,
+      summaryPeriodCode: summaryPeriod.code,
+      summaryPeriodName: summaryPeriod.name,
+      currentSummaryPercent: summaryCalculation.result.overallPercent,
+      rules: periodCalculation.rules,
       lateDeductions,
       records: simulatorRecords,
       retakeOptions,
-      semesterComponents: semesterCalculation.result.components.map((component) => ({
-        code: component.code,
-        label: component.label,
-        weight: component.weight,
-        percent: component.percent,
-      })),
+      summaryComponents,
     },
   };
 }
