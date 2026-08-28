@@ -1,10 +1,30 @@
 import { calculateGrade, calculateSemesterGrade } from "@/lib/grading/engine";
 import { buildRulesFromCategories, normalizeCategoryCode } from "@/lib/grading/config";
-import type { CategoryCalculationMethod, GradeRecord, GradeResult, GradingCategory, GradingRules, SemesterGradeResult } from "@/lib/grading/types";
+import type { CategoryCalculationMethod, GradeAuditLine, GradeRecord, GradeResult, GradingCategory, GradingRules, SemesterGradeResult } from "@/lib/grading/types";
 import { createClient } from "@/lib/supabase/server";
 
-export type GradingPeriodSummary = { id: string; code: string; name: string };
+export type GradingPeriodMode = "direct" | "composite";
+export type GradingPeriodRole = "standard" | "exam";
+export type GradingPeriodSummary = {
+  id: string;
+  code: string;
+  name: string;
+  calculationMode: GradingPeriodMode;
+  periodRole: GradingPeriodRole;
+  sortOrder: number;
+};
 export type StudentGradeCalculation = { studentId: string; sectionId: string; gradingPeriod: GradingPeriodSummary; rules: GradingRules; result: GradeResult };
+export type StudentPeriodCalculation =
+  | ({ mode: "direct" } & StudentGradeCalculation)
+  | {
+      mode: "composite";
+      studentId: string;
+      sectionId: string;
+      gradingPeriod: GradingPeriodSummary;
+      rules: GradingRules;
+      components: { weight: number; calculation: StudentPeriodCalculation }[];
+      result: SemesterGradeResult;
+    };
 export type StudentSemesterCalculation = {
   studentId: string;
   sectionId: string;
@@ -26,13 +46,12 @@ export type SectionGradebookRow = {
 export type SectionGradebookCalculation = {
   sectionId: string;
   gradingPeriod: GradingPeriodSummary;
-  mode: "quarter" | "semester";
+  mode: GradingPeriodMode;
   rules: GradingRules;
   rows: SectionGradebookRow[];
 };
 
 type CalculationOptions = { calculationMethodOverride?: CategoryCalculationMethod };
-
 type CategoryRow = {
   id: string;
   name: string;
@@ -42,6 +61,35 @@ type CategoryRow = {
   calculation_method: string;
   sort_order: number | string;
 };
+type PeriodRow = {
+  id: string;
+  code: string;
+  name: string;
+  calculation_mode: string;
+  period_role: string;
+  sort_order: number | string;
+};
+type ComponentRow = {
+  parent_period_id: string;
+  component_period_id: string;
+  weight: number | string;
+  sort_order: number | string;
+};
+
+function normalizePeriod(row: PeriodRow): GradingPeriodSummary {
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    calculationMode: row.calculation_mode === "composite" ? "composite" : "direct",
+    periodRole: row.period_role === "exam" ? "exam" : "standard",
+    sortOrder: Number(row.sort_order) || 0,
+  };
+}
+
+function overallPercent(calculation: StudentPeriodCalculation): number | null {
+  return calculation.result.overallPercent;
+}
 
 export function gradingCategoryFromName(name: string): GradingCategory {
   const normalized = name.trim().toLowerCase();
@@ -54,10 +102,14 @@ export function gradingCategoryFromName(name: string): GradingCategory {
 
 export async function getSectionGradingPeriods(sectionId: string): Promise<GradingPeriodSummary[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("grading_periods").select("id,code,name").eq("section_id", sectionId);
+  const { data, error } = await supabase
+    .from("grading_periods")
+    .select("id,code,name,calculation_mode,period_role,sort_order")
+    .eq("section_id", sectionId)
+    .order("sort_order", { ascending: true })
+    .order("code", { ascending: true });
   if (error || !data) return [];
-  const order = new Map([["Q1",1],["Q2",2],["S1",3],["Q3",4],["Q4",5],["S2",6]]);
-  return data.sort((a,b)=>(order.get(a.code)??99)-(order.get(b.code)??99));
+  return (data as PeriodRow[]).map(normalizePeriod);
 }
 
 async function loadCategoryRules(sectionId: string, options?: CalculationOptions) {
@@ -72,136 +124,366 @@ async function loadCategoryRules(sectionId: string, options?: CalculationOptions
   return buildRulesFromCategories(data as CategoryRow[], options?.calculationMethodOverride);
 }
 
+async function calculateDirectStudentPeriod(
+  sectionId: string,
+  studentId: string,
+  period: GradingPeriodSummary,
+  options?: CalculationOptions,
+): Promise<StudentGradeCalculation | null> {
+  const supabase = await createClient();
+  const categoryRules = await loadCategoryRules(sectionId, options);
+  if (!categoryRules) return null;
+  const { categoryById, rules } = categoryRules;
+  const { data: assignments, error: assignmentsError } = await supabase
+    .from("assignments")
+    .select("id,category_id,title,assignment_date,points_possible")
+    .eq("section_id", sectionId)
+    .eq("grading_period_id", period.id)
+    .eq("archived", false)
+    .order("assignment_date", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (assignmentsError || !assignments) return null;
+  if (assignments.length === 0) return { studentId, sectionId, gradingPeriod: period, rules, result: calculateGrade([], rules) };
+
+  const assignmentIds = assignments.map((assignment) => assignment.id);
+  const { data: gradeRows, error: gradeRowsError } = await supabase
+    .from("grade_records")
+    .select("id,assignment_id,missing,exempt")
+    .eq("student_id", studentId)
+    .in("assignment_id", assignmentIds);
+  if (gradeRowsError || !gradeRows) return null;
+  const gradeRowByAssignmentId = new Map(gradeRows.map((row) => [row.assignment_id, row]));
+  const gradeRecordIds = gradeRows.map((row) => row.id);
+  const attemptsByGradeRecordId = new Map<string, { id: string; points_earned: number; attempt_number: number; occurred_on: string }[]>();
+  if (gradeRecordIds.length > 0) {
+    const { data: attempts, error: attemptsError } = await supabase
+      .from("grade_attempts")
+      .select("id,grade_record_id,points_earned,attempt_number,occurred_on")
+      .in("grade_record_id", gradeRecordIds)
+      .order("attempt_number", { ascending: true });
+    if (attemptsError || !attempts) return null;
+    for (const attempt of attempts) {
+      const list = attemptsByGradeRecordId.get(attempt.grade_record_id) ?? [];
+      list.push(attempt);
+      attemptsByGradeRecordId.set(attempt.grade_record_id, list);
+    }
+  }
+
+  const records: GradeRecord[] = assignments.map((assignment) => {
+    const config = categoryById.get(assignment.category_id);
+    if (!config) throw new Error(`Assignment ${assignment.id} references an unknown grading category.`);
+    const row = gradeRowByAssignmentId.get(assignment.id);
+    const attempts = row ? attemptsByGradeRecordId.get(row.id) ?? [] : [];
+    const possible = Number(assignment.points_possible);
+    return {
+      assignmentId: assignment.id,
+      assignmentTitle: assignment.title,
+      assignmentDate: assignment.assignment_date,
+      gradingPeriodCode: period.code,
+      category: config.category,
+      pointsPossible: possible,
+      missing: row?.missing ?? false,
+      exempt: row?.exempt ?? false,
+      attempts: attempts.map((attempt) => ({
+        id: attempt.id,
+        earned: Number(attempt.points_earned),
+        possible,
+        attemptNumber: attempt.attempt_number,
+        occurredAt: attempt.occurred_on,
+      })),
+    };
+  });
+  return { studentId, sectionId, gradingPeriod: period, rules, result: calculateGrade(records, rules) };
+}
+
+export async function getStudentPeriodCalculation(
+  sectionId: string,
+  studentId: string,
+  gradingPeriodCode: string,
+  options?: CalculationOptions,
+  stack: string[] = [],
+): Promise<StudentPeriodCalculation | null> {
+  if (stack.includes(gradingPeriodCode)) throw new Error(`Circular grading-period composition detected at ${gradingPeriodCode}.`);
+  const supabase = await createClient();
+  const [{ data: periodRow, error: periodError }, categoryRules] = await Promise.all([
+    supabase
+      .from("grading_periods")
+      .select("id,code,name,calculation_mode,period_role,sort_order")
+      .eq("section_id", sectionId)
+      .eq("code", gradingPeriodCode)
+      .maybeSingle(),
+    loadCategoryRules(sectionId, options),
+  ]);
+  if (periodError || !periodRow || !categoryRules) return null;
+  const period = normalizePeriod(periodRow as PeriodRow);
+  if (period.calculationMode === "direct") {
+    const direct = await calculateDirectStudentPeriod(sectionId, studentId, period, options);
+    return direct ? { mode: "direct", ...direct } : null;
+  }
+
+  const { data: componentRows, error: componentError } = await supabase
+    .from("grading_period_components")
+    .select("parent_period_id,component_period_id,weight,sort_order")
+    .eq("parent_period_id", period.id)
+    .order("sort_order", { ascending: true });
+  if (componentError || !componentRows) return null;
+  const componentIds = componentRows.map((row) => row.component_period_id);
+  const { data: childRows, error: childError } = componentIds.length
+    ? await supabase
+        .from("grading_periods")
+        .select("id,code,name,calculation_mode,period_role,sort_order")
+        .eq("section_id", sectionId)
+        .in("id", componentIds)
+    : { data: [] as PeriodRow[], error: null };
+  if (childError || !childRows) return null;
+  const childById = new Map((childRows as PeriodRow[]).map((row) => [row.id, normalizePeriod(row)]));
+  const components: { weight: number; calculation: StudentPeriodCalculation }[] = [];
+  for (const componentRow of componentRows as ComponentRow[]) {
+    const child = childById.get(componentRow.component_period_id);
+    if (!child) continue;
+    const calculation = await getStudentPeriodCalculation(sectionId, studentId, child.code, options, [...stack, gradingPeriodCode]);
+    if (!calculation) continue;
+    components.push({ weight: Number(componentRow.weight), calculation });
+  }
+  const result = calculateSemesterGrade(components.map(({ weight, calculation }) => ({
+    code: calculation.gradingPeriod.code,
+    label: calculation.gradingPeriod.name,
+    role: calculation.gradingPeriod.periodRole,
+    weight,
+    percent: overallPercent(calculation),
+  })));
+  return { mode: "composite", studentId, sectionId, gradingPeriod: period, rules: categoryRules.rules, components, result };
+}
+
 export async function getStudentGradeCalculation(
   sectionId: string,
   studentId: string,
   gradingPeriodCode: string,
   options?: CalculationOptions,
 ): Promise<StudentGradeCalculation | null> {
-  const supabase = await createClient();
-  const [{ data: period, error: periodError }, categoryRules] = await Promise.all([
-    supabase.from("grading_periods").select("id,code,name").eq("section_id",sectionId).eq("code",gradingPeriodCode).maybeSingle(),
-    loadCategoryRules(sectionId, options),
-  ]);
-  if (periodError || !period || !categoryRules) return null;
-
-  const { categoryById, rules } = categoryRules;
-  const { data: assignments, error: assignmentsError } = await supabase.from("assignments")
-    .select("id,category_id,title,assignment_date,points_possible").eq("section_id",sectionId).eq("grading_period_id",period.id).eq("archived",false)
-    .order("assignment_date",{ascending:true}).order("created_at",{ascending:true});
-  if(assignmentsError||!assignments) return null;
-  if(assignments.length===0) return {studentId,sectionId,gradingPeriod:period,rules,result:calculateGrade([],rules)};
-
-  const assignmentIds=assignments.map(a=>a.id);
-  const { data: gradeRows, error: gradeRowsError }=await supabase.from("grade_records").select("id,assignment_id,missing,exempt").eq("student_id",studentId).in("assignment_id",assignmentIds);
-  if(gradeRowsError||!gradeRows) return null;
-  const gradeRowByAssignmentId=new Map(gradeRows.map(r=>[r.assignment_id,r]));
-  const gradeRecordIds=gradeRows.map(r=>r.id);
-  const attemptsByGradeRecordId=new Map<string,{id:string;points_earned:number;attempt_number:number;occurred_on:string}[]>();
-  if(gradeRecordIds.length>0){
-    const {data:attempts,error:attemptsError}=await supabase.from("grade_attempts").select("id,grade_record_id,points_earned,attempt_number,occurred_on").in("grade_record_id",gradeRecordIds).order("attempt_number",{ascending:true});
-    if(attemptsError||!attempts)return null;
-    for(const attempt of attempts){const list=attemptsByGradeRecordId.get(attempt.grade_record_id)??[];list.push(attempt);attemptsByGradeRecordId.set(attempt.grade_record_id,list);}
-  }
-  const records:GradeRecord[]=assignments.map(assignment=>{
-    const config=categoryById.get(assignment.category_id); if(!config) throw new Error(`Assignment ${assignment.id} references an unknown grading category.`);
-    const row=gradeRowByAssignmentId.get(assignment.id), attempts=row?attemptsByGradeRecordId.get(row.id)??[]:[], possible=Number(assignment.points_possible);
-    return {assignmentId:assignment.id,assignmentTitle:assignment.title,assignmentDate:assignment.assignment_date,gradingPeriodCode:period.code,category:config.category,pointsPossible:possible,missing:row?.missing??false,exempt:row?.exempt??false,attempts:attempts.map(a=>({id:a.id,earned:Number(a.points_earned),possible,attemptNumber:a.attempt_number,occurredAt:a.occurred_on}))};
-  });
-  return {studentId,sectionId,gradingPeriod:period,rules,result:calculateGrade(records,rules)};
+  const calculation = await getStudentPeriodCalculation(sectionId, studentId, gradingPeriodCode, options);
+  return calculation?.mode === "direct" ? calculation : null;
 }
 
 export async function getStudentSemesterCalculation(
-  sectionId:string,
-  studentId:string,
-  semesterCode:"S1"|"S2",
+  sectionId: string,
+  studentId: string,
+  semesterCode: "S1" | "S2",
   options?: CalculationOptions,
-):Promise<StudentSemesterCalculation>{
-  const quarterCodes=semesterCode==="S1"?["Q1","Q2"]:["Q3","Q4"];
-  const [firstQuarter,secondQuarter,examCalculation]=await Promise.all([
-    getStudentGradeCalculation(sectionId,studentId,quarterCodes[0],options),
-    getStudentGradeCalculation(sectionId,studentId,quarterCodes[1],options),
-    getStudentGradeCalculation(sectionId,studentId,semesterCode,options),
-  ]);
-  const quarterCalculations=[firstQuarter,secondQuarter].filter((value):value is StudentGradeCalculation=>value!==null);
-  const result=calculateSemesterGrade([
-    {code:quarterCodes[0],label:`${quarterCodes[0]} grade`,weight:0.4,percent:firstQuarter?.result.overallPercent??null},
-    {code:quarterCodes[1],label:`${quarterCodes[1]} grade`,weight:0.4,percent:secondQuarter?.result.overallPercent??null},
-    {code:"EXAM",label:"Semester Exam",weight:0.2,percent:examCalculation?.result.overallPercent??null},
-  ]);
-  return {studentId,sectionId,semesterCode,semesterName:semesterCode==="S1"?"Semester 1":"Semester 2",quarterCalculations,examCalculation,result};
+): Promise<StudentSemesterCalculation> {
+  const calculation = await getStudentPeriodCalculation(sectionId, studentId, semesterCode, options);
+  if (!calculation || calculation.mode !== "composite") {
+    return {
+      studentId,
+      sectionId,
+      semesterCode,
+      semesterName: semesterCode,
+      quarterCalculations: [],
+      examCalculation: null,
+      result: calculateSemesterGrade([]),
+    };
+  }
+  const directComponents = calculation.components
+    .map((component) => component.calculation)
+    .filter((component): component is Extract<StudentPeriodCalculation, { mode: "direct" }> => component.mode === "direct");
+  const examCalculation = directComponents.find((component) => component.gradingPeriod.periodRole === "exam") ?? null;
+  const quarterCalculations = directComponents.filter((component) => component.gradingPeriod.periodRole !== "exam");
+  return {
+    studentId,
+    sectionId,
+    semesterCode,
+    semesterName: calculation.gradingPeriod.name,
+    quarterCalculations,
+    examCalculation,
+    result: calculation.result,
+  };
 }
 
 export async function getSectionGradebook(
-  sectionId:string,
-  studentIds:string[],
-  gradingPeriodCode:string,
+  sectionId: string,
+  studentIds: string[],
+  gradingPeriodCode: string,
   options?: CalculationOptions,
-):Promise<SectionGradebookCalculation|null>{
-  const supabase=await createClient();
-  const [{data:periods,error:periodsError}, categoryRules]=await Promise.all([
-    supabase.from("grading_periods").select("id,code,name").eq("section_id",sectionId),
+): Promise<SectionGradebookCalculation | null> {
+  const supabase = await createClient();
+  const [{ data: periodRows, error: periodsError }, { data: componentRows, error: componentsError }, categoryRules] = await Promise.all([
+    supabase
+      .from("grading_periods")
+      .select("id,code,name,calculation_mode,period_role,sort_order")
+      .eq("section_id", sectionId),
+    supabase
+      .from("grading_period_components")
+      .select("parent_period_id,component_period_id,weight,sort_order"),
     loadCategoryRules(sectionId, options),
   ]);
-  if(periodsError||!periods||!categoryRules)return null;
-  const selectedPeriod=periods.find(period=>period.code===gradingPeriodCode); if(!selectedPeriod)return null;
-  const {categoryById,rules}=categoryRules;
-  const isSemester=gradingPeriodCode==="S1"||gradingPeriodCode==="S2";
-  const quarterCodes=gradingPeriodCode==="S1"?["Q1","Q2"]:gradingPeriodCode==="S2"?["Q3","Q4"]:[];
-  const requiredCodes=isSemester?[...quarterCodes,gradingPeriodCode]:[gradingPeriodCode];
-  const periodByCode=new Map(periods.map(period=>[period.code,period]));
-  const requiredPeriodIds=requiredCodes.map(code=>periodByCode.get(code)?.id).filter((id):id is string=>typeof id==="string");
-  if(requiredPeriodIds.length===0)return {sectionId,gradingPeriod:selectedPeriod,mode:isSemester?"semester":"quarter",rules,rows:studentIds.map(studentId=>({studentId,overallPercent:null,categoryPercents:{},componentPercents:{},missingCount:0,unenteredCount:0,assignmentCount:0}))};
+  if (periodsError || componentsError || !periodRows || !componentRows || !categoryRules) return null;
+  const periods = (periodRows as PeriodRow[]).map(normalizePeriod);
+  const periodById = new Map(periods.map((period) => [period.id, period]));
+  const periodByCode = new Map(periods.map((period) => [period.code, period]));
+  const selectedPeriod = periodByCode.get(gradingPeriodCode);
+  if (!selectedPeriod) return null;
+  const componentsByParent = new Map<string, ComponentRow[]>();
+  for (const row of componentRows as ComponentRow[]) {
+    if (!periodById.has(row.parent_period_id) || !periodById.has(row.component_period_id)) continue;
+    const list = componentsByParent.get(row.parent_period_id) ?? [];
+    list.push(row);
+    componentsByParent.set(row.parent_period_id, list);
+  }
+  for (const list of componentsByParent.values()) list.sort((a, b) => Number(a.sort_order) - Number(b.sort_order));
 
-  const {data:assignments,error:assignmentsError}=await supabase.from("assignments")
+  function collectDirectPeriodIds(periodId: string, stack: string[] = []): string[] {
+    if (stack.includes(periodId)) throw new Error("Circular grading-period composition detected.");
+    const period = periodById.get(periodId);
+    if (!period) return [];
+    if (period.calculationMode === "direct") return [periodId];
+    return (componentsByParent.get(periodId) ?? []).flatMap((component) => collectDirectPeriodIds(component.component_period_id, [...stack, periodId]));
+  }
+
+  const directPeriodIds = Array.from(new Set(collectDirectPeriodIds(selectedPeriod.id)));
+  const { categoryById, rules } = categoryRules;
+  if (directPeriodIds.length === 0) {
+    return {
+      sectionId,
+      gradingPeriod: selectedPeriod,
+      mode: selectedPeriod.calculationMode,
+      rules,
+      rows: studentIds.map((studentId) => ({ studentId, overallPercent: null, categoryPercents: {}, componentPercents: {}, missingCount: 0, unenteredCount: 0, assignmentCount: 0 })),
+    };
+  }
+
+  const { data: assignments, error: assignmentsError } = await supabase
+    .from("assignments")
     .select("id,category_id,grading_period_id,title,assignment_date,points_possible,created_at")
-    .eq("section_id",sectionId).eq("archived",false).in("grading_period_id",requiredPeriodIds)
-    .order("assignment_date",{ascending:true}).order("created_at",{ascending:true});
-  if(assignmentsError||!assignments)return null;
-  const assignmentIds=assignments.map(assignment=>assignment.id);
-  let gradeRows:{id:string;assignment_id:string;student_id:string;missing:boolean;exempt:boolean}[]=[];
-  if(studentIds.length>0&&assignmentIds.length>0){
-    const {data,error}=await supabase.from("grade_records").select("id,assignment_id,student_id,missing,exempt").in("student_id",studentIds).in("assignment_id",assignmentIds);
-    if(error||!data)return null; gradeRows=data;
+    .eq("section_id", sectionId)
+    .eq("archived", false)
+    .in("grading_period_id", directPeriodIds)
+    .order("assignment_date", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (assignmentsError || !assignments) return null;
+  const assignmentIds = assignments.map((assignment) => assignment.id);
+  let gradeRows: { id: string; assignment_id: string; student_id: string; missing: boolean; exempt: boolean }[] = [];
+  if (studentIds.length > 0 && assignmentIds.length > 0) {
+    const { data, error } = await supabase
+      .from("grade_records")
+      .select("id,assignment_id,student_id,missing,exempt")
+      .in("student_id", studentIds)
+      .in("assignment_id", assignmentIds);
+    if (error || !data) return null;
+    gradeRows = data;
   }
-  const gradeRecordIds=gradeRows.map(row=>row.id);
-  let attempts:{id:string;grade_record_id:string;points_earned:number;attempt_number:number;occurred_on:string}[]=[];
-  if(gradeRecordIds.length>0){
-    const {data,error}=await supabase.from("grade_attempts").select("id,grade_record_id,points_earned,attempt_number,occurred_on").in("grade_record_id",gradeRecordIds).order("attempt_number",{ascending:true});
-    if(error||!data)return null; attempts=data;
+  const gradeRecordIds = gradeRows.map((row) => row.id);
+  let attempts: { id: string; grade_record_id: string; points_earned: number; attempt_number: number; occurred_on: string }[] = [];
+  if (gradeRecordIds.length > 0) {
+    const { data, error } = await supabase
+      .from("grade_attempts")
+      .select("id,grade_record_id,points_earned,attempt_number,occurred_on")
+      .in("grade_record_id", gradeRecordIds)
+      .order("attempt_number", { ascending: true });
+    if (error || !data) return null;
+    attempts = data;
   }
 
-  const assignmentsByPeriodId=new Map<string,typeof assignments>();
-  for(const assignment of assignments){if(!assignment.grading_period_id)continue;const periodId=assignment.grading_period_id;const list=assignmentsByPeriodId.get(periodId)??[];list.push(assignment);assignmentsByPeriodId.set(periodId,list);}
-  const gradeRowByStudentAssignment=new Map<string,(typeof gradeRows)[number]>();
-  for(const row of gradeRows)gradeRowByStudentAssignment.set(`${row.student_id}:${row.assignment_id}`,row);
-  const attemptsByGradeRecordId=new Map<string,typeof attempts>();
-  for(const attempt of attempts){const list=attemptsByGradeRecordId.get(attempt.grade_record_id)??[];list.push(attempt);attemptsByGradeRecordId.set(attempt.grade_record_id,list);}
+  const assignmentsByPeriodId = new Map<string, typeof assignments>();
+  for (const assignment of assignments) {
+    if (!assignment.grading_period_id) continue;
+    const list = assignmentsByPeriodId.get(assignment.grading_period_id) ?? [];
+    list.push(assignment);
+    assignmentsByPeriodId.set(assignment.grading_period_id, list);
+  }
+  const gradeRowByStudentAssignment = new Map<string, (typeof gradeRows)[number]>();
+  for (const row of gradeRows) gradeRowByStudentAssignment.set(`${row.student_id}:${row.assignment_id}`, row);
+  const attemptsByGradeRecordId = new Map<string, typeof attempts>();
+  for (const attempt of attempts) {
+    const list = attemptsByGradeRecordId.get(attempt.grade_record_id) ?? [];
+    list.push(attempt);
+    attemptsByGradeRecordId.set(attempt.grade_record_id, list);
+  }
 
-  function calculateStudentPeriod(studentId:string,code:string){
-    const period=periodByCode.get(code); if(!period)return {result:calculateGrade([],rules),assignmentCount:0};
-    const periodAssignments=assignmentsByPeriodId.get(period.id)??[];
-    const records:GradeRecord[]=periodAssignments.map(assignment=>{
-      const config=categoryById.get(assignment.category_id); if(!config)throw new Error(`Assignment ${assignment.id} references an unknown grading category.`);
-      const row=gradeRowByStudentAssignment.get(`${studentId}:${assignment.id}`), rowAttempts=row?attemptsByGradeRecordId.get(row.id)??[]:[], possible=Number(assignment.points_possible);
-      return {assignmentId:assignment.id,assignmentTitle:assignment.title,assignmentDate:assignment.assignment_date,gradingPeriodCode:code,category:config.category,pointsPossible:possible,missing:row?.missing??false,exempt:row?.exempt??false,attempts:rowAttempts.map(attempt=>({id:attempt.id,earned:Number(attempt.points_earned),possible,attemptNumber:attempt.attempt_number,occurredAt:attempt.occurred_on}))};
+  function calculateDirect(studentId: string, periodId: string) {
+    const period = periodById.get(periodId);
+    const periodAssignments = assignmentsByPeriodId.get(periodId) ?? [];
+    if (!period) return { result: calculateGrade([], rules), assignmentCount: 0 };
+    const records: GradeRecord[] = periodAssignments.map((assignment) => {
+      const config = categoryById.get(assignment.category_id);
+      if (!config) throw new Error(`Assignment ${assignment.id} references an unknown grading category.`);
+      const row = gradeRowByStudentAssignment.get(`${studentId}:${assignment.id}`);
+      const rowAttempts = row ? attemptsByGradeRecordId.get(row.id) ?? [] : [];
+      const possible = Number(assignment.points_possible);
+      return {
+        assignmentId: assignment.id,
+        assignmentTitle: assignment.title,
+        assignmentDate: assignment.assignment_date,
+        gradingPeriodCode: period.code,
+        category: config.category,
+        pointsPossible: possible,
+        missing: row?.missing ?? false,
+        exempt: row?.exempt ?? false,
+        attempts: rowAttempts.map((attempt) => ({
+          id: attempt.id,
+          earned: Number(attempt.points_earned),
+          possible,
+          attemptNumber: attempt.attempt_number,
+          occurredAt: attempt.occurred_on,
+        })),
+      };
     });
-    return {result:calculateGrade(records,rules),assignmentCount:periodAssignments.length};
+    return { result: calculateGrade(records, rules), assignmentCount: periodAssignments.length };
   }
 
-  const rows=studentIds.map((studentId):SectionGradebookRow=>{
-    if(!isSemester){
-      const calculation=calculateStudentPeriod(studentId,gradingPeriodCode);
-      return {studentId,overallPercent:calculation.result.overallPercent,categoryPercents:calculation.result.categoryPercents,componentPercents:{},missingCount:calculation.result.audit.filter(line=>line.status==="missing").length,unenteredCount:calculation.result.audit.filter(line=>line.status==="unentered").length,assignmentCount:calculation.assignmentCount};
+  type BulkPeriodResult = {
+    overallPercent: number | null;
+    categoryPercents: Record<GradingCategory, number>;
+    componentPercents: Record<string, number | null>;
+    audit: GradeAuditLine[];
+    assignmentCount: number;
+  };
+
+  function calculatePeriod(studentId: string, periodId: string, stack: string[] = []): BulkPeriodResult {
+    if (stack.includes(periodId)) throw new Error("Circular grading-period composition detected.");
+    const period = periodById.get(periodId);
+    if (!period) return { overallPercent: null, categoryPercents: {}, componentPercents: {}, audit: [], assignmentCount: 0 };
+    if (period.calculationMode === "direct") {
+      const direct = calculateDirect(studentId, periodId);
+      return {
+        overallPercent: direct.result.overallPercent,
+        categoryPercents: direct.result.categoryPercents,
+        componentPercents: {},
+        audit: direct.result.audit,
+        assignmentCount: direct.assignmentCount,
+      };
     }
-    const first=calculateStudentPeriod(studentId,quarterCodes[0]), second=calculateStudentPeriod(studentId,quarterCodes[1]), exam=calculateStudentPeriod(studentId,gradingPeriodCode);
-    const semester=calculateSemesterGrade([
-      {code:quarterCodes[0],label:`${quarterCodes[0]} grade`,weight:0.4,percent:first.result.overallPercent},
-      {code:quarterCodes[1],label:`${quarterCodes[1]} grade`,weight:0.4,percent:second.result.overallPercent},
-      {code:"EXAM",label:"Semester Exam",weight:0.2,percent:exam.result.overallPercent},
-    ]);
-    const audit=[...first.result.audit,...second.result.audit,...exam.result.audit];
-    return {studentId,overallPercent:semester.overallPercent,categoryPercents:{},componentPercents:{[quarterCodes[0]]:first.result.overallPercent,[quarterCodes[1]]:second.result.overallPercent,EXAM:exam.result.overallPercent},missingCount:audit.filter(line=>line.status==="missing").length,unenteredCount:audit.filter(line=>line.status==="unentered").length,assignmentCount:first.assignmentCount+second.assignmentCount+exam.assignmentCount};
+    const childResults = (componentsByParent.get(periodId) ?? []).map((component) => {
+      const child = periodById.get(component.component_period_id);
+      const calculation = calculatePeriod(studentId, component.component_period_id, [...stack, periodId]);
+      return { component, child, calculation };
+    }).filter((entry) => Boolean(entry.child));
+    const composite = calculateSemesterGrade(childResults.map(({ component, child, calculation }) => ({
+      code: child!.code,
+      label: child!.name,
+      role: child!.periodRole,
+      weight: Number(component.weight),
+      percent: calculation.overallPercent,
+    })));
+    return {
+      overallPercent: composite.overallPercent,
+      categoryPercents: {},
+      componentPercents: Object.fromEntries(childResults.map(({ child, calculation }) => [child!.code, calculation.overallPercent])),
+      audit: childResults.flatMap(({ calculation }) => calculation.audit),
+      assignmentCount: childResults.reduce((sum, { calculation }) => sum + calculation.assignmentCount, 0),
+    };
+  }
+
+  const rows = studentIds.map((studentId): SectionGradebookRow => {
+    const calculation = calculatePeriod(studentId, selectedPeriod.id);
+    return {
+      studentId,
+      overallPercent: calculation.overallPercent,
+      categoryPercents: calculation.categoryPercents,
+      componentPercents: calculation.componentPercents,
+      missingCount: calculation.audit.filter((line) => line.status === "missing").length,
+      unenteredCount: calculation.audit.filter((line) => line.status === "unentered").length,
+      assignmentCount: calculation.assignmentCount,
+    };
   });
-  return {sectionId,gradingPeriod:selectedPeriod,mode:isSemester?"semester":"quarter",rules,rows};
+  return { sectionId, gradingPeriod: selectedPeriod, mode: selectedPeriod.calculationMode, rules, rows };
 }
