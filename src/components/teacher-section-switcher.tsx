@@ -26,15 +26,16 @@ export function TeacherSectionSwitcher({
 }) {
   if (sections.length <= 1) return null;
 
-  return <form className="teacher-section-switcher" action={setActiveTeacherSection}>
+  return <form action={setActiveTeacherSection} style={{ display: "flex", alignItems: "center" }}>
     <input type="hidden" name="returnTo" value={returnTo}/>
-    <label>
+    <label style={{ display: "grid", gap: 3, color: "var(--muted)", fontSize: ".7rem", fontWeight: 750 }}>
       <span>Course / section</span>
       <select
         name="sectionId"
         value={activeSectionId}
         onChange={(event) => event.currentTarget.form?.requestSubmit()}
         aria-label="Select teacher course and section"
+        style={{ minWidth: 245, background: "var(--surface)", color: "var(--text)" }}
       >
         {sections.map((section) => <option key={section.sectionId} value={section.sectionId}>{optionLabel(section)}</option>)}
       </select>
