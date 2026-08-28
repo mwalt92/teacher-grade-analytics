@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { getTeacherSections } from "@/lib/data/teacher-context";
+import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
+import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import { AssignmentForm } from "../assignment-form";
 
@@ -11,8 +12,7 @@ function displayCourseName(courseName: string, courseCode: string | null) {
 }
 
 export default async function NewAssignmentPage() {
-  const sections = await getTeacherSections();
-  const section = sections[0];
+  const [sections, section] = await Promise.all([getTeacherSections(), getActiveTeacherSection()]);
   if (!section) redirect("/");
   const supabase = await createClient();
   const [{ data: periods }, { data: categories }, { data: types }] = await Promise.all([
@@ -35,7 +35,7 @@ export default async function NewAssignmentPage() {
   return <main className="app-shell">
     <header className="topbar">
       <div><p className="eyebrow">Teacher Grade Analytics</p><h1>Assignment Creation</h1><p className="subtle">{displayCourseName(section.courseName, section.courseCode)} • {section.sectionName}</p></div>
-      <Link className="secondary-link" href="/"><ArrowLeft size={17}/> Back to Dashboard</Link>
+      <div className="grade-audit-header-actions"><TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo="/assignments/new"/><Link className="secondary-link" href="/"><ArrowLeft size={17}/> Back to Dashboard</Link></div>
     </header>
     <section className="content-wrap assignment-create-wrap">
       <article className="panel">
