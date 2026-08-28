@@ -84,6 +84,7 @@ export function GradeSimulator({ data }: { data: GradeSimulatorData }) {
       assignmentDate: "2099-12-31",
       gradingPeriodCode: data.quarterCode,
       category: scenario.category,
+      pointsPossible: possible,
       missing: false,
       exempt: false,
       attempts: [{
@@ -190,7 +191,7 @@ export function GradeSimulator({ data }: { data: GradeSimulatorData }) {
       <div className={`${styles.projectionCard} ${styles.projected}`}><span>Projected {data.semesterCode}</span><strong>{formatPercent(projection.semester.overallPercent)}</strong><small>{formatDelta(projection.semester.overallPercent, data.currentSemesterPercent)} pts</small></div>
     </section>
 
-    <div className={styles.explainer}><Sparkles size={17}/><span>The simulator uses the same category weights, dynamic weighting, best-attempt retake policy, and lowest-score drop rules as the real gradebook. Late deductions come from this course&apos;s category settings.</span></div>
+    <div className={styles.explainer}><Sparkles size={17}/><span>The simulator uses the same category weights, dynamic weighting, best-attempt retake policy, lowest-score drop rules, and configured category calculation methods as the real gradebook. Late deductions come from this course&apos;s category settings.</span></div>
 
     <section className={styles.scenarioSection}>
       <div className={styles.sectionHeading}><div><strong>Hypothetical future assignments</strong><span>Add more than one to model a sequence of upcoming scores.</span></div><button className="secondary-link" type="button" onClick={addScenario}><Plus size={15}/> Add another</button></div>
