@@ -7,9 +7,9 @@ export default function LoginPage() {
       <section className={styles.card}>
         <p className="eyebrow">Teacher Grade Analytics</p>
         <h1>Sign in</h1>
-        <p className="subtle">Use your Google account to access your authorized courses and grade data.</p>
+        <p className="subtle">Use your school-managed Google account to access authorized course and grade data.</p>
         <GoogleSignInButton />
-        <p className={styles.note}>Development note: Google OAuth must be enabled in Supabase before this button will complete sign-in.</p>
+        <p className={styles.note}>Google sign-in is the only supported login method. Password and email-link sign-in are disabled.</p>
       </section>
     </main>
   );

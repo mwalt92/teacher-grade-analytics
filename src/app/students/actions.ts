@@ -69,6 +69,13 @@ export async function previewRosterImport(
     if (!(file instanceof File) || file.size === 0) return { error: "Choose a PowerSchool .xlsx roster file." };
 
     const { supabase, userId } = await requireTeacherForSection(sectionId);
+    const { error: cleanupError } = await supabase
+      .from("roster_import_batches")
+      .delete()
+      .eq("teacher_id", userId)
+      .lt("expires_at", new Date().toISOString());
+    if (cleanupError) throw cleanupError;
+
     const preview = await parsePowerSchoolWorkbook(file);
     const studentNumbers = [...new Set(preview.rows.map((row) => row.studentNumber).filter((value): value is string => Boolean(value)))];
 
@@ -143,7 +150,10 @@ export async function importRosterBatch(
       .maybeSingle();
     if (batchError) throw batchError;
     if (!batch || batch.status !== "preview") return { error: "This roster preview is no longer available for import." };
-    if (new Date(batch.expires_at).getTime() < Date.now()) return { error: "This roster preview expired. Preview the file again." };
+    if (new Date(batch.expires_at).getTime() < Date.now()) {
+      await supabase.from("roster_import_batches").delete().eq("id", batch.id).eq("teacher_id", userId);
+      return { error: "This roster preview expired. Preview the file again." };
+    }
 
     if (!Array.isArray(batch.parsed_rows) || !batch.parsed_rows.every(isParsedRosterRow)) {
       return { error: "The stored roster preview could not be validated." };
@@ -263,15 +273,21 @@ export async function importRosterBatch(
 
     const { error: finishError } = await supabase
       .from("roster_import_batches")
-      .update({ status: "imported", imported_at: new Date().toISOString(), result_summary: summary as unknown as Json })
-      .eq("id", batchId);
+      .update({
+        status: "imported",
+        imported_at: new Date().toISOString(),
+        result_summary: summary as unknown as Json,
+        parsed_rows: [] as unknown as Json,
+        warnings: [] as unknown as Json,
+      })
+      .eq("id", batchId)
+      .eq("teacher_id", userId);
     if (finishError) throw finishError;
 
     revalidatePath("/");
     revalidatePath("/students");
     return { success: "Roster import completed.", summary };
   } catch (error) {
-    console.error("Roster import failed", error);
     return { error: error instanceof Error ? error.message : "Roster import failed." };
   }
 }
