@@ -1,0 +1,47 @@
+.studentNumber {
+  min-width: 0;
+}
+
+.studentNumber summary {
+  list-style: none;
+  width: fit-content;
+}
+
+.studentNumber summary::-webkit-details-marker {
+  display: none;
+}
+
+.hideLabel {
+  display: none;
+}
+
+.studentNumber[open] .showLabel {
+  display: none;
+}
+
+.studentNumber[open] .hideLabel {
+  display: inline;
+}
+
+.studentNumberValue {
+  display: block;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.emailCell {
+  min-width: 0;
+}
+
+.emailDisplay {
+  display: block;
+  width: min(100%, 230px);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
