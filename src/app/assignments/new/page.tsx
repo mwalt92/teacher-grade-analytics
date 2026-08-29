@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Settings2 } from "lucide-react";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
@@ -47,7 +47,10 @@ export default async function NewAssignmentPage() {
       <article className="panel">
         <div className="panel-header">
           <div><p className="eyebrow">New assignment</p><h2>What are you entering?</h2><p className="subtle">Choose an assignment type, then confirm the grading category and behavior. Type and category are independent so each course can use its own structure.</p></div>
-          <Link className="secondary-link" href="/assignments"><ArrowLeft size={17}/> Back to Assignments</Link>
+          <div className="toolbar-group">
+            <Link className="secondary-link" href="/settings"><Settings2 size={17}/> Manage types</Link>
+            <Link className="secondary-link" href="/assignments"><ArrowLeft size={17}/> Back to Assignments</Link>
+          </div>
         </div>
         <AssignmentForm
           sectionId={section.sectionId}
