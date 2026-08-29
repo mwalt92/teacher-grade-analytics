@@ -46,7 +46,9 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
           {roster.length === 0 ? <div className="empty-state"><UserPlus size={30}/><h3>No students here yet</h3><p className="subtle">Add a student manually for testing, or preview a PowerSchool roster before importing.</p></div> : <div className="roster-table">
             <div className="roster-row roster-head"><span>Student</span><span>Student #</span><span>Email</span><span>Status</span><span></span></div>
             {roster.map((student) => <div className="roster-row" key={student.enrollmentId}>
-              <strong>{student.displayName}</strong><span>{student.externalStudentKey ?? "—"}</span><span>{student.email ?? "Not linked yet"}</span><span className={student.active ? "status success-pill" : "status neutral-pill"}>{student.active ? "Active" : "Inactive"}</span>
+              <strong>{student.displayName}</strong>
+              <span>{student.externalStudentKey ? <details><summary className="text-button">Click to show</summary><span>{student.externalStudentKey}</span></details> : "—"}</span>
+              <span>{student.email ?? "Not linked yet"}</span><span className={student.active ? "status success-pill" : "status neutral-pill"}>{student.active ? "Active" : "Inactive"}</span>
               <form action={setEnrollmentActive}><input type="hidden" name="sectionId" value={section.sectionId}/><input type="hidden" name="enrollmentId" value={student.enrollmentId}/><input type="hidden" name="active" value={student.active ? "false" : "true"}/><button className="text-button" type="submit">{student.active ? "Hide" : "Reactivate"}</button></form>
             </div>)}
           </div>}
