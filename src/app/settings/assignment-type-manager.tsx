@@ -92,7 +92,7 @@ export function AssignmentTypeManager({
           <input type="hidden" name="assignmentTypeId" value={type.id}/>
           <label>Display name<input name="name" required maxLength={100} defaultValue={type.name}/></label>
           <label>Default category<select name="defaultCategoryId" required defaultValue={type.defaultCategoryId}>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
-          <label>Default points<input name="defaultPointsPossible" type="number" min="0.01" max="100000" step="0.5" required defaultValue={type.defaultPointsPossible}/></label>
+          <label>Default points<input name="defaultPointsPossible" type="number" min="0.5" max="100000" step="0.5" required defaultValue={type.defaultPointsPossible}/></label>
           <label className={styles.descriptionField}>Description <span className="optional">optional</span><input name="description" maxLength={240} defaultValue={type.description ?? ""} placeholder="Short note shown on the New Assignment card"/></label>
           <label className={styles.checkboxField}><input type="checkbox" name="defaultAllowRetakes" value="true" defaultChecked={type.defaultAllowRetakes}/><span><strong>Retakes on by default</strong><small>Teachers can still override this on an individual assignment.</small></span></label>
           <div className={styles.cardActions}>
@@ -113,7 +113,7 @@ export function AssignmentTypeManager({
         <input type="hidden" name="sectionId" value={sectionId}/>
         <label>Display name<input name="name" required maxLength={100} placeholder="e.g. Exit Ticket"/></label>
         <label>Default category<select name="defaultCategoryId" required defaultValue={categories[0]?.id ?? ""}><option value="" disabled>Choose category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
-        <label>Default points<input name="defaultPointsPossible" type="number" min="0.01" max="100000" step="0.5" required defaultValue="10"/></label>
+        <label>Default points<input name="defaultPointsPossible" type="number" min="0.5" max="100000" step="0.5" required defaultValue="10"/></label>
         <label className={styles.descriptionField}>Description <span className="optional">optional</span><input name="description" maxLength={240} placeholder="Short note shown on the New Assignment card"/></label>
         <label className={styles.checkboxField}><input type="checkbox" name="defaultAllowRetakes" value="true"/><span><strong>Retakes on by default</strong><small>This only sets the starting value for new assignments.</small></span></label>
         <div className={styles.cardActions}><button className="primary-button" type="submit" disabled={pending || categories.length === 0}><Plus size={16}/>{pending ? "Adding…" : "Add assignment type"}</button></div>
