@@ -1,0 +1,185 @@
+.settingsIntro {
+  display: grid;
+  gap: 10px;
+}
+
+.settingsGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 20px;
+  align-items: start;
+}
+
+.manager {
+  display: grid;
+  gap: 18px;
+}
+
+.typeList {
+  display: grid;
+  gap: 14px;
+}
+
+.typeCard {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.inactiveCard {
+  background: var(--surface-soft);
+  opacity: .78;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.titleRow h3 {
+  margin: 0;
+}
+
+.orderBadge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 32px;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-weight: 800;
+  font-size: .8rem;
+}
+
+.orderControls {
+  display: flex;
+  gap: 6px;
+}
+
+.orderControls button {
+  min-width: 38px;
+  padding: 8px;
+  justify-content: center;
+}
+
+.typeForm {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.3fr) minmax(170px, 1fr) minmax(120px, .55fr);
+  gap: 14px;
+  align-items: end;
+}
+
+.typeForm label {
+  display: grid;
+  gap: 7px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.descriptionField {
+  grid-column: 1 / -1;
+}
+
+.checkboxField {
+  grid-column: 1 / -1;
+  display: flex !important;
+  align-items: center;
+  gap: 10px !important;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.checkboxField input {
+  width: auto;
+  min-height: auto;
+  flex: none;
+}
+
+.checkboxField span {
+  display: grid;
+  gap: 2px;
+}
+
+.checkboxField small {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.cardActions {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.addCard {
+  display: grid;
+  gap: 16px;
+}
+
+.sidebarStack {
+  display: grid;
+  gap: 14px;
+}
+
+.sidebarItem {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.sidebarItem strong {
+  color: var(--text);
+}
+
+.sidebarItem span {
+  color: var(--muted);
+  font-size: .9rem;
+}
+
+@media (max-width: 920px) {
+  .settingsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .cardHeader {
+    display: grid;
+  }
+
+  .orderControls {
+    justify-content: flex-start;
+  }
+
+  .typeForm {
+    grid-template-columns: 1fr;
+  }
+
+  .descriptionField,
+  .checkboxField,
+  .cardActions {
+    grid-column: auto;
+  }
+}
