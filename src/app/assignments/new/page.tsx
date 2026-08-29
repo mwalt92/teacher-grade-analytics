@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { getTeacherSections } from "@/lib/data/teacher-context";
+import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
+import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
+import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import { AssignmentForm } from "../assignment-form";
 
@@ -11,8 +13,7 @@ function displayCourseName(courseName: string, courseCode: string | null) {
 }
 
 export default async function NewAssignmentPage() {
-  const sections = await getTeacherSections();
-  const section = sections[0];
+  const [sections, section] = await Promise.all([getTeacherSections(), getActiveTeacherSection()]);
   if (!section) redirect("/");
   const supabase = await createClient();
   const [{ data: periods }, { data: categories }, { data: types }] = await Promise.all([
@@ -34,12 +35,20 @@ export default async function NewAssignmentPage() {
 
   return <main className="app-shell">
     <header className="topbar">
-      <div><p className="eyebrow">Teacher Grade Analytics</p><h1>Assignment Creation</h1><p className="subtle">{displayCourseName(section.courseName, section.courseCode)} • {section.sectionName}</p></div>
-      <Link className="secondary-link" href="/"><ArrowLeft size={17}/> Back to Dashboard</Link>
+      <div>
+        <p className="eyebrow">Teacher Grade Analytics</p>
+        <h1>Assignment Creation</h1>
+        <p className="subtle">{displayCourseName(section.courseName, section.courseCode)} • {section.sectionName}</p>
+        <TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo="/assignments/new"/>
+      </div>
     </header>
+    <TeacherPrimaryNav/>
     <section className="content-wrap assignment-create-wrap">
       <article className="panel">
-        <div className="panel-header"><div><p className="eyebrow">New assignment</p><h2>What are you entering?</h2><p className="subtle">Choose an assignment type, then confirm the grading category and behavior. Type and category are independent so each course can use its own structure.</p></div></div>
+        <div className="panel-header">
+          <div><p className="eyebrow">New assignment</p><h2>What are you entering?</h2><p className="subtle">Choose an assignment type, then confirm the grading category and behavior. Type and category are independent so each course can use its own structure.</p></div>
+          <Link className="secondary-link" href="/assignments"><ArrowLeft size={17}/> Back to Assignments</Link>
+        </div>
         <AssignmentForm
           sectionId={section.sectionId}
           periods={(periods ?? []).map((period) => ({ id: period.id, code: period.code, name: period.name }))}

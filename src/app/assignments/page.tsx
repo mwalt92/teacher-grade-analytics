@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Archive, ArrowLeft, Edit3, Plus, RotateCcw, Search } from "lucide-react";
+import { Archive, Edit3, Plus, RotateCcw, Search } from "lucide-react";
+import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
+import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getAssignmentManagementData } from "@/lib/data/assignment-management";
-import { getTeacherSections } from "@/lib/data/teacher-context";
+import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import { archiveAssignment, restoreAssignment } from "./management-actions";
 import styles from "./assignments.module.css";
@@ -31,18 +33,18 @@ export default async function AssignmentsPage({ searchParams }: AssignmentPagePr
   const { data: claims } = await supabase.auth.getClaims();
   if (typeof claims?.claims?.sub !== "string") redirect("/login");
 
-  const sections = await getTeacherSections();
-  const section = sections[0];
+  const [sections, section] = await Promise.all([getTeacherSections(), getActiveTeacherSection()]);
   if (!section) redirect("/");
 
   const params = await searchParams;
   const q = (params.q ?? "").trim();
-  const period = params.period ?? "all";
   const status = params.status === "archived" || params.status === "all" ? params.status : "active";
   const data = await getAssignmentManagementData(section.sectionId);
   if (!data) {
     return <main className="content-wrap"><article className="panel"><h1>Assignments</h1><p className="subtle">The assignment workspace could not be loaded.</p></article></main>;
   }
+  const validPeriodCodes = new Set(data.periods.map((item) => item.code));
+  const period = params.period && validPeriodCodes.has(params.period) ? params.period : "all";
   const validTypeCodes = new Set(data.assignmentTypes.map((type) => type.code));
   const kind = validTypeCodes.has(params.kind ?? "") ? params.kind! : "all";
 
@@ -73,15 +75,19 @@ export default async function AssignmentsPage({ searchParams }: AssignmentPagePr
         <p className="eyebrow">Teacher Grade Analytics</p>
         <h1>Assignments</h1>
         <p className="subtle">{section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName} • {section.sectionName}</p>
-      </div>
-      <div className="grade-audit-header-actions">
-        <Link className="secondary-link" href="/"><ArrowLeft size={17}/> Dashboard</Link>
-        <Link className="secondary-link" href="/gradebook/assignments">Assignment Gradebook</Link>
-        <Link className="primary-button" href="/assignments/new"><Plus size={17}/> New Assignment</Link>
+        <TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/>
       </div>
     </header>
+    <TeacherPrimaryNav/>
 
     <section className={`content-wrap ${styles.content}`}>
+      <div className="section-heading">
+        <div><p className="eyebrow">Assignment workspace</p><h2>Manage course assignments</h2></div>
+        <div className="grade-audit-header-actions">
+          <Link className="secondary-link" href="/gradebook/assignments">Assignment Gradebook</Link>
+          <Link className="primary-button" href="/assignments/new"><Plus size={17}/> New Assignment</Link>
+        </div>
+      </div>
       {notice ? <div className={styles.notice}>{notice}</div> : null}
       {params.error ? <div className={styles.error}>{params.error}</div> : null}
 

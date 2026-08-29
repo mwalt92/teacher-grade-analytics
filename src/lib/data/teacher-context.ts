@@ -1,4 +1,7 @@
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+
+export const ACTIVE_TEACHER_SECTION_COOKIE = "teacher_active_section";
 
 export type TeacherSectionSummary = {
   sectionId: string;
@@ -59,5 +62,17 @@ export async function getTeacherSections(): Promise<TeacherSectionSummary[]> {
       schoolYearId: schoolYear.id,
       schoolYearLabel: schoolYear.label,
     }];
-  });
+  }).sort((a, b) =>
+    b.schoolYearLabel.localeCompare(a.schoolYearLabel)
+    || a.courseName.localeCompare(b.courseName)
+    || a.sectionName.localeCompare(b.sectionName));
+}
+
+export async function getActiveTeacherSection(): Promise<TeacherSectionSummary | null> {
+  const sections = await getTeacherSections();
+  if (!sections.length) return null;
+
+  const cookieStore = await cookies();
+  const selectedSectionId = cookieStore.get(ACTIVE_TEACHER_SECTION_COOKIE)?.value;
+  return sections.find((section) => section.sectionId === selectedSectionId) ?? sections[0];
 }

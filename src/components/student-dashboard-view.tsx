@@ -1,5 +1,6 @@
-import Link from "next/link";
+import type { ReactNode } from "react";
 import { GradeSimulator } from "@/components/grade-simulator";
+import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import type { StudentDashboardData } from "@/lib/data/student-dashboard";
 import styles from "./student-dashboard-view.module.css";
 
@@ -16,6 +17,7 @@ type StudentDashboardViewProps = {
   previewStudents?: { studentId: string; displayName: string }[];
   previewStudentId?: string;
   previewActionPath?: string;
+  previewHeaderActions?: ReactNode;
 };
 
 function formatPercent(value: number | null, digits = 1) {
@@ -51,6 +53,7 @@ export function StudentDashboardView({
   previewStudents = [],
   previewStudentId,
   previewActionPath = "/student/preview",
+  previewHeaderActions,
 }: StudentDashboardViewProps) {
   const recentAssignments = data.assignments.slice(0, 10);
   const previewCarryFields = hiddenFields.filter((field) => field.name !== "studentId" && field.name !== "period");
@@ -63,9 +66,10 @@ export function StudentDashboardView({
         <p className="eyebrow">Student Progress</p>
         <h1>{courseName}</h1>
         <p className="subtle">{studentName} • {sectionName} • {schoolYear}</p>
+        {preview ? previewHeaderActions : null}
       </div>
-      {preview ? <Link className="secondary-link" href="/">Teacher Dashboard</Link> : null}
     </header>
+    {preview ? <TeacherPrimaryNav/> : null}
 
     <section className={`content-wrap ${styles.content}`}>
       {preview ? <div className={styles.previewBanner}>

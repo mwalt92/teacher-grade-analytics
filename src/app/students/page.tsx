@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, UserPlus } from "lucide-react";
+import { UserPlus } from "lucide-react";
+import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
+import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getSectionRoster } from "@/lib/data/roster";
-import { getTeacherSections } from "@/lib/data/teacher-context";
+import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import { addStudent, setEnrollmentActive } from "./actions";
 import { RosterImportPreview } from "./roster-import-preview";
@@ -11,8 +13,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
   if (typeof claims?.claims?.sub !== "string") redirect("/login");
-  const sections = await getTeacherSections();
-  const section = sections[0];
+  const [sections, section] = await Promise.all([getTeacherSections(), getActiveTeacherSection()]);
   if (!section) redirect("/");
   const { view } = await searchParams;
   const filter = view === "inactive" ? "inactive" : view === "all" ? "all" : "active";
@@ -21,13 +22,19 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
     id: item.sectionId,
     label: `${item.courseCode ? `${item.courseName} ${item.courseCode}` : item.courseName} — ${item.sectionName}`,
   }));
+  const returnTo = filter === "inactive" ? "/students?view=inactive" : filter === "all" ? "/students?view=all" : "/students";
 
   return <main className="app-shell">
     <header className="topbar">
-      <div><p className="eyebrow">Teacher Grade Analytics</p><h1>Roster</h1><p className="subtle">{section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName} • {section.sectionName}</p></div>
-      <div className="toolbar-group"><Link className="secondary-link" href="/"><ArrowLeft size={17}/> Dashboard</Link></div>
+      <div>
+        <p className="eyebrow">Teacher Grade Analytics</p>
+        <h1>Roster</h1>
+        <p className="subtle">{section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName} • {section.sectionName}</p>
+        <TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/>
+      </div>
     </header>
-    <nav className="main-nav" aria-label="Roster filters">
+    <TeacherPrimaryNav/>
+    <nav className="main-nav" aria-label="Roster filters" style={{ background: "var(--surface-soft)", paddingTop: 8 }}>
       <Link className={filter === "active" ? "nav-button active" : "nav-button"} href="/students">Active</Link>
       <Link className={filter === "inactive" ? "nav-button active" : "nav-button"} href="/students?view=inactive">Inactive</Link>
       <Link className={filter === "all" ? "nav-button active" : "nav-button"} href="/students?view=all">All students</Link>
