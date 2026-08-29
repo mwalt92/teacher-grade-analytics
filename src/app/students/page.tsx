@@ -8,6 +8,7 @@ import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-
 import { createClient } from "@/lib/supabase/server";
 import { addStudent, setEnrollmentActive } from "./actions";
 import { RosterImportPreview } from "./roster-import-preview";
+import styles from "./students.module.css";
 
 export default async function StudentsPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const supabase = await createClient();
@@ -47,9 +48,10 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
             <div className="roster-row roster-head"><span>Student</span><span>Student #</span><span>Email</span><span>Status</span><span></span></div>
             {roster.map((student) => <div className="roster-row" key={student.enrollmentId}>
               <strong>{student.displayName}</strong>
-              <span>{student.externalStudentKey ? <details><summary className="text-button">Click to show</summary><span>{student.externalStudentKey}</span></details> : "—"}</span>
-              <span>{student.email ?? "Not linked yet"}</span><span className={student.active ? "status success-pill" : "status neutral-pill"}>{student.active ? "Active" : "Inactive"}</span>
-              <form action={setEnrollmentActive}><input type="hidden" name="sectionId" value={section.sectionId}/><input type="hidden" name="enrollmentId" value={student.enrollmentId}/><input type="hidden" name="active" value={student.active ? "false" : "true"}/><button className="text-button" type="submit">{student.active ? "Hide" : "Reactivate"}</button></form>
+              <span>{student.externalStudentKey ? <details className={styles.studentNumber}><summary className="text-button"><span className={styles.showLabel}>Click to show</span><span className={styles.hideLabel}>Hide</span></summary><span className={styles.studentNumberValue}>{student.externalStudentKey}</span></details> : "—"}</span>
+              <span className={styles.emailCell}>{student.email ? <span className={styles.emailDisplay} title={student.email}>{student.email}</span> : "Not linked yet"}</span>
+              <span className={student.active ? "status success-pill" : "status neutral-pill"}>{student.active ? "Active" : "Inactive"}</span>
+              <form action={setEnrollmentActive}><input type="hidden" name="sectionId" value={section.sectionId}/><input type="hidden" name="enrollmentId" value={student.enrollmentId}/><input type="hidden" name="active" value={student.active ? "false" : "true"}/><button className="text-button" type="submit">{student.active ? "Deactivate" : "Reactivate"}</button></form>
             </div>)}
           </div>}
         </article>
