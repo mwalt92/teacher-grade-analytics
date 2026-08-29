@@ -7,6 +7,7 @@ import { getSectionRoster } from "@/lib/data/roster";
 import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import { addStudent, setEnrollmentActive } from "./actions";
+import { EmailReconciliation } from "./email-reconciliation";
 import { RosterImportPreview } from "./roster-import-preview";
 import styles from "./students.module.css";
 
@@ -19,6 +20,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   const { view } = await searchParams;
   const filter = view === "inactive" ? "inactive" : view === "all" ? "all" : "active";
   const roster = await getSectionRoster(section.sectionId, filter);
+  const activeRoster = filter === "active" ? roster : await getSectionRoster(section.sectionId, "active");
   const sectionOptions = sections.map((item) => ({
     id: item.sectionId,
     label: `${item.courseCode ? `${item.courseName} ${item.courseCode}` : item.courseName} — ${item.sectionName}`,
@@ -63,8 +65,19 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
       </div>
 
       <article className="panel full-width import-card-live">
-        <div className="panel-header"><div><p className="eyebrow">PowerSchool import</p><h2>Preview a roster export</h2><p className="subtle">Supports multi-course .xlsx exports. Student Number is the preferred identity key; Name + Course exports are accepted but flagged for review.</p></div></div>
+        <div className="panel-header"><div><p className="eyebrow">Import Center • Step 1</p><h2>Preview a PowerSchool roster export</h2><p className="subtle">Supports multi-course .xlsx exports. Student Number is the preferred identity key; Name + Course exports are accepted but flagged for review.</p></div></div>
         <RosterImportPreview sectionId={section.sectionId} sections={sectionOptions}/>
+      </article>
+
+      <article className="panel full-width import-card-live">
+        <EmailReconciliation
+          sectionId={section.sectionId}
+          students={activeRoster.map((student) => ({
+            displayName: student.displayName,
+            studentNumber: student.externalStudentKey ?? "",
+            currentEmail: student.email,
+          }))}
+        />
       </article>
     </section>
   </main>;

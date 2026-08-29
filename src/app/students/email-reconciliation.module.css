@@ -1,0 +1,115 @@
+.wrap {
+  display: grid;
+  gap: 16px;
+}
+
+.instructions {
+  display: grid;
+  gap: 6px;
+}
+
+.form {
+  display: grid;
+  gap: 16px;
+}
+
+.inputLabel {
+  display: grid;
+  gap: 7px;
+  font-size: .82rem;
+  font-weight: 750;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 92px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 13px;
+  background: #fff;
+  line-height: 1.45;
+}
+
+.textarea:focus {
+  outline: 2px solid var(--brand-soft);
+  border-color: var(--brand);
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reviewList {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.reviewRow {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.1fr) minmax(220px, 1.5fr) minmax(100px, .7fr);
+  gap: 12px;
+  align-items: center;
+  padding: 11px 13px;
+  background: #fff;
+  border-top: 1px solid var(--line);
+}
+
+.reviewRow:first-child {
+  border-top: 0;
+}
+
+.reviewRow select {
+  width: 100%;
+  min-width: 0;
+  background: #fff;
+}
+
+.studentMeta {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.studentMeta small {
+  color: var(--muted);
+}
+
+.statusText {
+  color: var(--muted);
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.warningStack {
+  display: grid;
+  gap: 8px;
+}
+
+.confirmRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.confirmCopy {
+  display: grid;
+  gap: 4px;
+}
+
+@media(max-width: 760px) {
+  .reviewRow {
+    grid-template-columns: 1fr;
+  }
+
+  .confirmRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
