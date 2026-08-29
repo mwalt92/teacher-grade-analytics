@@ -35,7 +35,7 @@
 
 .emailDisplay {
   display: block;
-  width: 100%;
+  width: min(100%, 230px);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
