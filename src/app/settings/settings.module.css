@@ -1,6 +1,32 @@
+.settingsNav {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.settingsNav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted);
+  font-weight: 750;
+}
+
+.settingsNav .settingsNavActive {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
 .settingsIntro {
   display: grid;
   gap: 10px;
+  margin-bottom: 18px;
 }
 
 .settingsGrid {
@@ -72,6 +98,7 @@
 
 .orderControls button {
   min-width: 38px;
+  width: auto;
   padding: 8px;
   justify-content: center;
 }
@@ -83,11 +110,24 @@
   align-items: end;
 }
 
-.typeForm label {
+.typeForm label,
+.categoryForm label {
   display: grid;
   gap: 7px;
   font-weight: 700;
   color: var(--text);
+}
+
+.typeForm input,
+.typeForm select,
+.categoryForm input,
+.categoryForm select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0 12px;
+  background: #fff;
 }
 
 .descriptionField {
@@ -135,6 +175,64 @@
   gap: 16px;
 }
 
+.categoryForm {
+  display: grid;
+  grid-template-columns: minmax(170px, 1.2fr) minmax(105px, .55fr) minmax(210px, 1fr) minmax(105px, .55fr) minmax(130px, .7fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.weightSummary {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.weightSummary > div {
+  display: grid;
+  gap: 3px;
+}
+
+.weightSummary span {
+  color: var(--muted);
+  font-size: .88rem;
+}
+
+.weightSummary > strong {
+  font-size: 1.35rem;
+}
+
+.weightGood {
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: rgba(22, 121, 75, .22);
+}
+
+.weightWarning {
+  background: var(--warning-soft);
+  color: var(--warning);
+  border-color: rgba(161, 92, 0, .22);
+}
+
+.categoryActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.categoryActions .secondary-button {
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
 .sidebarStack {
   display: grid;
   gap: 14px;
@@ -158,6 +256,12 @@
   font-size: .9rem;
 }
 
+@media (max-width: 1120px) {
+  .categoryForm {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
 @media (max-width: 920px) {
   .settingsGrid {
     grid-template-columns: 1fr;
@@ -173,7 +277,8 @@
     justify-content: flex-start;
   }
 
-  .typeForm {
+  .typeForm,
+  .categoryForm {
     grid-template-columns: 1fr;
   }
 
@@ -181,5 +286,16 @@
   .checkboxField,
   .cardActions {
     grid-column: auto;
+  }
+
+  .weightSummary,
+  .categoryActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .categoryActions .secondary-button,
+  .categoryActions .primary-button {
+    width: 100%;
   }
 }
