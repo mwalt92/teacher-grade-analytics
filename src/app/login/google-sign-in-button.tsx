@@ -51,8 +51,8 @@ export function GoogleSignInButton() {
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
   useEffect(() => {
-    const clientId = googleClientId;
-    if (!clientId || !googleScriptReady || !window.google?.accounts?.id) return;
+    if (!googleClientId || !googleScriptReady || !window.google?.accounts?.id) return;
+    const clientId: string = googleClientId;
 
     let cancelled = false;
     const supabase = createClient();
