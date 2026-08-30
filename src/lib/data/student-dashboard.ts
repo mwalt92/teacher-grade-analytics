@@ -1,4 +1,5 @@
 import { getSectionGradingPeriods, getStudentGradeCalculation, getStudentPeriodCalculation } from "@/lib/data/grade-calculation";
+import { getCourseOfferingForSection } from "@/lib/data/course-offering";
 import type { CategoryCalculationMethod, GradeRecord, GradingCategory, GradingRules, SemesterComponent } from "@/lib/grading/types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -71,7 +72,11 @@ export async function getStudentDashboardData(
   studentId: string,
   requestedPeriod?: string,
 ): Promise<StudentDashboardData | null> {
-  const periods = await getSectionGradingPeriods(sectionId);
+  const [periods, scope] = await Promise.all([
+    getSectionGradingPeriods(sectionId),
+    getCourseOfferingForSection(sectionId),
+  ]);
+  if (!scope) return null;
   const reviewPeriods = periods.filter((period) => period.calculationMode === "direct" && period.periodRole === "standard");
   if (!reviewPeriods.length) return null;
   const selectedPeriod = reviewPeriods.find((period) => period.code === requestedPeriod) ?? reviewPeriods[0];
@@ -149,7 +154,7 @@ export async function getStudentDashboardData(
   const { data: lateRows } = await supabase
     .from("grading_categories")
     .select("code,late_deduction")
-    .eq("section_id", sectionId);
+    .eq("offering_id", scope.offeringId);
   const lateDeductions: Record<GradingCategory, number> = {};
   for (const row of lateRows ?? []) lateDeductions[row.code] = Number(row.late_deduction) || 0;
 
