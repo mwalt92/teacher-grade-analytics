@@ -23,7 +23,15 @@ async function requireTeacherForSection(sectionId: string) {
   if (error) throw error;
   if (!assignment) throw new Error("You do not have access to this section");
 
-  return supabase;
+  const { data: section, error: sectionError } = await supabase
+    .from("sections")
+    .select("offering_id")
+    .eq("id", sectionId)
+    .maybeSingle();
+  if (sectionError) throw sectionError;
+  if (!section?.offering_id) throw new Error("This section is missing its course offering");
+
+  return { supabase, offeringId: section.offering_id };
 }
 
 function cleanedText(value: FormDataEntryValue | null, maxLength: number) {
@@ -56,16 +64,16 @@ function revalidateAssignmentTypePaths() {
   revalidatePath("/student/preview");
 }
 
-async function validateCategoryForSection(
+async function validateCategoryForOffering(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  sectionId: string,
+  offeringId: string,
   categoryId: string,
 ) {
   const { data, error } = await supabase
     .from("grading_categories")
     .select("id")
     .eq("id", categoryId)
-    .eq("section_id", sectionId)
+    .eq("offering_id", offeringId)
     .maybeSingle();
   if (error) throw error;
   return Boolean(data);
@@ -84,15 +92,15 @@ export async function createAssignmentType(formData: FormData): Promise<Assignme
       return { error: "Name, default category, and a positive points value are required." };
     }
 
-    const supabase = await requireTeacherForSection(sectionId);
-    if (!(await validateCategoryForSection(supabase, sectionId, defaultCategoryId))) {
+    const { supabase, offeringId } = await requireTeacherForSection(sectionId);
+    if (!(await validateCategoryForOffering(supabase, offeringId, defaultCategoryId))) {
       return { error: "That grading category is not available for this course." };
     }
 
     const { data: existingTypes, error: existingError } = await supabase
       .from("assignment_types")
       .select("name,code,sort_order")
-      .eq("section_id", sectionId)
+      .eq("offering_id", offeringId)
       .order("sort_order")
       .order("name");
     if (existingError) throw existingError;
@@ -114,6 +122,7 @@ export async function createAssignmentType(formData: FormData): Promise<Assignme
     const maxSort = Math.max(0, ...(existingTypes ?? []).map((type) => type.sort_order ?? 0));
     const { error: insertError } = await supabase.from("assignment_types").insert({
       section_id: sectionId,
+      offering_id: offeringId,
       code,
       name,
       description,
@@ -126,7 +135,7 @@ export async function createAssignmentType(formData: FormData): Promise<Assignme
     if (insertError) throw insertError;
 
     revalidateAssignmentTypePaths();
-    return { success: `${name} was added to the New Assignment hotlist.` };
+    return { success: `${name} was added to the shared New Assignment hotlist.` };
   } catch (error) {
     console.error("Create assignment type failed", error);
     return { error: error instanceof Error ? error.message : "Could not create that assignment type." };
@@ -147,10 +156,10 @@ export async function updateAssignmentType(formData: FormData): Promise<Assignme
       return { error: "Name, default category, and a positive points value are required." };
     }
 
-    const supabase = await requireTeacherForSection(sectionId);
+    const { supabase, offeringId } = await requireTeacherForSection(sectionId);
     const [{ data: currentType, error: typeError }, { data: allTypes, error: namesError }] = await Promise.all([
-      supabase.from("assignment_types").select("id,code").eq("id", assignmentTypeId).eq("section_id", sectionId).maybeSingle(),
-      supabase.from("assignment_types").select("id,name").eq("section_id", sectionId),
+      supabase.from("assignment_types").select("id,code").eq("id", assignmentTypeId).eq("offering_id", offeringId).maybeSingle(),
+      supabase.from("assignment_types").select("id,name").eq("offering_id", offeringId),
     ]);
     if (typeError) throw typeError;
     if (namesError) throw namesError;
@@ -159,7 +168,7 @@ export async function updateAssignmentType(formData: FormData): Promise<Assignme
     if ((allTypes ?? []).some((type) => type.id !== assignmentTypeId && type.name.trim().toLowerCase() === name.toLowerCase())) {
       return { error: `An assignment type named “${name}” already exists in this course.` };
     }
-    if (!(await validateCategoryForSection(supabase, sectionId, defaultCategoryId))) {
+    if (!(await validateCategoryForOffering(supabase, offeringId, defaultCategoryId))) {
       return { error: "That grading category is not available for this course." };
     }
 
@@ -173,11 +182,11 @@ export async function updateAssignmentType(formData: FormData): Promise<Assignme
         default_allow_retakes: defaultAllowRetakes,
       })
       .eq("id", assignmentTypeId)
-      .eq("section_id", sectionId);
+      .eq("offering_id", offeringId);
     if (updateError) throw updateError;
 
     revalidateAssignmentTypePaths();
-    return { success: `${name} defaults were saved. Existing assignments were not changed.` };
+    return { success: `${name} defaults were saved for every section. Existing assignments were not changed.` };
   } catch (error) {
     console.error("Update assignment type failed", error);
     return { error: error instanceof Error ? error.message : "Could not save that assignment type." };
@@ -191,12 +200,12 @@ export async function setAssignmentTypeActive(formData: FormData): Promise<Assig
     const active = String(formData.get("active")) === "true";
     if (!sectionId || !assignmentTypeId) return { error: "Assignment type is required." };
 
-    const supabase = await requireTeacherForSection(sectionId);
+    const { supabase, offeringId } = await requireTeacherForSection(sectionId);
     const { data: type, error: typeError } = await supabase
       .from("assignment_types")
       .select("id,name,active")
       .eq("id", assignmentTypeId)
-      .eq("section_id", sectionId)
+      .eq("offering_id", offeringId)
       .maybeSingle();
     if (typeError) throw typeError;
     if (!type) return { error: "That assignment type is no longer available in this course." };
@@ -205,7 +214,7 @@ export async function setAssignmentTypeActive(formData: FormData): Promise<Assig
       const { count, error: countError } = await supabase
         .from("assignment_types")
         .select("id", { count: "exact", head: true })
-        .eq("section_id", sectionId)
+        .eq("offering_id", offeringId)
         .eq("active", true);
       if (countError) throw countError;
       if ((count ?? 0) <= 1) return { error: "Keep at least one active assignment type so New Assignment remains usable." };
@@ -215,11 +224,11 @@ export async function setAssignmentTypeActive(formData: FormData): Promise<Assig
       .from("assignment_types")
       .update({ active })
       .eq("id", assignmentTypeId)
-      .eq("section_id", sectionId);
+      .eq("offering_id", offeringId);
     if (updateError) throw updateError;
 
     revalidateAssignmentTypePaths();
-    return { success: active ? `${type.name} is back on the hotlist.` : `${type.name} was removed from the hotlist. Existing assignments are preserved.` };
+    return { success: active ? `${type.name} is back on the shared hotlist.` : `${type.name} was removed from the shared hotlist. Existing assignments are preserved.` };
   } catch (error) {
     console.error("Toggle assignment type failed", error);
     return { error: error instanceof Error ? error.message : "Could not change that assignment type." };
@@ -233,11 +242,11 @@ export async function moveAssignmentType(formData: FormData): Promise<Assignment
     const direction = String(formData.get("direction")) === "down" ? "down" : "up";
     if (!sectionId || !assignmentTypeId) return { error: "Assignment type is required." };
 
-    const supabase = await requireTeacherForSection(sectionId);
+    const { supabase, offeringId } = await requireTeacherForSection(sectionId);
     const { data: types, error } = await supabase
       .from("assignment_types")
       .select("id,name,sort_order")
-      .eq("section_id", sectionId)
+      .eq("offering_id", offeringId)
       .order("sort_order")
       .order("name");
     if (error) throw error;
@@ -254,12 +263,12 @@ export async function moveAssignmentType(formData: FormData): Promise<Assignment
         .from("assignment_types")
         .update({ sort_order: (position + 1) * 10 })
         .eq("id", ordered[position].id)
-        .eq("section_id", sectionId);
+        .eq("offering_id", offeringId);
       if (reorderError) throw reorderError;
     }
 
     revalidateAssignmentTypePaths();
-    return { success: "Hotlist order updated." };
+    return { success: "Shared hotlist order updated." };
   } catch (error) {
     console.error("Move assignment type failed", error);
     return { error: error instanceof Error ? error.message : "Could not reorder that assignment type." };
