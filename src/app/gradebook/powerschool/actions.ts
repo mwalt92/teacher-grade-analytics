@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { getCourseOfferingForSection } from "@/lib/data/course-offering";
 import { getSectionGradebook } from "@/lib/data/grade-calculation";
 import { getSectionRoster } from "@/lib/data/roster";
 import { parsePowerSchoolFinalGradesReport, studentNameKeys } from "@/lib/import/powerschool-final-grades";
@@ -17,10 +18,12 @@ export async function savePowerSchoolSnapshot(formData: FormData) {
   const { data: claims } = await supabase.auth.getClaims();
   const userId = claims?.claims?.sub;
   if (typeof userId !== "string") redirect("/login");
+  const scope = await getCourseOfferingForSection(sectionId);
+  if (!scope) throw new Error("That section is missing its course offering.");
 
   const [{ data: teacherSection }, { data: period }, roster] = await Promise.all([
     supabase.from("teacher_sections").select("section_id").eq("teacher_id", userId).eq("section_id", sectionId).maybeSingle(),
-    supabase.from("grading_periods").select("id,code,period_role").eq("section_id", sectionId).eq("code", periodCode).maybeSingle(),
+    supabase.from("grading_periods").select("id,code,period_role").eq("offering_id", scope.offeringId).eq("code", periodCode).maybeSingle(),
     getSectionRoster(sectionId, "active"),
   ]);
   if (!teacherSection || !period || period.period_role === "exam") throw new Error("You do not have access to that section or reporting period.");
@@ -73,10 +76,12 @@ export async function importPowerSchoolFinalGrades(formData: FormData) {
   const { data: claims } = await supabase.auth.getClaims();
   const userId = claims?.claims?.sub;
   if (typeof userId !== "string") redirect("/login");
+  const scope = await getCourseOfferingForSection(sectionId);
+  if (!scope) throw new Error("That section is missing its course offering.");
 
   const [{ data: teacherSection }, { data: periods }, roster] = await Promise.all([
     supabase.from("teacher_sections").select("section_id").eq("teacher_id", userId).eq("section_id", sectionId).maybeSingle(),
-    supabase.from("grading_periods").select("id,code,period_role,sort_order").eq("section_id", sectionId),
+    supabase.from("grading_periods").select("id,code,period_role,sort_order").eq("offering_id", scope.offeringId),
     getSectionRoster(sectionId, "active"),
   ]);
   if (!teacherSection || !periods) throw new Error("You do not have access to that section.");
