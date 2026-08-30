@@ -218,7 +218,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                 <div className={styles.sidebarItem}><strong>Direct period</strong><span>Assignments can be created inside it and category rules calculate its grade.</span></div>
                 <div className={styles.sidebarItem}><strong>Composite period</strong><span>Combines selected direct periods. Its component weights must total 100%.</span></div>
                 <div className={styles.sidebarItem}><strong>Exam role</strong><span>Marks a direct period as an exam component for semester calculations and related tools.</span></div>
-                <div className={styles.sidebarItem}><strong>Stable structure</strong><span>Existing codes and direct/composite types stay fixed so links and historical assignments remain safe.</span></div>
+                <div className={styles.sidebarItem}><strong>Stable structure</strong><span>Unused period codes can be corrected during setup. Once assignments, composite structure, or imported grade history reference a period, its code stays locked.</span></div>
               </div>
             </article>
           </aside>
