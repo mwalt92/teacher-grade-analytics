@@ -1,3 +1,4 @@
+import { getCourseOfferingForSection } from "@/lib/data/course-offering";
 import { createClient } from "@/lib/supabase/server";
 
 export type AssignmentManagementPeriod = { id: string; code: string; name: string };
@@ -33,6 +34,9 @@ function legacyTypeLabel(code: string) {
 }
 
 export async function getAssignmentManagementData(sectionId: string): Promise<AssignmentManagementData | null> {
+  const scope = await getCourseOfferingForSection(sectionId);
+  if (!scope) return null;
+
   const supabase = await createClient();
   const [assignmentsResult, periodsResult, categoriesResult, typesResult] = await Promise.all([
     supabase
@@ -41,9 +45,9 @@ export async function getAssignmentManagementData(sectionId: string): Promise<As
       .eq("section_id", sectionId)
       .order("assignment_date", { ascending: false })
       .order("created_at", { ascending: false }),
-    supabase.from("grading_periods").select("id,code,name,sort_order").eq("section_id", sectionId).eq("calculation_mode", "direct").order("sort_order").order("code"),
-    supabase.from("grading_categories").select("id,name").eq("section_id", sectionId),
-    supabase.from("assignment_types").select("id,code,name,active,sort_order").eq("section_id", sectionId).order("sort_order").order("name"),
+    supabase.from("grading_periods").select("id,code,name,sort_order").eq("offering_id", scope.offeringId).eq("calculation_mode", "direct").order("sort_order").order("code"),
+    supabase.from("grading_categories").select("id,name").eq("offering_id", scope.offeringId),
+    supabase.from("assignment_types").select("id,code,name,active,sort_order").eq("offering_id", scope.offeringId).order("sort_order").order("name"),
   ]);
 
   if (assignmentsResult.error || periodsResult.error || categoriesResult.error || typesResult.error) return null;
