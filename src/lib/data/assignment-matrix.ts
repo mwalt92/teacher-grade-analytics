@@ -1,6 +1,7 @@
 import { calculateGrade } from "@/lib/grading/engine";
 import { buildRulesFromCategories } from "@/lib/grading/config";
 import type { GradeRecord, GradingCategory, GradingRules } from "@/lib/grading/types";
+import { getCourseOfferingForSection } from "@/lib/data/course-offering";
 import { createClient } from "@/lib/supabase/server";
 
 export type AssignmentMatrixAssignment = {
@@ -40,10 +41,12 @@ export type AssignmentMatrix = {
 };
 
 export async function getAssignmentMatrix(sectionId: string, studentIds: string[], gradingPeriodCode: string): Promise<AssignmentMatrix | null> {
+  const scope = await getCourseOfferingForSection(sectionId);
+  if (!scope) return null;
   const supabase = await createClient();
   const [{ data: period, error: periodError }, { data: categories, error: categoriesError }] = await Promise.all([
-    supabase.from("grading_periods").select("id,code,name").eq("section_id", sectionId).eq("code", gradingPeriodCode).maybeSingle(),
-    supabase.from("grading_categories").select("id,name,code,weight,drop_lowest,calculation_method,sort_order").eq("section_id", sectionId).order("sort_order", { ascending: true }),
+    supabase.from("grading_periods").select("id,code,name").eq("offering_id", scope.offeringId).eq("code", gradingPeriodCode).maybeSingle(),
+    supabase.from("grading_categories").select("id,name,code,weight,drop_lowest,calculation_method,sort_order").eq("offering_id", scope.offeringId).order("sort_order", { ascending: true }),
   ]);
   if (periodError || categoriesError || !period || !categories?.length) return null;
 
