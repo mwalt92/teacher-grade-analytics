@@ -9,6 +9,7 @@ import type { TeacherDashboardData } from "@/lib/data/dashboard";
 type TeacherSectionOption = {
   sectionId: string;
   sectionName: string;
+  offeringId: string;
   courseName: string;
   courseCode: string | null;
   schoolYearLabel: string;
