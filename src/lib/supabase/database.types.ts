@@ -29,6 +29,7 @@ export type Database = {
     Functions: {
       clear_assignment_scores: { Args: { p_assignment_id:string }; Returns:number };
       delete_empty_assignment: { Args: { p_assignment_id:string }; Returns:boolean };
+      save_grading_period_settings: { Args: { p_section_id:string; p_periods:Json; p_components:Json }; Returns:void };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };

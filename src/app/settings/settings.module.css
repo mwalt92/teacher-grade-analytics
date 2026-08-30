@@ -111,7 +111,9 @@
 }
 
 .typeForm label,
-.categoryForm label {
+.categoryForm label,
+.periodForm label,
+.componentWeight {
   display: grid;
   gap: 7px;
   font-weight: 700;
@@ -121,7 +123,10 @@
 .typeForm input,
 .typeForm select,
 .categoryForm input,
-.categoryForm select {
+.categoryForm select,
+.periodForm input,
+.periodForm select,
+.componentWeight input {
   width: 100%;
   min-height: 42px;
   border: 1px solid var(--line);
@@ -182,6 +187,18 @@
   align-items: end;
 }
 
+.periodForm {
+  display: grid;
+  grid-template-columns: minmax(120px, .55fr) minmax(220px, 1.5fr) minmax(145px, .7fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.periodForm input:disabled {
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
 .weightSummary {
   display: flex;
   justify-content: space-between;
@@ -204,6 +221,7 @@
 
 .weightSummary > strong {
   font-size: 1.35rem;
+  text-align: right;
 }
 
 .weightGood {
@@ -231,6 +249,90 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
+}
+
+.componentEditor {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.componentHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.componentHeader > div {
+  display: grid;
+  gap: 3px;
+}
+
+.componentHeader span {
+  color: var(--muted);
+  font-size: .88rem;
+}
+
+.componentTotalGood,
+.componentTotalWarning {
+  font-size: 1.05rem;
+}
+
+.componentTotalGood {
+  color: var(--success);
+}
+
+.componentTotalWarning {
+  color: var(--warning);
+}
+
+.componentList {
+  display: grid;
+  gap: 8px;
+}
+
+.componentRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 125px;
+  gap: 14px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.componentToggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.componentToggle input {
+  width: auto;
+  flex: none;
+}
+
+.componentToggle span {
+  display: grid;
+  gap: 2px;
+}
+
+.componentToggle small {
+  color: var(--muted);
+}
+
+.componentWeight {
+  font-size: .82rem;
+}
+
+.componentWeight input:disabled {
+  background: var(--surface-soft);
 }
 
 .sidebarStack {
@@ -269,7 +371,8 @@
 }
 
 @media (max-width: 720px) {
-  .cardHeader {
+  .cardHeader,
+  .componentHeader {
     display: grid;
   }
 
@@ -278,7 +381,9 @@
   }
 
   .typeForm,
-  .categoryForm {
+  .categoryForm,
+  .periodForm,
+  .componentRow {
     grid-template-columns: 1fr;
   }
 
@@ -292,6 +397,10 @@
   .categoryActions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .weightSummary > strong {
+    text-align: left;
   }
 
   .categoryActions .secondary-button,

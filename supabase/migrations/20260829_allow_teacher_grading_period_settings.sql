@@ -1,0 +1,246 @@
+grant insert, update on public.grading_periods to authenticated;
+revoke delete on public.grading_periods from authenticated;
+
+revoke all on public.grading_period_components from authenticated;
+grant select, insert, update, delete on public.grading_period_components to authenticated;
+
+create policy grading_periods_teacher_insert
+on public.grading_periods
+for insert
+to authenticated
+with check ((select private.is_teacher_for_section(section_id)));
+
+create policy grading_periods_teacher_update
+on public.grading_periods
+for update
+to authenticated
+using ((select private.is_teacher_for_section(section_id)))
+with check ((select private.is_teacher_for_section(section_id)));
+
+create policy grading_period_components_teacher_insert
+on public.grading_period_components
+for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.grading_periods parent
+    join public.grading_periods component on component.id = grading_period_components.component_period_id
+    where parent.id = grading_period_components.parent_period_id
+      and parent.section_id = component.section_id
+      and (select private.is_teacher_for_section(parent.section_id))
+  )
+);
+
+create policy grading_period_components_teacher_update
+on public.grading_period_components
+for update
+to authenticated
+using (
+  exists (
+    select 1 from public.grading_periods parent
+    where parent.id = grading_period_components.parent_period_id
+      and (select private.is_teacher_for_section(parent.section_id))
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.grading_periods parent
+    join public.grading_periods component on component.id = grading_period_components.component_period_id
+    where parent.id = grading_period_components.parent_period_id
+      and parent.section_id = component.section_id
+      and (select private.is_teacher_for_section(parent.section_id))
+  )
+);
+
+create policy grading_period_components_teacher_delete
+on public.grading_period_components
+for delete
+to authenticated
+using (
+  exists (
+    select 1 from public.grading_periods parent
+    where parent.id = grading_period_components.parent_period_id
+      and (select private.is_teacher_for_section(parent.section_id))
+  )
+);
+
+create or replace function public.save_grading_period_settings(
+  p_section_id uuid,
+  p_periods jsonb,
+  p_components jsonb
+)
+returns void
+language plpgsql
+security invoker
+set search_path = public, private, pg_temp
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+  if not private.is_teacher_for_section(p_section_id) then
+    raise exception 'You do not have access to this section';
+  end if;
+  if jsonb_typeof(p_periods) <> 'array' or jsonb_array_length(p_periods) = 0 then
+    raise exception 'At least one grading period is required';
+  end if;
+  if jsonb_typeof(p_components) <> 'array' then
+    raise exception 'Invalid grading-period components';
+  end if;
+
+  create temporary table tmp_grading_periods (
+    id uuid primary key,
+    code text not null,
+    name text not null,
+    calculation_mode text not null,
+    period_role text not null,
+    sort_order integer not null
+  ) on commit drop;
+
+  insert into tmp_grading_periods(id, code, name, calculation_mode, period_role, sort_order)
+  select id, trim(code), trim(name), calculation_mode, period_role, sort_order
+  from jsonb_to_recordset(p_periods) as x(
+    id uuid,
+    code text,
+    name text,
+    calculation_mode text,
+    period_role text,
+    sort_order integer
+  );
+
+  if exists (select 1 from tmp_grading_periods where code = '' or name = '') then
+    raise exception 'Every grading period needs a code and name';
+  end if;
+  if exists (select 1 from tmp_grading_periods where code !~ '^[A-Za-z0-9][A-Za-z0-9_-]{0,15}$') then
+    raise exception 'Grading-period codes may use only letters, numbers, hyphens, and underscores';
+  end if;
+  if exists (select lower(code) from tmp_grading_periods group by lower(code) having count(*) > 1) then
+    raise exception 'Grading-period codes must be unique within the course';
+  end if;
+  if exists (select lower(name) from tmp_grading_periods group by lower(name) having count(*) > 1) then
+    raise exception 'Grading-period names must be unique within the course';
+  end if;
+  if exists (select 1 from tmp_grading_periods where calculation_mode not in ('direct','composite')) then
+    raise exception 'Invalid grading-period calculation mode';
+  end if;
+  if exists (select 1 from tmp_grading_periods where period_role not in ('standard','exam')) then
+    raise exception 'Invalid grading-period role';
+  end if;
+  if exists (select 1 from tmp_grading_periods where calculation_mode = 'composite' and period_role <> 'standard') then
+    raise exception 'Composite grading periods must use the standard role';
+  end if;
+  if not exists (select 1 from tmp_grading_periods where calculation_mode = 'direct') then
+    raise exception 'Keep at least one direct grading period so assignments have somewhere to belong';
+  end if;
+
+  if exists (
+    select 1
+    from tmp_grading_periods submitted
+    join public.grading_periods current on current.id = submitted.id
+    where current.section_id <> p_section_id
+  ) then
+    raise exception 'A grading period does not belong to this course';
+  end if;
+
+  if exists (
+    select 1
+    from public.grading_periods current
+    where current.section_id = p_section_id
+      and not exists (select 1 from tmp_grading_periods submitted where submitted.id = current.id)
+  ) then
+    raise exception 'Existing grading periods cannot be removed from this screen yet';
+  end if;
+
+  if exists (
+    select 1
+    from tmp_grading_periods submitted
+    join public.grading_periods current on current.id = submitted.id
+    where current.section_id = p_section_id
+      and (current.code <> submitted.code or current.calculation_mode <> submitted.calculation_mode)
+  ) then
+    raise exception 'Existing grading-period codes and types cannot be changed';
+  end if;
+
+  create temporary table tmp_grading_period_components (
+    parent_period_id uuid not null,
+    component_period_id uuid not null,
+    weight numeric not null,
+    sort_order integer not null,
+    primary key(parent_period_id, component_period_id)
+  ) on commit drop;
+
+  insert into tmp_grading_period_components(parent_period_id, component_period_id, weight, sort_order)
+  select parent_period_id, component_period_id, weight, sort_order
+  from jsonb_to_recordset(p_components) as x(
+    parent_period_id uuid,
+    component_period_id uuid,
+    weight numeric,
+    sort_order integer
+  );
+
+  if exists (select 1 from tmp_grading_period_components where weight <= 0) then
+    raise exception 'Composite component weights must be greater than 0';
+  end if;
+  if exists (
+    select 1
+    from tmp_grading_period_components c
+    left join tmp_grading_periods parent on parent.id = c.parent_period_id
+    left join tmp_grading_periods component on component.id = c.component_period_id
+    where parent.id is null or component.id is null
+      or parent.calculation_mode <> 'composite'
+      or component.calculation_mode <> 'direct'
+      or parent.id = component.id
+  ) then
+    raise exception 'Composite periods may contain only direct periods from the same course';
+  end if;
+  if exists (
+    select 1 from tmp_grading_periods p
+    where p.calculation_mode = 'direct'
+      and exists (select 1 from tmp_grading_period_components c where c.parent_period_id = p.id)
+  ) then
+    raise exception 'Direct grading periods cannot contain components';
+  end if;
+  if exists (
+    select 1
+    from tmp_grading_periods p
+    where p.calculation_mode = 'composite'
+      and not exists (select 1 from tmp_grading_period_components c where c.parent_period_id = p.id)
+  ) then
+    raise exception 'Every composite grading period needs at least one component';
+  end if;
+  if exists (
+    select 1
+    from tmp_grading_periods p
+    where p.calculation_mode = 'composite'
+      and abs((select coalesce(sum(c.weight),0) from tmp_grading_period_components c where c.parent_period_id = p.id) - 1) > 0.00005
+  ) then
+    raise exception 'Each composite grading period must total 100 percent';
+  end if;
+
+  insert into public.grading_periods(
+    id, section_id, code, name, starts_on, ends_on, calculation_mode, sort_order, period_role
+  )
+  select p.id, p_section_id, p.code, p.name, null, null, p.calculation_mode, p.sort_order, p.period_role
+  from tmp_grading_periods p
+  on conflict (id) do update
+  set name = excluded.name,
+      sort_order = excluded.sort_order,
+      period_role = excluded.period_role
+  where public.grading_periods.section_id = p_section_id;
+
+  delete from public.grading_period_components c
+  using public.grading_periods p
+  where c.parent_period_id = p.id
+    and p.section_id = p_section_id;
+
+  insert into public.grading_period_components(parent_period_id, component_period_id, weight, sort_order)
+  select parent_period_id, component_period_id, weight, sort_order
+  from tmp_grading_period_components;
+end;
+$$;
+
+revoke all on function public.save_grading_period_settings(uuid,jsonb,jsonb) from public;
+revoke all on function public.save_grading_period_settings(uuid,jsonb,jsonb) from anon;
+grant execute on function public.save_grading_period_settings(uuid,jsonb,jsonb) to authenticated;
