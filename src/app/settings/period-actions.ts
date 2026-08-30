@@ -97,6 +97,9 @@ export async function saveGradingPeriods(formData: FormData): Promise<GradingPer
     if (periods.some((period) => !/^[A-Za-z0-9][A-Za-z0-9_-]{0,15}$/.test(period.code))) {
       return { error: "Period codes may use only letters, numbers, hyphens, and underscores." };
     }
+    periods.forEach((period) => {
+      period.code = period.code.toUpperCase();
+    });
 
     const supabase = await requireTeacherForSection(sectionId);
     const { data: existing, error: existingError } = await supabase
@@ -113,14 +116,43 @@ export async function saveGradingPeriods(formData: FormData): Promise<GradingPer
       return { error: "Existing grading periods cannot be removed from this screen yet." };
     }
 
+    const codeChanges = periods.flatMap((period) => {
+      if (!period.id) return [];
+      const current = existingById.get(period.id);
+      if (!current || current.code === period.code) return [];
+      return [{ id: period.id, oldCode: current.code, newCode: period.code }];
+    });
+
+    if (codeChanges.length) {
+      const changedIds = codeChanges.map((change) => change.id);
+      const [assignmentRefs, parentRefs, componentRefs, snapshotRefs] = await Promise.all([
+        supabase.from("assignments").select("grading_period_id").in("grading_period_id", changedIds),
+        supabase.from("grading_period_components").select("parent_period_id").in("parent_period_id", changedIds),
+        supabase.from("grading_period_components").select("component_period_id").in("component_period_id", changedIds),
+        supabase.from("power_school_snapshots").select("grading_period_id").in("grading_period_id", changedIds),
+      ]);
+      if (assignmentRefs.error) throw assignmentRefs.error;
+      if (parentRefs.error) throw parentRefs.error;
+      if (componentRefs.error) throw componentRefs.error;
+      if (snapshotRefs.error) throw snapshotRefs.error;
+
+      const lockedIds = new Set<string>();
+      (assignmentRefs.data ?? []).forEach((row) => row.grading_period_id && lockedIds.add(row.grading_period_id));
+      (parentRefs.data ?? []).forEach((row) => lockedIds.add(row.parent_period_id));
+      (componentRefs.data ?? []).forEach((row) => lockedIds.add(row.component_period_id));
+      (snapshotRefs.data ?? []).forEach((row) => row.grading_period_id && lockedIds.add(row.grading_period_id));
+
+      const lockedChange = codeChanges.find((change) => lockedIds.has(change.id));
+      if (lockedChange) {
+        return { error: `${lockedChange.oldCode} is already referenced by assignments, composite structure, or imported grade history, so its code cannot be changed here.` };
+      }
+    }
+
     for (const period of periods) {
       const current = period.id ? existingById.get(period.id) : null;
       if (current) {
-        if (current.code !== period.code) return { error: `${current.code} is an established period code and cannot be changed.` };
         const currentMode: PeriodMode = current.calculation_mode === "composite" ? "composite" : "direct";
         if (currentMode !== period.calculationMode) return { error: `${period.code} cannot change between direct and composite after it has been created.` };
-      } else {
-        period.code = period.code.toUpperCase();
       }
       if (period.calculationMode === "composite" && period.periodRole !== "standard") {
         return { error: `${period.code} is composite, so its role must remain Standard.` };

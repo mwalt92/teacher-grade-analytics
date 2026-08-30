@@ -17,19 +17,25 @@ type PeriodRow = {
   calculationMode: PeriodMode;
   periodRole: PeriodRole;
   assignmentCount: number;
+  codeLocked: boolean;
   components: PeriodComponent[];
 };
 
-type InitialPeriod = Omit<PeriodRow, "clientKey" | "components"> & {
+type InitialPeriod = Omit<PeriodRow, "clientKey" | "components" | "codeLocked"> & {
   id: string;
   components: { periodId: string; weightPercent: number }[];
 };
 type Notice = { kind: "success" | "error"; text: string } | null;
 
 function hydratePeriods(initialPeriods: InitialPeriod[]): PeriodRow[] {
+  const referencedComponentIds = new Set(
+    initialPeriods.flatMap((period) => period.components.map((component) => component.periodId)),
+  );
+
   return initialPeriods.map((period) => ({
     ...period,
     clientKey: period.id,
+    codeLocked: period.assignmentCount > 0 || period.components.length > 0 || referencedComponentIds.has(period.id),
     components: period.components.map((component) => ({
       componentClientKey: component.periodId,
       weightPercent: component.weightPercent,
@@ -106,6 +112,7 @@ export function GradingPeriodManager({
       calculationMode,
       periodRole: "standard",
       assignmentCount: 0,
+      codeLocked: false,
       components: [],
     }]);
     setNotice(null);
@@ -199,7 +206,7 @@ export function GradingPeriodManager({
           </div>
 
           <div className={styles.periodForm}>
-            <label>Short code<input required maxLength={16} disabled={Boolean(period.id)} value={period.code} placeholder={period.calculationMode === "direct" ? "e.g. Q1" : "e.g. S1"} onChange={(event) => patch(period.clientKey, { code: event.target.value.toUpperCase() })}/></label>
+            <label>Short code<input required maxLength={16} disabled={pending || period.codeLocked} value={period.code} placeholder={period.calculationMode === "direct" ? "e.g. Q1" : "e.g. S1"} title={period.codeLocked ? "This code is locked because the period is already referenced by assignments or composite structure." : "Unused grading-period codes can be changed during setup."} onChange={(event) => patch(period.clientKey, { code: event.target.value.toUpperCase() })}/></label>
             <label>Display name<input required maxLength={100} value={period.name} placeholder={period.calculationMode === "direct" ? "e.g. Quarter 1" : "e.g. Semester 1"} onChange={(event) => patch(period.clientKey, { name: event.target.value })}/></label>
             {period.calculationMode === "direct" ? <label>Role<select value={period.periodRole} onChange={(event) => patch(period.clientKey, { periodRole: event.target.value as PeriodRole })}><option value="standard">Standard</option><option value="exam">Exam</option></select></label> : <label>Role<input disabled value="Composite result"/></label>}
           </div>
