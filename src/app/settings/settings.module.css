@@ -29,6 +29,25 @@
   margin-bottom: 18px;
 }
 
+.scopeBanner {
+  display: grid;
+  gap: 4px;
+  margin: -6px 0 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--brand-soft);
+}
+
+.scopeBanner strong {
+  color: var(--brand);
+}
+
+.scopeBanner span {
+  color: var(--muted);
+  font-size: .9rem;
+}
+
 .settingsGrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
