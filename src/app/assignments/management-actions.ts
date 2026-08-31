@@ -37,15 +37,23 @@ async function requireTeacherAssignment(assignmentId: string) {
     .maybeSingle();
   if (assignmentError || !assignment) throw new Error("Assignment not found.");
 
-  const { data: teacherSection, error: teacherError } = await supabase
-    .from("teacher_sections")
-    .select("section_id")
-    .eq("teacher_id", userId)
-    .eq("section_id", assignment.section_id)
-    .maybeSingle();
+  const [{ data: teacherSection, error: teacherError }, { data: section, error: sectionError }] = await Promise.all([
+    supabase
+      .from("teacher_sections")
+      .select("section_id")
+      .eq("teacher_id", userId)
+      .eq("section_id", assignment.section_id)
+      .maybeSingle(),
+    supabase
+      .from("sections")
+      .select("offering_id")
+      .eq("id", assignment.section_id)
+      .maybeSingle(),
+  ]);
   if (teacherError || !teacherSection) throw new Error("You do not have access to this assignment.");
+  if (sectionError || !section?.offering_id) throw new Error("This section is missing its course offering.");
 
-  return { supabase, assignment, userId };
+  return { supabase, assignment, userId, offeringId: section.offering_id };
 }
 
 function revalidateAssignmentViews(assignmentId: string) {
@@ -77,30 +85,30 @@ export async function updateAssignmentMetadata(formData: FormData) {
     redirect(editRedirect(assignmentId, returnTo, "error", "Complete all required assignment fields."));
   }
 
-  const { supabase, assignment } = await requireTeacherAssignment(assignmentId);
+  const { supabase, assignment, offeringId } = await requireTeacherAssignment(assignmentId);
   const [{ data: period }, { data: assignmentType }, { data: category }] = await Promise.all([
     supabase
       .from("grading_periods")
       .select("id")
       .eq("id", gradingPeriodId)
-      .eq("section_id", assignment.section_id)
+      .eq("offering_id", offeringId)
       .maybeSingle(),
     supabase
       .from("assignment_types")
       .select("id,code")
       .eq("id", assignmentTypeId)
-      .eq("section_id", assignment.section_id)
+      .eq("offering_id", offeringId)
       .maybeSingle(),
     supabase
       .from("grading_categories")
       .select("id")
       .eq("id", categoryId)
-      .eq("section_id", assignment.section_id)
+      .eq("offering_id", offeringId)
       .maybeSingle(),
   ]);
-  if (!period) redirect(editRedirect(assignmentId, returnTo, "error", "Choose a grading period from this section."));
-  if (!assignmentType) redirect(editRedirect(assignmentId, returnTo, "error", "Choose an assignment type from this section."));
-  if (!category) redirect(editRedirect(assignmentId, returnTo, "error", "Choose a grading category from this section."));
+  if (!period) redirect(editRedirect(assignmentId, returnTo, "error", "Choose a grading period from this course."));
+  if (!assignmentType) redirect(editRedirect(assignmentId, returnTo, "error", "Choose an assignment type from this course."));
+  if (!category) redirect(editRedirect(assignmentId, returnTo, "error", "Choose a grading category from this course."));
 
   const { error } = await supabase
     .from("assignments")

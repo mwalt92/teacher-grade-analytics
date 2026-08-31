@@ -33,7 +33,15 @@ async function requireTeacherForSection(sectionId: string) {
   if (error) throw error;
   if (!assignment) throw new Error("You do not have access to this section");
 
-  return supabase;
+  const { data: section, error: sectionError } = await supabase
+    .from("sections")
+    .select("offering_id")
+    .eq("id", sectionId)
+    .maybeSingle();
+  if (sectionError) throw sectionError;
+  if (!section?.offering_id) throw new Error("This section is missing its course offering");
+
+  return { supabase, offeringId: section.offering_id };
 }
 
 function cleanName(value: unknown) {
@@ -111,11 +119,11 @@ export async function saveGradingCategories(formData: FormData): Promise<Grading
       return { error: `Category weights must total 100%. They currently total ${totalWeight.toFixed(1)}%.` };
     }
 
-    const supabase = await requireTeacherForSection(sectionId);
+    const { supabase, offeringId } = await requireTeacherForSection(sectionId);
     const { data: existing, error: existingError } = await supabase
       .from("grading_categories")
       .select("id,code")
-      .eq("section_id", sectionId);
+      .eq("offering_id", offeringId);
     if (existingError) throw existingError;
 
     const existingById = new Map((existing ?? []).map((category) => [category.id, category]));
@@ -143,6 +151,7 @@ export async function saveGradingCategories(formData: FormData): Promise<Grading
       return {
         id: current?.id ?? randomUUID(),
         section_id: sectionId,
+        offering_id: offeringId,
         code,
         name: category.name,
         weight: category.weightPercent / 100,
@@ -159,7 +168,7 @@ export async function saveGradingCategories(formData: FormData): Promise<Grading
     if (saveError) throw saveError;
 
     revalidateCategoryPaths();
-    return { success: "Grading categories saved. Grade calculations now use this configuration." };
+    return { success: "Grading categories saved for every section. Grade calculations now use this shared configuration." };
   } catch (error) {
     console.error("Save grading categories failed", error);
     return { error: error instanceof Error ? error.message : "Could not save grading categories." };

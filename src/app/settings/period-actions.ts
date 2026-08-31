@@ -36,7 +36,16 @@ async function requireTeacherForSection(sectionId: string) {
     .maybeSingle();
   if (error) throw error;
   if (!assignment) throw new Error("You do not have access to this section");
-  return supabase;
+
+  const { data: section, error: sectionError } = await supabase
+    .from("sections")
+    .select("offering_id")
+    .eq("id", sectionId)
+    .maybeSingle();
+  if (sectionError) throw sectionError;
+  if (!section?.offering_id) throw new Error("This section is missing its course offering");
+
+  return { supabase, offeringId: section.offering_id };
 }
 
 function cleanText(value: unknown, maxLength: number) {
@@ -101,11 +110,11 @@ export async function saveGradingPeriods(formData: FormData): Promise<GradingPer
       period.code = period.code.toUpperCase();
     });
 
-    const supabase = await requireTeacherForSection(sectionId);
+    const { supabase, offeringId } = await requireTeacherForSection(sectionId);
     const { data: existing, error: existingError } = await supabase
       .from("grading_periods")
       .select("id,code,calculation_mode")
-      .eq("section_id", sectionId);
+      .eq("offering_id", offeringId);
     if (existingError) throw existingError;
 
     const existingById = new Map((existing ?? []).map((period) => [period.id, period]));
@@ -222,7 +231,7 @@ export async function saveGradingPeriods(formData: FormData): Promise<GradingPer
     if (saveError) throw saveError;
 
     revalidatePeriodPaths();
-    return { success: "Grading periods saved. Grade calculations now use this period structure." };
+    return { success: "Grading periods saved for every section. Grade calculations now use this shared period structure." };
   } catch (error) {
     console.error("Save grading periods failed", error);
     return { error: error instanceof Error ? error.message : "Could not save grading periods." };

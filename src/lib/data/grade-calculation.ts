@@ -1,6 +1,7 @@
 import { calculateGrade, calculateSemesterGrade } from "@/lib/grading/engine";
 import { buildRulesFromCategories, normalizeCategoryCode } from "@/lib/grading/config";
 import type { CategoryCalculationMethod, GradeAuditLine, GradeRecord, GradeResult, GradingCategory, GradingRules, SemesterGradeResult } from "@/lib/grading/types";
+import { getCourseOfferingForSection } from "@/lib/data/course-offering";
 import { createClient } from "@/lib/supabase/server";
 
 export type GradingPeriodMode = "direct" | "composite";
@@ -101,11 +102,13 @@ export function gradingCategoryFromName(name: string): GradingCategory {
 }
 
 export async function getSectionGradingPeriods(sectionId: string): Promise<GradingPeriodSummary[]> {
+  const scope = await getCourseOfferingForSection(sectionId);
+  if (!scope) return [];
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("grading_periods")
     .select("id,code,name,calculation_mode,period_role,sort_order")
-    .eq("section_id", sectionId)
+    .eq("offering_id", scope.offeringId)
     .order("sort_order", { ascending: true })
     .order("code", { ascending: true });
   if (error || !data) return [];
@@ -113,11 +116,13 @@ export async function getSectionGradingPeriods(sectionId: string): Promise<Gradi
 }
 
 async function loadCategoryRules(sectionId: string, options?: CalculationOptions) {
+  const scope = await getCourseOfferingForSection(sectionId);
+  if (!scope) return null;
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("grading_categories")
     .select("id,name,code,weight,drop_lowest,calculation_method,sort_order")
-    .eq("section_id", sectionId)
+    .eq("offering_id", scope.offeringId)
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
   if (error || !data?.length) return null;
@@ -204,12 +209,14 @@ export async function getStudentPeriodCalculation(
   stack: string[] = [],
 ): Promise<StudentPeriodCalculation | null> {
   if (stack.includes(gradingPeriodCode)) throw new Error(`Circular grading-period composition detected at ${gradingPeriodCode}.`);
+  const scope = await getCourseOfferingForSection(sectionId);
+  if (!scope) return null;
   const supabase = await createClient();
   const [{ data: periodRow, error: periodError }, categoryRules] = await Promise.all([
     supabase
       .from("grading_periods")
       .select("id,code,name,calculation_mode,period_role,sort_order")
-      .eq("section_id", sectionId)
+      .eq("offering_id", scope.offeringId)
       .eq("code", gradingPeriodCode)
       .maybeSingle(),
     loadCategoryRules(sectionId, options),
@@ -232,7 +239,7 @@ export async function getStudentPeriodCalculation(
     ? await supabase
         .from("grading_periods")
         .select("id,code,name,calculation_mode,period_role,sort_order")
-        .eq("section_id", sectionId)
+        .eq("offering_id", scope.offeringId)
         .in("id", componentIds)
     : { data: [] as PeriodRow[], error: null };
   if (childError || !childRows) return null;
@@ -305,12 +312,14 @@ export async function getSectionGradebook(
   gradingPeriodCode: string,
   options?: CalculationOptions,
 ): Promise<SectionGradebookCalculation | null> {
+  const scope = await getCourseOfferingForSection(sectionId);
+  if (!scope) return null;
   const supabase = await createClient();
   const [{ data: periodRows, error: periodsError }, { data: componentRows, error: componentsError }, categoryRules] = await Promise.all([
     supabase
       .from("grading_periods")
       .select("id,code,name,calculation_mode,period_role,sort_order")
-      .eq("section_id", sectionId),
+      .eq("offering_id", scope.offeringId),
     supabase
       .from("grading_period_components")
       .select("parent_period_id,component_period_id,weight,sort_order"),

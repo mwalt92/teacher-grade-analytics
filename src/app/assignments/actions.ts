@@ -21,15 +21,20 @@ export async function createAssignment(formData: FormData) {
   const userId = claims?.claims?.sub;
   if (typeof userId !== "string") redirect("/login");
 
-  const [{ data: teacherSection }, { data: period }, { data: assignmentType }, { data: category }] = await Promise.all([
+  const [{ data: teacherSection }, { data: section }] = await Promise.all([
     supabase.from("teacher_sections").select("section_id").eq("teacher_id", userId).eq("section_id", sectionId).maybeSingle(),
-    supabase.from("grading_periods").select("id,calculation_mode").eq("id", gradingPeriodId).eq("section_id", sectionId).maybeSingle(),
-    supabase.from("assignment_types").select("id,code,active").eq("id", assignmentTypeId).eq("section_id", sectionId).maybeSingle(),
-    supabase.from("grading_categories").select("id").eq("id", categoryId).eq("section_id", sectionId).maybeSingle(),
+    supabase.from("sections").select("offering_id").eq("id", sectionId).maybeSingle(),
   ]);
-  if (!teacherSection || !period || period.calculation_mode !== "direct") throw new Error("Choose a direct grading period from this section.");
-  if (!assignmentType || !assignmentType.active) throw new Error("Choose an active assignment type from this section.");
-  if (!category) throw new Error("Choose a grading category from this section.");
+  if (!teacherSection || !section?.offering_id) throw new Error("You do not have access to this section.");
+
+  const [{ data: period }, { data: assignmentType }, { data: category }] = await Promise.all([
+    supabase.from("grading_periods").select("id,calculation_mode").eq("id", gradingPeriodId).eq("offering_id", section.offering_id).maybeSingle(),
+    supabase.from("assignment_types").select("id,code,active").eq("id", assignmentTypeId).eq("offering_id", section.offering_id).maybeSingle(),
+    supabase.from("grading_categories").select("id").eq("id", categoryId).eq("offering_id", section.offering_id).maybeSingle(),
+  ]);
+  if (!period || period.calculation_mode !== "direct") throw new Error("Choose a direct grading period from this course.");
+  if (!assignmentType || !assignmentType.active) throw new Error("Choose an active assignment type from this course.");
+  if (!category) throw new Error("Choose a grading category from this course.");
 
   const assignmentId = crypto.randomUUID();
   const { error } = await supabase.from("assignments").insert({

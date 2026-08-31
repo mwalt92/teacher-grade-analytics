@@ -17,9 +17,9 @@ export default async function NewAssignmentPage() {
   if (!section) redirect("/");
   const supabase = await createClient();
   const [{ data: periods }, { data: categories }, { data: types }] = await Promise.all([
-    supabase.from("grading_periods").select("id,code,name,sort_order").eq("section_id", section.sectionId).eq("calculation_mode", "direct").order("sort_order").order("code"),
-    supabase.from("grading_categories").select("id,code,name,sort_order").eq("section_id", section.sectionId).order("sort_order").order("name"),
-    supabase.from("assignment_types").select("id,code,name,description,default_category_id,default_points_possible,default_allow_retakes,sort_order").eq("section_id", section.sectionId).eq("active", true).order("sort_order").order("name"),
+    supabase.from("grading_periods").select("id,code,name,sort_order").eq("offering_id", section.offeringId).eq("calculation_mode", "direct").order("sort_order").order("code"),
+    supabase.from("grading_categories").select("id,code,name,sort_order").eq("offering_id", section.offeringId).order("sort_order").order("name"),
+    supabase.from("assignment_types").select("id,code,name,description,default_category_id,default_points_possible,default_allow_retakes,sort_order").eq("offering_id", section.offeringId).eq("active", true).order("sort_order").order("name"),
   ]);
   const today = new Date().toISOString().slice(0, 10);
 
@@ -46,7 +46,7 @@ export default async function NewAssignmentPage() {
     <section className="content-wrap assignment-create-wrap">
       <article className="panel">
         <div className="panel-header">
-          <div><p className="eyebrow">New assignment</p><h2>What are you entering?</h2><p className="subtle">Choose an assignment type, then confirm the grading category and behavior. Type and category are independent so each course can use its own structure.</p></div>
+          <div><p className="eyebrow">New assignment</p><h2>What are you entering?</h2><p className="subtle">Choose an assignment type, then confirm the grading category and behavior. These options are shared across every section of this course; the assignment itself is created only in the section shown above.</p></div>
           <div className="toolbar-group">
             <Link className="secondary-link" href="/settings"><Settings2 size={17}/> Manage types</Link>
             <Link className="secondary-link" href="/assignments"><ArrowLeft size={17}/> Back to Assignments</Link>

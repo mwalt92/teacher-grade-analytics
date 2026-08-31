@@ -6,11 +6,14 @@ export const ACTIVE_TEACHER_SECTION_COOKIE = "teacher_active_section";
 export type TeacherSectionSummary = {
   sectionId: string;
   sectionName: string;
+  offeringId: string;
   courseId: string;
   courseName: string;
   courseCode: string | null;
   schoolYearId: string;
   schoolYearLabel: string;
+  periodNumber: number | null;
+  sortOrder: number;
 };
 
 export async function getTeacherSections(): Promise<TeacherSectionSummary[]> {
@@ -30,8 +33,9 @@ export async function getTeacherSections(): Promise<TeacherSectionSummary[]> {
 
   const { data: sections, error: sectionsError } = await supabase
     .from("sections")
-    .select("id,name,course_id,school_year_id")
-    .in("id", sectionIds);
+    .select("id,name,offering_id,course_id,school_year_id,active,period_number,sort_order")
+    .in("id", sectionIds)
+    .eq("active", true);
 
   if (sectionsError || !sections?.length) return [];
 
@@ -51,20 +55,25 @@ export async function getTeacherSections(): Promise<TeacherSectionSummary[]> {
   return sections.flatMap((section) => {
     const course = coursesById.get(section.course_id);
     const schoolYear = yearsById.get(section.school_year_id);
-    if (!course || !schoolYear) return [];
+    if (!course || !schoolYear || !section.offering_id) return [];
 
     return [{
       sectionId: section.id,
       sectionName: section.name,
+      offeringId: section.offering_id,
       courseId: course.id,
       courseName: course.name,
       courseCode: course.code,
       schoolYearId: schoolYear.id,
       schoolYearLabel: schoolYear.label,
+      periodNumber: section.period_number == null ? null : Number(section.period_number),
+      sortOrder: Number(section.sort_order) || 0,
     }];
   }).sort((a, b) =>
     b.schoolYearLabel.localeCompare(a.schoolYearLabel)
     || a.courseName.localeCompare(b.courseName)
+    || (a.periodNumber ?? Number.MAX_SAFE_INTEGER) - (b.periodNumber ?? Number.MAX_SAFE_INTEGER)
+    || a.sortOrder - b.sortOrder
     || a.sectionName.localeCompare(b.sectionName));
 }
 
