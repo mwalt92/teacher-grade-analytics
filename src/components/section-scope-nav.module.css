@@ -1,0 +1,2 @@
+.scopeNav{display:flex;gap:8px;flex-wrap:wrap;background:var(--surface-soft);padding:8px max(18px,calc((100vw - 1320px)/2)) 4px}
+@media(max-width:620px){.scopeNav{padding-left:14px;padding-right:14px}}

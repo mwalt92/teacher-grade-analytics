@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
+import { AllSectionsDashboard } from "@/components/all-sections-dashboard";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { getTeacherDashboardData } from "@/lib/data/dashboard";
+import { getTeacherDashboardData, getTeacherOfferingDashboardData } from "@/lib/data/dashboard";
 import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 
@@ -9,7 +10,7 @@ function displayCourseName(courseName: string, courseCode: string | null) {
   return courseName.toLowerCase().includes(courseCode.toLowerCase()) ? courseName : `${courseName} ${courseCode}`;
 }
 
-type HomePageProps = { searchParams: Promise<{ period?: string }> };
+type HomePageProps = { searchParams: Promise<{ period?: string; scope?: string }> };
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const supabase = await createClient();
@@ -31,14 +32,32 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     return <main className="content-wrap"><article className="panel"><p className="eyebrow">Teacher setup</p><h1>No section assigned yet</h1><p className="subtle">Your teacher account is ready. The next setup step is assigning a school year, course, section, and roster.</p></article></main>;
   }
 
+  const offeringSections = sections.filter((item) => item.offeringId === section.offeringId);
+  const canShowAllSections = offeringSections.length > 1;
+  const showAllSections = params.scope === "all" && canShowAllSections;
+  const courseName = displayCourseName(section.courseName, section.courseCode);
+
+  if (showAllSections) {
+    const dashboard = await getTeacherOfferingDashboardData(offeringSections, params.period);
+    return <AllSectionsDashboard
+      courseName={courseName}
+      schoolYear={section.schoolYearLabel}
+      sections={sections}
+      offeringSections={offeringSections}
+      activeSectionId={section.sectionId}
+      dashboard={dashboard}
+    />;
+  }
+
   const dashboard = await getTeacherDashboardData(section.sectionId, params.period);
 
   return <DashboardShell
-    courseName={displayCourseName(section.courseName, section.courseCode)}
+    courseName={courseName}
     schoolYear={section.schoolYearLabel}
     sectionName={section.sectionName}
     sections={sections}
     activeSectionId={section.sectionId}
     dashboard={dashboard}
+    canShowAllSections={canShowAllSections}
   />;
 }
