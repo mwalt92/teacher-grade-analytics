@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Save } from "lucide-react";
@@ -100,6 +101,15 @@ export function CourseSectionManager({
         <label>Class period <span className="optional">optional</span><input name="periodNumber" type="number" min="0" max="99" step="1" placeholder="6"/></label>
         <div className={styles.cardActions}><button className="primary-button" type="submit" disabled={pending}><Plus size={16}/>{pending ? "Adding…" : "Add section"}</button></div>
       </form>
+    </article>
+
+    <article className={`panel ${styles.addCard}`}>
+      <div>
+        <p className="eyebrow">Add course</p>
+        <h3>Create a different course</h3>
+        <p className="subtle">Start blank or copy selected grading configuration from one of your existing courses. Students, rosters, assignments, and grades are never copied.</p>
+      </div>
+      <div className={styles.cardActions}><Link className="secondary-link" href="/settings/course-setup"><Plus size={16}/> Create Course</Link></div>
     </article>
   </div>;
 }
