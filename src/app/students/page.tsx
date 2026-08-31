@@ -63,7 +63,11 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   const roster = scope === "section" ? await getSectionRoster(section.sectionId, filter) : [];
   const activeRoster = scope === "section" && filter !== "active" ? await getSectionRoster(section.sectionId, "active") : roster;
   const totalRows = scope === "all" ? combinedRows.length : roster.length;
-  const sectionOptions = sections.map((item) => ({
+  const orderedImportSections = [
+    ...offeringSections,
+    ...sections.filter((item) => item.offeringId !== section.offeringId),
+  ];
+  const sectionOptions = orderedImportSections.map((item) => ({
     id: item.sectionId,
     label: `${item.courseCode ? `${item.courseName} ${item.courseCode}` : item.courseName} — ${item.sectionName}`,
   }));
@@ -104,7 +108,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
       <div className="roster-layout">
         <article className="panel">
           <div className="panel-header"><div><p className="eyebrow">{filter} roster</p><h2>{totalRows} {totalRows === 1 ? "student" : "students"}{scope === "all" ? ` across ${visibleOfferingSections.length} ${visibleOfferingSections.length === 1 ? "section" : "sections"}` : ""}</h2></div><span className="save-indicator">● Live Supabase data</span></div>
-          {totalRows === 0 ? <div className="empty-state"><UserPlus size={30}/><h3>No students here yet</h3><p className="subtle">{scope === "all" ? "No enrollments match this combined-roster filter." : "Add a student manually for testing, or preview a PowerSchool roster before importing."}</p></div> : scope === "all" ? <div className={styles.allRosterTable}>
+          {totalRows === 0 ? <div className="empty-state"><UserPlus size={30}/><h3>No students here yet</h3><p className="subtle">{scope === "all" ? "No enrollments match this combined-roster filter. Use the Import Center below to load one or more class periods." : "Add a student manually for testing, or preview a PowerSchool roster before importing."}</p></div> : scope === "all" ? <div className={styles.allRosterTable}>
             <div className={`${styles.allRosterRow} ${styles.allRosterHead}`}><span>Student</span><span>Section</span><span>Student #</span><span>Email</span><span>Status</span><span></span></div>
             {combinedRows.map(({ student, section: rowSection }) => <div className={styles.allRosterRow} key={student.enrollmentId}>
               <strong>{student.displayName}</strong>
@@ -131,27 +135,25 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
             <input type="hidden" name="sectionId" value={section.sectionId}/><label>Student name<input name="displayName" required placeholder="Last, First"/></label><label>Student number<input name="studentNumber" required placeholder="PowerSchool student #"/></label><label>School email <span className="optional">optional</span><input name="schoolEmail" type="email" placeholder="student@school.org"/></label><button className="primary-button" type="submit"><UserPlus size={17}/> Add to roster</button>
           </form></article>
         </aside> : <aside className="roster-sidebar">
-          <article className={`panel ${styles.sectionToolsNote}`}><p className="eyebrow">Section-specific tools</p><h3>Imports and quick-add stay class-specific</h3><p>Combined view is intentionally focused on reading and managing enrollment status. Switch to a class period above before importing a PowerSchool roster, reconciling email addresses, or manually adding a student.</p></article>
+          <article className={`panel ${styles.sectionToolsNote}`}><p className="eyebrow">Roster tools</p><h3>PowerSchool import works across sections</h3><p>Use the Import Center below to upload once and map each detected PowerSchool course to its destination class period. Quick Add and email reconciliation still stay section-specific.</p></article>
         </aside>}
       </div>
 
-      {scope === "section" ? <>
-        <article className="panel full-width import-card-live">
-          <div className="panel-header"><div><p className="eyebrow">Import Center • Step 1</p><h2>Preview a PowerSchool roster export</h2><p className="subtle">Supports multi-course .xlsx exports. Student Number is the preferred identity key; Name + Course exports are accepted but flagged for review.</p></div></div>
-          <RosterImportPreview sectionId={section.sectionId} sections={sectionOptions}/>
-        </article>
+      <article className="panel full-width import-card-live">
+        <div className="panel-header"><div><p className="eyebrow">Import Center • {scope === "all" ? "Multi-section" : "Step 1"}</p><h2>{scope === "all" ? "Import PowerSchool rosters across sections" : "Preview a PowerSchool roster export"}</h2><p className="subtle">{scope === "all" ? "Upload one multi-course .xlsx export, then explicitly map each detected PowerSchool course to the correct destination section before anything is committed." : "Supports multi-course .xlsx exports. Student Number is the preferred identity key; Name + Course exports are accepted but flagged for review."}</p></div></div>
+        <RosterImportPreview sectionId={section.sectionId} sections={sectionOptions}/>
+      </article>
 
-        <article className="panel full-width import-card-live">
-          <EmailReconciliation
-            sectionId={section.sectionId}
-            students={activeRoster.map((student) => ({
-              displayName: student.displayName,
-              studentNumber: student.externalStudentKey ?? "",
-              currentEmail: student.email,
-            }))}
-          />
-        </article>
-      </> : null}
+      {scope === "section" ? <article className="panel full-width import-card-live">
+        <EmailReconciliation
+          sectionId={section.sectionId}
+          students={activeRoster.map((student) => ({
+            displayName: student.displayName,
+            studentNumber: student.externalStudentKey ?? "",
+            currentEmail: student.email,
+          }))}
+        />
+      </article> : null}
     </section>
   </main>;
 }
