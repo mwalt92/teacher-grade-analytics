@@ -22,24 +22,42 @@ type DashboardShellProps = {
   sections: TeacherSectionOption[];
   activeSectionId: string;
   dashboard: TeacherDashboardData;
+  canShowAllSections?: boolean;
 };
 
 function formatPercent(value: number | null, digits = 1) {
   return value === null ? "—" : `${value.toFixed(digits)}%`;
 }
 
-export function DashboardShell({ courseName, schoolYear, sectionName, sections, activeSectionId, dashboard }: DashboardShellProps) {
+function dashboardHref(scope: "section" | "all", periodCode?: string) {
+  const params = new URLSearchParams();
+  if (scope === "all") params.set("scope", "all");
+  if (periodCode) params.set("period", periodCode);
+  const query = params.toString();
+  return query ? `/?${query}` : "/";
+}
+
+export function DashboardShell({ courseName, schoolYear, sectionName, sections, activeSectionId, dashboard, canShowAllSections = false }: DashboardShellProps) {
   const selectedPeriod = dashboard.selectedPeriod;
+  const sectionHref = dashboardHref("section", selectedPeriod?.code);
+  const allHref = dashboardHref("all", selectedPeriod?.code);
+  const attentionStudents = dashboard.attentionStudents.slice(0, 4);
+  const recentAssignments = dashboard.recentAssignments.slice(0, 6);
+
   return <main className="app-shell">
     <header className="topbar">
       <div>
         <p className="eyebrow">Teacher Grade Analytics</p>
         <h1>{courseName}</h1>
         <p className="subtle">{schoolYear} • {sectionName}{selectedPeriod ? ` • ${selectedPeriod.code}` : ""}</p>
-        <TeacherSectionSwitcher sections={sections} activeSectionId={activeSectionId} returnTo="/"/>
+        <TeacherSectionSwitcher sections={sections} activeSectionId={activeSectionId} returnTo={sectionHref}/>
       </div>
     </header>
     <TeacherPrimaryNav/>
+    {canShowAllSections ? <nav className="main-nav" aria-label="Dashboard section scope" style={{ background: "var(--surface-soft)", paddingTop: 8, paddingBottom: 4 }}>
+      <Link className="nav-button active" href={sectionHref}>{sectionName}</Link>
+      <Link className="nav-button" href={allHref}>All Sections</Link>
+    </nav> : null}
     <section className="content-wrap">
       <div className="section-heading">
         <div><p className="eyebrow">Dashboard</p><h2>What needs your attention?</h2><p className="subtle">● Live canonical course data</p></div>
@@ -66,7 +84,7 @@ export function DashboardShell({ courseName, schoolYear, sectionName, sections, 
         <article className="panel">
           <div className="panel-header"><div><p className="eyebrow">Students to review</p><h3>Needs attention</h3></div><Link className="text-button" href="/students">View roster <ArrowRight size={16}/></Link></div>
           <div className="student-list">
-            {dashboard.attentionStudents.length ? dashboard.attentionStudents.map((student) => {
+            {attentionStudents.length ? attentionStudents.map((student) => {
               const mismatch = student.powerSchoolDifference !== null && Math.abs(student.powerSchoolDifference) >= 0.1;
               const reason = student.missingCount > 0
                 ? `${student.missingCount} missing${mismatch ? " • PowerSchool mismatch" : ""}`
@@ -92,9 +110,9 @@ export function DashboardShell({ courseName, schoolYear, sectionName, sections, 
 
       <section className="panel full-width">
         <div className="panel-header"><div><p className="eyebrow">Recent work</p><h3>{selectedPeriod ? `${selectedPeriod.code} assignments` : "Recent assignments"}</h3></div><Link className="text-button" href="/assignments">View assignments <ArrowRight size={16}/></Link></div>
-        {dashboard.recentAssignments.length ? <div className="assignment-table" role="table" aria-label="Recent assignments">
+        {recentAssignments.length ? <div className="assignment-table" role="table" aria-label="Recent assignments">
           <div className="assignment-row table-head" role="row"><span>Assignment</span><span>Type</span><span>Date</span><span>Class Avg.</span><span>Status</span></div>
-          {dashboard.recentAssignments.map((assignment) => {
+          {recentAssignments.map((assignment) => {
             const status = assignment.missingCount > 0
               ? `${assignment.missingCount} missing`
               : assignment.rosterCount === 0
