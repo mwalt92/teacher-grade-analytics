@@ -2,6 +2,7 @@ import { getAssignmentManagementData } from "@/lib/data/assignment-management";
 import { getSectionGradebook, getSectionGradingPeriods } from "@/lib/data/grade-calculation";
 import { getLatestPowerSchoolSnapshots, POWERSCHOOL_TOLERANCE } from "@/lib/data/powerschool";
 import { getSectionRoster } from "@/lib/data/roster";
+import type { TeacherSectionSummary } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 
 export type DashboardAttentionStudent = {
@@ -14,6 +15,7 @@ export type DashboardAttentionStudent = {
 
 export type DashboardRecentAssignment = {
   id: string;
+  linkGroupId: string | null;
   title: string;
   type: string;
   date: string;
@@ -27,6 +29,7 @@ export type TeacherDashboardData = {
   selectedPeriod: { id: string; code: string; name: string } | null;
   periods: { code: string; name: string }[];
   studentCount: number;
+  gradedStudentCount: number;
   classAverage: number | null;
   missingCount: number;
   retakeCount: number;
@@ -35,6 +38,53 @@ export type TeacherDashboardData = {
   powerSchoolNotCapturedCount: number;
   attentionStudents: DashboardAttentionStudent[];
   recentAssignments: DashboardRecentAssignment[];
+};
+
+export type OfferingDashboardSection = {
+  sectionId: string;
+  sectionName: string;
+  periodNumber: number | null;
+  sortOrder: number;
+  dashboard: TeacherDashboardData;
+};
+
+export type OfferingDashboardAttentionStudent = DashboardAttentionStudent & {
+  sectionId: string;
+  sectionName: string;
+  periodNumber: number | null;
+};
+
+export type OfferingDashboardRecentSection = DashboardRecentAssignment & {
+  sectionId: string;
+  sectionName: string;
+  periodNumber: number | null;
+};
+
+export type OfferingDashboardRecentGroup = {
+  key: string;
+  linkGroupId: string | null;
+  title: string;
+  type: string;
+  date: string;
+  diverged: boolean;
+  sections: OfferingDashboardRecentSection[];
+};
+
+export type TeacherOfferingDashboardData = {
+  selectedPeriod: { id: string; code: string; name: string } | null;
+  periods: { code: string; name: string }[];
+  sectionCount: number;
+  studentCount: number;
+  gradedStudentCount: number;
+  classAverage: number | null;
+  missingCount: number;
+  retakeCount: number;
+  powerSchoolWithinTolerance: number;
+  powerSchoolMismatchCount: number;
+  powerSchoolNotCapturedCount: number;
+  attentionStudents: OfferingDashboardAttentionStudent[];
+  recentAssignments: OfferingDashboardRecentGroup[];
+  sections: OfferingDashboardSection[];
 };
 
 export async function getTeacherDashboardData(sectionId: string, requestedPeriod?: string): Promise<TeacherDashboardData> {
@@ -81,8 +131,7 @@ export async function getTeacherDashboardData(sectionId: string, requestedPeriod
       };
     })
     .filter((student) => student.missingCount > 0 || (student.powerSchoolDifference !== null && Math.abs(student.powerSchoolDifference) >= POWERSCHOOL_TOLERANCE))
-    .sort((a, b) => b.missingCount - a.missingCount || Math.abs(b.powerSchoolDifference ?? 0) - Math.abs(a.powerSchoolDifference ?? 0))
-    .slice(0, 4);
+    .sort((a, b) => b.missingCount - a.missingCount || Math.abs(b.powerSchoolDifference ?? 0) - Math.abs(a.powerSchoolDifference ?? 0));
 
   const periodIds = new Set(periods.map((period) => period.id));
   const { data: componentRows } = periodIds.size
@@ -139,7 +188,7 @@ export async function getTeacherDashboardData(sectionId: string, requestedPeriod
   }
 
   const retakeCount = attempts.filter((attempt) => attempt.attempt_number > 1).length;
-  const recentAssignments = relevantAssignments.slice(0, 6).map((assignment): DashboardRecentAssignment => {
+  const recentAssignments = relevantAssignments.map((assignment): DashboardRecentAssignment => {
     const records = recordsByAssignment.get(assignment.id) ?? [];
     const percents: number[] = [];
     let enteredCount = 0;
@@ -160,6 +209,7 @@ export async function getTeacherDashboardData(sectionId: string, requestedPeriod
     }
     return {
       id: assignment.id,
+      linkGroupId: assignment.linkGroupId,
       title: assignment.title,
       type: assignment.assignmentType?.name ?? "—",
       date: assignment.assignmentDate,
@@ -174,6 +224,7 @@ export async function getTeacherDashboardData(sectionId: string, requestedPeriod
     selectedPeriod: selectedPeriod ? { id: selectedPeriod.id, code: selectedPeriod.code, name: selectedPeriod.name } : null,
     periods: selectablePeriods.map((period) => ({ code: period.code, name: period.name })),
     studentCount: roster.length,
+    gradedStudentCount: gradedRows.length,
     classAverage,
     missingCount,
     retakeCount,
@@ -182,5 +233,90 @@ export async function getTeacherDashboardData(sectionId: string, requestedPeriod
     powerSchoolNotCapturedCount: Math.max(0, roster.length - snapshots.length),
     attentionStudents,
     recentAssignments,
+  };
+}
+
+export async function getTeacherOfferingDashboardData(
+  sections: TeacherSectionSummary[],
+  requestedPeriod?: string,
+): Promise<TeacherOfferingDashboardData> {
+  const orderedSections = [...sections].sort((a, b) =>
+    (a.periodNumber ?? Number.MAX_SAFE_INTEGER) - (b.periodNumber ?? Number.MAX_SAFE_INTEGER)
+    || a.sortOrder - b.sortOrder
+    || a.sectionName.localeCompare(b.sectionName));
+  const sectionDashboards = await Promise.all(orderedSections.map(async (section): Promise<OfferingDashboardSection> => ({
+    sectionId: section.sectionId,
+    sectionName: section.sectionName,
+    periodNumber: section.periodNumber,
+    sortOrder: section.sortOrder,
+    dashboard: await getTeacherDashboardData(section.sectionId, requestedPeriod),
+  })));
+
+  const firstDashboard = sectionDashboards[0]?.dashboard;
+  const gradedStudentCount = sectionDashboards.reduce((sum, section) => sum + section.dashboard.gradedStudentCount, 0);
+  const weightedGradeSum = sectionDashboards.reduce((sum, section) =>
+    sum + (section.dashboard.classAverage ?? 0) * section.dashboard.gradedStudentCount, 0);
+
+  const attentionStudents = sectionDashboards
+    .flatMap((section) => section.dashboard.attentionStudents.map((student): OfferingDashboardAttentionStudent => ({
+      ...student,
+      sectionId: section.sectionId,
+      sectionName: section.sectionName,
+      periodNumber: section.periodNumber,
+    })))
+    .sort((a, b) =>
+      b.missingCount - a.missingCount
+      || Math.abs(b.powerSchoolDifference ?? 0) - Math.abs(a.powerSchoolDifference ?? 0)
+      || (a.periodNumber ?? Number.MAX_SAFE_INTEGER) - (b.periodNumber ?? Number.MAX_SAFE_INTEGER)
+      || a.displayName.localeCompare(b.displayName));
+
+  const groups = new Map<string, OfferingDashboardRecentGroup>();
+  for (const section of sectionDashboards) {
+    for (const assignment of section.dashboard.recentAssignments) {
+      const key = assignment.linkGroupId ? `linked:${assignment.linkGroupId}` : `single:${section.sectionId}:${assignment.id}`;
+      const current = groups.get(key) ?? {
+        key,
+        linkGroupId: assignment.linkGroupId,
+        title: assignment.title,
+        type: assignment.type,
+        date: assignment.date,
+        diverged: false,
+        sections: [],
+      };
+      current.sections.push({
+        ...assignment,
+        sectionId: section.sectionId,
+        sectionName: section.sectionName,
+        periodNumber: section.periodNumber,
+      });
+      if (assignment.title !== current.title || assignment.type !== current.type || assignment.date !== current.date) current.diverged = true;
+      if (assignment.date > current.date) current.date = assignment.date;
+      groups.set(key, current);
+    }
+  }
+  const recentAssignments = [...groups.values()]
+    .map((group) => ({
+      ...group,
+      sections: group.sections.sort((a, b) =>
+        (a.periodNumber ?? Number.MAX_SAFE_INTEGER) - (b.periodNumber ?? Number.MAX_SAFE_INTEGER)
+        || a.sectionName.localeCompare(b.sectionName)),
+    }))
+    .sort((a, b) => b.date.localeCompare(a.date) || a.title.localeCompare(b.title));
+
+  return {
+    selectedPeriod: firstDashboard?.selectedPeriod ?? null,
+    periods: firstDashboard?.periods ?? [],
+    sectionCount: sectionDashboards.length,
+    studentCount: sectionDashboards.reduce((sum, section) => sum + section.dashboard.studentCount, 0),
+    gradedStudentCount,
+    classAverage: gradedStudentCount > 0 ? weightedGradeSum / gradedStudentCount : null,
+    missingCount: sectionDashboards.reduce((sum, section) => sum + section.dashboard.missingCount, 0),
+    retakeCount: sectionDashboards.reduce((sum, section) => sum + section.dashboard.retakeCount, 0),
+    powerSchoolWithinTolerance: sectionDashboards.reduce((sum, section) => sum + section.dashboard.powerSchoolWithinTolerance, 0),
+    powerSchoolMismatchCount: sectionDashboards.reduce((sum, section) => sum + section.dashboard.powerSchoolMismatchCount, 0),
+    powerSchoolNotCapturedCount: sectionDashboards.reduce((sum, section) => sum + section.dashboard.powerSchoolNotCapturedCount, 0),
+    attentionStudents,
+    recentAssignments,
+    sections: sectionDashboards,
   };
 }
