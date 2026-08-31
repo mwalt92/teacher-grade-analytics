@@ -164,7 +164,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
           <div className="panel-header"><div><p className="eyebrow">Import Center • Step 2</p><h2>Reconcile school emails by class period</h2><p className="subtle">Each class period keeps its own reviewed email list. Paste and save one section at a time below so the existing one-to-one identity checks remain unchanged.</p></div></div>
         </article>
         {allSectionEmailRosters.map(({ section: emailSection, roster: emailRoster }) => <article className="panel full-width import-card-live" key={emailSection.sectionId}>
-          <div className="panel-header"><div><p className="eyebrow">Email reconciliation • {emailSection.sectionName}</p><h2>{emailSection.sectionName}</h2><p className="subtle">{emailRoster.length} active {emailRoster.length === 1 ? "student" : "students"}. Use the PowerSchool email list for this class period only.</p></div></div>
+          <div className="panel-header"><div><p className="eyebrow">Email reconciliation • {emailSection.sectionName}</p><h2>{emailSection.sectionName}</h2><p className="subtle">{emailRoster.length} active {emailRoster.length === 1 ? "student" : "students"}. Paste the PowerSchool email list for this class period only.</p></div></div>
           <EmailReconciliation
             sectionId={emailSection.sectionId}
             students={emailRoster.map((student) => ({
