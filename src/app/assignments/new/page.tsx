@@ -32,6 +32,13 @@ export default async function NewAssignmentPage() {
     defaultPointsPossible: Number(type.default_points_possible),
     defaultAllowRetakes: Boolean(type.default_allow_retakes),
   }));
+  const targetSections = sections
+    .filter((item) => item.offeringId === section.offeringId)
+    .map((item) => ({
+      id: item.sectionId,
+      name: item.sectionName,
+      periodNumber: item.periodNumber,
+    }));
 
   return <main className="app-shell">
     <header className="topbar">
@@ -46,7 +53,7 @@ export default async function NewAssignmentPage() {
     <section className="content-wrap assignment-create-wrap">
       <article className="panel">
         <div className="panel-header">
-          <div><p className="eyebrow">New assignment</p><h2>What are you entering?</h2><p className="subtle">Choose an assignment type, then confirm the grading category and behavior. These options are shared across every section of this course; the assignment itself is created only in the section shown above.</p></div>
+          <div><p className="eyebrow">New assignment</p><h2>What are you entering?</h2><p className="subtle">Choose the course settings once, then publish the assignment to one or more class sections. Each section keeps its own roster and grade records while the related assignments stay explicitly linked.</p></div>
           <div className="toolbar-group">
             <Link className="secondary-link" href="/settings"><Settings2 size={17}/> Manage types</Link>
             <Link className="secondary-link" href="/assignments"><ArrowLeft size={17}/> Back to Assignments</Link>
@@ -54,6 +61,7 @@ export default async function NewAssignmentPage() {
         </div>
         <AssignmentForm
           sectionId={section.sectionId}
+          targetSections={targetSections}
           periods={(periods ?? []).map((period) => ({ id: period.id, code: period.code, name: period.name }))}
           categories={(categories ?? []).map((category) => ({ id: category.id, code: category.code, name: category.name }))}
           assignmentTypes={assignmentTypes}
