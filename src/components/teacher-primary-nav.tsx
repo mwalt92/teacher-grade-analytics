@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const items = [
-  { label: "Home", href: "/home" },
-  { label: "Dashboard", href: "/" },
+  { label: "Home", href: "/" },
+  { label: "Dashboard", href: "/dashboard" },
   { label: "Students", href: "/students" },
   { label: "Assignments", href: "/assignments" },
   { label: "Gradebook", href: "/gradebook" },
@@ -14,7 +14,7 @@ const items = [
 ];
 
 function isActive(pathname: string, href: string) {
-  if (href === "/") return pathname === "/";
+  if (href === "/") return pathname === "/" || pathname === "/home";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

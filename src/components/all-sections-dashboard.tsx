@@ -23,7 +23,7 @@ function dashboardHref(scope: "section" | "all", periodCode?: string) {
   if (scope === "all") params.set("scope", "all");
   if (periodCode) params.set("period", periodCode);
   const query = params.toString();
-  return query ? `/?${query}` : "/";
+  return query ? `/dashboard?${query}` : "/dashboard";
 }
 
 export function AllSectionsDashboard({
@@ -72,7 +72,7 @@ export function AllSectionsDashboard({
       <div className="section-heading">
         <div><p className="eyebrow">Course dashboard</p><h2>What needs attention across your sections?</h2><p className="subtle">● Live canonical course data • section grades remain independent</p></div>
         <div className="grade-audit-header-actions">
-          {dashboard.periods.length > 1 ? <form method="get" action="/">
+          {dashboard.periods.length > 1 ? <form method="get" action="/dashboard">
             <input type="hidden" name="scope" value="all"/>
             <select name="period" aria-label="Select grading period" defaultValue={selectedPeriod?.code} onChange={(event) => event.currentTarget.form?.requestSubmit()}>
               {dashboard.periods.map((period) => <option key={period.code} value={period.code}>{period.code} — {period.name}</option>)}
