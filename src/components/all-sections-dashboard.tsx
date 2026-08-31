@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, BookOpenCheck, ClipboardPlus, Layers3, RotateCcw, ShieldCheck, Users } from "lucide-react";
+import { AlertTriangle, ArrowRight, BookOpenCheck, ClipboardPlus, Layers3, ShieldCheck, Users } from "lucide-react";
 import { setActiveTeacherSection } from "@/app/teacher-section-actions";
+import { SectionScopeNav } from "@/components/section-scope-nav";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import type { TeacherOfferingDashboardData } from "@/lib/data/dashboard";
@@ -43,6 +44,7 @@ export function AllSectionsDashboard({
   const selectedPeriod = dashboard.selectedPeriod;
   const sectionHref = dashboardHref("section", selectedPeriod?.code);
   const allHref = dashboardHref("all", selectedPeriod?.code);
+  const currentSectionLabel = offeringSections.find((section) => section.sectionId === activeSectionId)?.sectionName ?? "Current Section";
   const recentGroups = dashboard.recentAssignments.slice(0, 6);
   const attentionStudents = dashboard.attentionStudents.slice(0, 8);
 
@@ -57,10 +59,14 @@ export function AllSectionsDashboard({
     </header>
     <TeacherPrimaryNav/>
 
-    <nav className={styles.scopeNav} aria-label="Dashboard section scope">
-      <Link className="nav-button" href={sectionHref}>{offeringSections.find((section) => section.sectionId === activeSectionId)?.sectionName ?? "Current Section"}</Link>
-      <Link className="nav-button active" href={allHref}>All Sections ({dashboard.sectionCount})</Link>
-    </nav>
+    <SectionScopeNav
+      sectionLabel={currentSectionLabel}
+      sectionHref={sectionHref}
+      allLabel={`All Sections (${dashboard.sectionCount})`}
+      allHref={allHref}
+      activeScope="all"
+      ariaLabel="Dashboard section scope"
+    />
 
     <section className="content-wrap">
       <div className="section-heading">
