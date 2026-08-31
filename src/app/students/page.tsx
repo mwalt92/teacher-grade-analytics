@@ -62,6 +62,12 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
 
   const roster = scope === "section" ? await getSectionRoster(section.sectionId, filter) : [];
   const activeRoster = scope === "section" && filter !== "active" ? await getSectionRoster(section.sectionId, "active") : roster;
+  const allSectionEmailRosters = scope === "all"
+    ? await Promise.all(offeringSections.map(async (item) => ({
+      section: item,
+      roster: await getSectionRoster(item.sectionId, "active"),
+    })))
+    : [];
   const totalRows = scope === "all" ? combinedRows.length : roster.length;
   const orderedImportSections = [
     ...offeringSections,
@@ -135,7 +141,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
             <input type="hidden" name="sectionId" value={section.sectionId}/><label>Student name<input name="displayName" required placeholder="Last, First"/></label><label>Student number<input name="studentNumber" required placeholder="PowerSchool student #"/></label><label>School email <span className="optional">optional</span><input name="schoolEmail" type="email" placeholder="student@school.org"/></label><button className="primary-button" type="submit"><UserPlus size={17}/> Add to roster</button>
           </form></article>
         </aside> : <aside className="roster-sidebar">
-          <article className={`panel ${styles.sectionToolsNote}`}><p className="eyebrow">Roster tools</p><h3>PowerSchool import works across sections</h3><p>Use the Import Center below to upload once and map each detected PowerSchool course to its destination class period. Quick Add and email reconciliation still stay section-specific.</p></article>
+          <article className={`panel ${styles.sectionToolsNote}`}><p className="eyebrow">Roster tools</p><h3>Import and email tools work across sections</h3><p>Use the Import Center below to upload once and map each detected PowerSchool course to its destination class period. Email reconciliation is available below as a separate reviewed panel for each class period. Quick Add stays section-specific.</p></article>
         </aside>}
       </div>
 
@@ -153,7 +159,22 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
             currentEmail: student.email,
           }))}
         />
-      </article> : null}
+      </article> : <>
+        <article className="panel full-width import-card-live">
+          <div className="panel-header"><div><p className="eyebrow">Import Center • Step 2</p><h2>Reconcile school emails by class period</h2><p className="subtle">Each class period keeps its own reviewed email list. Paste and save one section at a time below so the existing one-to-one identity checks remain unchanged.</p></div></div>
+        </article>
+        {allSectionEmailRosters.map(({ section: emailSection, roster: emailRoster }) => <article className="panel full-width import-card-live" key={emailSection.sectionId}>
+          <div className="panel-header"><div><p className="eyebrow">Email reconciliation • {emailSection.sectionName}</p><h2>{emailSection.sectionName}</h2><p className="subtle">{emailRoster.length} active {emailRoster.length === 1 ? "student" : "students"}. Use the PowerSchool email list for this class period only.</p></div></div>
+          <EmailReconciliation
+            sectionId={emailSection.sectionId}
+            students={emailRoster.map((student) => ({
+              displayName: student.displayName,
+              studentNumber: student.externalStudentKey ?? "",
+              currentEmail: student.email,
+            }))}
+          />
+        </article>)}
+      </>}
     </section>
   </main>;
 }
