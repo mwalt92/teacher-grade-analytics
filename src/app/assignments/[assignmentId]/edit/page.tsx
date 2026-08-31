@@ -30,14 +30,19 @@ export default async function EditAssignmentPage({ params, searchParams }: EditA
   const supabase = await createClient();
   const { data: assignment } = await supabase
     .from("assignments")
-    .select("id,section_id,title,assignment_type,assignment_type_id,category_id,assignment_date,points_possible,allow_retakes,grading_period_id,archived,archived_at")
+    .select("id,section_id,link_group_id,title,assignment_type,assignment_type_id,category_id,assignment_date,points_possible,allow_retakes,grading_period_id,archived,archived_at")
     .eq("id", assignmentId)
     .maybeSingle();
   if (!assignment) notFound();
   const section = sections.find((item) => item.sectionId === assignment.section_id);
   if (!section) notFound();
 
-  const management = await getAssignmentManagementData(section.sectionId);
+  const [management, linkedCountResult] = await Promise.all([
+    getAssignmentManagementData(section.sectionId),
+    assignment.link_group_id
+      ? supabase.from("assignments").select("id", { count: "exact", head: true }).eq("link_group_id", assignment.link_group_id)
+      : Promise.resolve({ count: 0 }),
+  ]);
   if (!management) notFound();
   const activity = management.assignments.find((item) => item.id === assignmentId);
   if (!activity) notFound();
@@ -45,6 +50,7 @@ export default async function EditAssignmentPage({ params, searchParams }: EditA
   const gradeHref = `/assignments/${assignmentId}?returnTo=${encodeURIComponent(returnTo)}`;
   const clearedCount = query.cleared == null ? null : Number(query.cleared);
   const currentType = management.assignmentTypes.find((type) => type.id === assignment.assignment_type_id);
+  const linkedCount = linkedCountResult.count ?? 0;
 
   return <main className="app-shell">
     <header className="topbar">
@@ -65,6 +71,7 @@ export default async function EditAssignmentPage({ params, searchParams }: EditA
       {query.saved === "1" ? <div className={styles.notice}>Assignment changes saved. Grade calculations now use the updated setup.</div> : null}
       {clearedCount != null && Number.isFinite(clearedCount) ? <div className={styles.notice}>Cleared {clearedCount} student grade record{clearedCount === 1 ? "" : "s"}. This assignment is now empty and ready for permanent deletion if that is what you intended.</div> : null}
       {query.error ? <div className={styles.error}>{query.error}</div> : null}
+      {linkedCount > 1 ? <div className="import-message warning"><strong>Linked across {linkedCount} sections.</strong> For this first multi-section publishing version, edits, archive actions, score clearing, and deletion on this page affect only {section.sectionName}. The linked sections remain separate grade records.</div> : null}
       {assignment.archived ? <div className={styles.archivedBanner}>This assignment is archived. Its historical scores are preserved, but it is excluded from active Gradebook, audit calculations, PowerSchool comparison calculations, and student grades until restored.</div> : null}
 
       <div className={styles.editLayout}>
