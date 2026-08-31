@@ -45,3 +45,128 @@
   border-radius: 8px;
   background: var(--surface-soft);
 }
+
+.sectionFilterBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid #bfd2e8;
+  border-radius: 14px;
+  background: #f3f8fd;
+}
+
+.sectionFilterBar > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: #294d73;
+}
+
+.sectionFilterBar > div > span {
+  display: grid;
+  gap: 2px;
+}
+
+.sectionFilterBar small {
+  color: #58708a;
+  font-size: .75rem;
+}
+
+.sectionFilterBar nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.sectionFilterLink,
+.sectionFilterActive {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--muted);
+  font-size: .76rem;
+  font-weight: 750;
+}
+
+.sectionFilterActive {
+  border-color: #91add1;
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.allRosterTable {
+  display: grid;
+  overflow-x: auto;
+}
+
+.allRosterRow {
+  display: grid;
+  grid-template-columns: minmax(170px, 1.3fr) 110px .7fr minmax(180px, 1.15fr) .65fr .55fr;
+  gap: 14px;
+  align-items: center;
+  min-width: 900px;
+  padding: 14px 8px;
+  border-top: 1px solid var(--line);
+}
+
+.allRosterHead {
+  border-top: 0;
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 750;
+}
+
+.sectionCell {
+  display: grid;
+  gap: 2px;
+}
+
+.sectionCell strong {
+  font-size: .82rem;
+}
+
+.sectionCell small {
+  color: var(--muted);
+  font-size: .7rem;
+}
+
+.sectionToolsNote p:last-child {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: .84rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 980px) {
+  .sectionFilterBar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sectionFilterBar nav {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  .sectionFilterBar {
+    padding: 11px 12px;
+  }
+
+  .allRosterRow {
+    grid-template-columns: minmax(160px, 1.3fr) 100px minmax(150px, 1fr) .6fr .55fr;
+    min-width: 760px;
+  }
+
+  .allRosterRow > :nth-child(3) {
+    display: none;
+  }
+}
