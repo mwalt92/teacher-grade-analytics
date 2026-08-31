@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, BookOpenCheck, ClipboardPlus, RotateCcw, ShieldCheck, Users } from "lucide-react";
+import { SectionScopeNav } from "@/components/section-scope-nav";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import type { TeacherDashboardData } from "@/lib/data/dashboard";
@@ -54,10 +55,14 @@ export function DashboardShell({ courseName, schoolYear, sectionName, sections, 
       </div>
     </header>
     <TeacherPrimaryNav/>
-    {canShowAllSections ? <nav className="main-nav" aria-label="Dashboard section scope" style={{ background: "var(--surface-soft)", paddingTop: 8, paddingBottom: 4 }}>
-      <Link className="nav-button active" href={sectionHref}>{sectionName}</Link>
-      <Link className="nav-button" href={allHref}>All Sections</Link>
-    </nav> : null}
+    {canShowAllSections ? <SectionScopeNav
+      sectionLabel={sectionName}
+      sectionHref={sectionHref}
+      allLabel="All Sections"
+      allHref={allHref}
+      activeScope="section"
+      ariaLabel="Dashboard section scope"
+    /> : null}
     <section className="content-wrap">
       <div className="section-heading">
         <div><p className="eyebrow">Dashboard</p><h2>What needs your attention?</h2><p className="subtle">● Live canonical course data</p></div>
