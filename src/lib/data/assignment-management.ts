@@ -7,6 +7,7 @@ export type AssignmentManagementType = { id: string; code: string; name: string;
 
 export type AssignmentManagementRow = {
   id: string;
+  linkGroupId: string | null;
   title: string;
   assignmentType: AssignmentManagementType | null;
   assignmentDate: string;
@@ -41,7 +42,7 @@ export async function getAssignmentManagementData(sectionId: string): Promise<As
   const [assignmentsResult, periodsResult, categoriesResult, typesResult] = await Promise.all([
     supabase
       .from("assignments")
-      .select("id,title,assignment_type,assignment_type_id,assignment_date,points_possible,allow_retakes,archived,archived_at,grading_period_id,category_id,created_at")
+      .select("id,link_group_id,title,assignment_type,assignment_type_id,assignment_date,points_possible,allow_retakes,archived,archived_at,grading_period_id,category_id,created_at")
       .eq("section_id", sectionId)
       .order("assignment_date", { ascending: false })
       .order("created_at", { ascending: false }),
@@ -121,6 +122,7 @@ export async function getAssignmentManagementData(sectionId: string): Promise<As
 
     return {
       id: assignment.id,
+      linkGroupId: assignment.link_group_id,
       title: assignment.title,
       assignmentType,
       assignmentDate: assignment.assignment_date,
