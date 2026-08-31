@@ -39,7 +39,12 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   if (!section) redirect("/");
 
   const filter: RosterFilter = params.view === "inactive" ? "inactive" : params.view === "all" ? "all" : "active";
-  const offeringSections = sections.filter((item) => item.offeringId === section.offeringId);
+  const offeringSections = sections
+    .filter((item) => item.offeringId === section.offeringId)
+    .sort((a, b) =>
+      (a.periodNumber ?? Number.MAX_SAFE_INTEGER) - (b.periodNumber ?? Number.MAX_SAFE_INTEGER)
+      || a.sortOrder - b.sortOrder
+      || a.sectionName.localeCompare(b.sectionName));
   const canShowAllSections = offeringSections.length > 1;
   const scope: "section" | "all" = params.scope === "all" && canShowAllSections ? "all" : "section";
   const requestedSectionFilter = params.section ?? "all";
