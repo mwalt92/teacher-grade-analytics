@@ -1,25 +1,32 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { SectionScopeNav } from "@/components/section-scope-nav";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getSectionGradebook, getSectionGradingPeriods } from "@/lib/data/grade-calculation";
 import { getSectionRoster } from "@/lib/data/roster";
 import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
+import { AllSectionsGradebook } from "./all-sections-gradebook";
 import styles from "./gradebook.module.css";
 
 function formatPercent(value:number|null,digits=2){return value===null?"—":`${value.toFixed(digits)}%`;}
-type GradebookPageProps={searchParams:Promise<{period?:string}>};
+type GradebookPageProps={searchParams:Promise<{period?:string;scope?:string}>};
 
 export default async function GradebookPage({searchParams}:GradebookPageProps){
  const supabase=await createClient();
  const {data:claimsData,error:claimsError}=await supabase.auth.getClaims();
  const userId=claimsData?.claims?.sub;
  if(claimsError||typeof userId!=="string")redirect("/login");
- const [sections,section]=await Promise.all([getTeacherSections(),getActiveTeacherSection()]);
+ const [sections,section,params]=await Promise.all([getTeacherSections(),getActiveTeacherSection(),searchParams]);
  if(!section)return <main className="content-wrap"><article className="panel"><h1>No teacher section is available.</h1></article></main>;
- const [roster,periods,params]=await Promise.all([getSectionRoster(section.sectionId,"active"),getSectionGradingPeriods(section.sectionId),searchParams]);
+ const offeringSections=sections.filter(candidate=>candidate.offeringId===section.offeringId);
+ const canShowAllSections=offeringSections.length>1;
+ const [roster,periods]=await Promise.all([getSectionRoster(section.sectionId,"active"),getSectionGradingPeriods(section.sectionId)]);
  const selectedPeriod=periods.find(period=>period.code===params.period)??periods[0];
+ if(params.scope==="all"&&canShowAllSections&&selectedPeriod){
+  return <AllSectionsGradebook sections={sections} offeringSections={offeringSections} activeSection={section} periods={periods} selectedPeriod={selectedPeriod}/>;
+ }
  const calculation=selectedPeriod?await getSectionGradebook(section.sectionId,roster.map(student=>student.studentId),selectedPeriod.code):null;
  const rowByStudentId=new Map(calculation?.rows.map(row=>[row.studentId,row])??[]);
  const gradedRows=calculation?.rows.filter(row=>row.overallPercent!==null)??[];
@@ -36,9 +43,11 @@ export default async function GradebookPage({searchParams}:GradebookPageProps){
  const detailColumns=calculation?.mode==="composite"?componentPeriods.map(period=>({key:period.code,label:period.periodRole==="exam"?"Exam":period.name})):categoryCodes.map(code=>({key:code,label:calculation?.rules.categoryLabels?.[code]??code}));
  const rowTemplate=`minmax(210px,1.7fr) minmax(105px,.8fr) repeat(${detailColumns.length},minmax(100px,.75fr)) minmax(105px,.8fr) minmax(70px,.5fr)`;
  const tableMinWidth=620+detailColumns.length*115;
- const returnTo=selectedPeriod?`/gradebook?period=${encodeURIComponent(selectedPeriod.code)}`:"/gradebook";
- return <main className="app-shell"><header className="topbar"><div><p className="eyebrow">Teacher Gradebook</p><h1>{section.courseCode?`${section.courseName} ${section.courseCode}`:section.courseName}</h1><p className="subtle">{section.sectionName} • live grades from the canonical grading engine</p><TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/></div></header>
+ const sectionHref=selectedPeriod?`/gradebook?period=${encodeURIComponent(selectedPeriod.code)}`:"/gradebook";
+ const allHref=selectedPeriod?`/gradebook?scope=all&period=${encodeURIComponent(selectedPeriod.code)}`:"/gradebook?scope=all";
+ return <main className="app-shell"><header className="topbar"><div><p className="eyebrow">Teacher Gradebook</p><h1>{section.courseCode?`${section.courseName} ${section.courseCode}`:section.courseName}</h1><p className="subtle">{section.sectionName} • live grades from the canonical grading engine</p><TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={sectionHref}/></div></header>
  <TeacherPrimaryNav/>
+ {canShowAllSections?<SectionScopeNav sectionLabel={section.sectionName} sectionHref={sectionHref} allLabel={`All Sections (${offeringSections.length})`} allHref={allHref} activeScope="section" ariaLabel="Gradebook section scope"/>:null}
  <section className={`content-wrap ${styles.content}`}><article className={`panel ${styles.controls}`}><div className="panel-header"><div><p className="eyebrow">Class view</p><h3>Current grades</h3></div><div className="grade-audit-header-actions"><Link className="secondary-link" href={`/gradebook/assignments${selectedPeriod?`?period=${selectedPeriod.code}`:""}`}>Assignments</Link><Link className="secondary-link" href={`/gradebook/powerschool${selectedPeriod?`?period=${selectedPeriod.code}`:""}`}>PowerSchool Comparison</Link><Link className="secondary-link" href={`/gradebook/audit${selectedPeriod?`?period=${selectedPeriod.code}`:""}`}>Grade Audit</Link></div></div><form method="get" className={styles.periodForm}><label><span>Grading period</span><select name="period" defaultValue={selectedPeriod?.code} aria-label="Select grading period">{periods.map(period=><option key={period.id} value={period.code}>{period.code} — {period.name}</option>)}</select></label><button className="primary-button" type="submit">View Gradebook</button></form></article>
  <section className={`metric-grid ${styles.metrics}`} aria-label="Gradebook summary"><article className="metric-card"><span className="metric-label">Active students</span><strong>{roster.length}</strong></article><article className="metric-card"><span className="metric-label">Class average</span><strong>{formatPercent(classAverage)}</strong></article><article className="metric-card"><span className="metric-label">Missing flags</span><strong>{missingCount}</strong></article><article className="metric-card"><span className="metric-label">Unentered scores</span><strong>{unenteredCount}</strong></article></section>
  <article className={`panel full-width ${styles.tablePanel}`}><div className="panel-header"><div><p className="eyebrow">{selectedPeriod?.code??"Gradebook"}</p><h3>{calculation?.mode==="composite"?"Composite period overview":selectedPeriod?.periodRole==="exam"?"Exam grade overview":"Category grade overview"}</h3></div><span className="subtle">{gradedRows.length} of {roster.length} students currently have a computed grade</span></div>
