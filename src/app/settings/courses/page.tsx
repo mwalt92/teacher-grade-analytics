@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Archive, ClipboardPlus, Home, RotateCcw } from "lucide-react";
+import { Archive, BookCopy, ClipboardPlus, Home, RotateCcw } from "lucide-react";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { getTeacherCourseLifecycleOfferings } from "@/lib/data/course-lifecycle";
 import { createClient } from "@/lib/supabase/server";
@@ -52,6 +52,7 @@ export default async function CourseLibraryPage({ searchParams }: PageProps) {
         </div>
         <div className={styles.pageActions}>
           <Link className="secondary-link" href="/"><Home size={17}/> Teacher Home</Link>
+          <Link className="secondary-link" href="/settings/templates"><BookCopy size={17}/> Templates</Link>
           <Link className="primary-button" href="/settings/course-setup"><ClipboardPlus size={17}/> Create Course</Link>
         </div>
       </div>
