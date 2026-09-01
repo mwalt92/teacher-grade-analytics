@@ -39,8 +39,19 @@ export async function getTeacherSections(): Promise<TeacherSectionSummary[]> {
 
   if (sectionsError || !sections?.length) return [];
 
-  const courseIds = [...new Set(sections.map((section) => section.course_id))];
-  const schoolYearIds = [...new Set(sections.map((section) => section.school_year_id))];
+  const offeringIds = [...new Set(sections.map((section) => section.offering_id))];
+  const { data: offerings, error: offeringsError } = await supabase
+    .from("course_offerings")
+    .select("id,active")
+    .in("id", offeringIds);
+  if (offeringsError || !offerings) return [];
+
+  const activeOfferingIds = new Set(offerings.filter((offering) => offering.active).map((offering) => offering.id));
+  const activeSections = sections.filter((section) => activeOfferingIds.has(section.offering_id));
+  if (!activeSections.length) return [];
+
+  const courseIds = [...new Set(activeSections.map((section) => section.course_id))];
+  const schoolYearIds = [...new Set(activeSections.map((section) => section.school_year_id))];
 
   const [{ data: courses, error: coursesError }, { data: schoolYears, error: yearsError }] = await Promise.all([
     supabase.from("courses").select("id,name,code").in("id", courseIds),
@@ -52,7 +63,7 @@ export async function getTeacherSections(): Promise<TeacherSectionSummary[]> {
   const coursesById = new Map(courses.map((course) => [course.id, course]));
   const yearsById = new Map(schoolYears.map((year) => [year.id, year]));
 
-  return sections.flatMap((section) => {
+  return activeSections.flatMap((section) => {
     const course = coursesById.get(section.course_id);
     const schoolYear = yearsById.get(section.school_year_id);
     if (!course || !schoolYear || !section.offering_id) return [];
