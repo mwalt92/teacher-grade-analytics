@@ -44,7 +44,7 @@ export default async function AssignmentGradePage({ params, searchParams }: { pa
     return linkedSection ? [{ assignmentId: linked.id, section: linkedSection }] : [];
   }).sort((a, b) => (a.section.periodNumber ?? 999) - (b.section.periodNumber ?? 999) || a.section.sectionName.localeCompare(b.section.sectionName));
 
-  const { data: records } = await supabase.from("grade_records").select("id,student_id,missing").eq("assignment_id", assignmentId);
+  const { data: records } = await supabase.from("grade_records").select("id,student_id,missing,exempt").eq("assignment_id", assignmentId);
   const recordIds = (records ?? []).map((record) => record.id);
   const { data: attempts } = recordIds.length
     ? await supabase.from("grade_attempts").select("grade_record_id,attempt_number,points_earned,occurred_on").in("grade_record_id", recordIds).order("attempt_number", { ascending: true })
@@ -66,6 +66,7 @@ export default async function AssignmentGradePage({ params, searchParams }: { pa
       externalStudentKey: student.externalStudentKey,
       points: attemptOne?.points ?? null,
       missing: record?.missing ?? false,
+      exempt: record?.exempt ?? false,
       attempts: studentAttempts,
     };
   });
