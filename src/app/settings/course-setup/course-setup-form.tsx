@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, CheckCircle2, Copy, Plus } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookCopy, CheckCircle2, Copy, Plus } from "lucide-react";
 import { createTeacherCourse } from "./actions";
 import styles from "./course-setup.module.css";
 
@@ -22,35 +23,51 @@ type SourceCourse = {
   gradingPeriodCount: number;
 };
 
+type TemplateOption = {
+  id: string;
+  name: string;
+  description: string | null;
+  defaultCourseName: string;
+  defaultCourseCode: string | null;
+  categoryCount: number;
+  assignmentTypeCount: number;
+  gradingPeriodCount: number;
+};
+
 type Basics = {
   courseName: string;
   courseCode: string;
   sectionName: string;
   periodNumber: string;
   sourceOfferingId: string;
+  templateId: string;
 };
 
 export function CourseSetupForm({
   defaultSchoolYearId,
   schoolYears,
   sources,
+  templates,
 }: {
   defaultSchoolYearId: string;
   schoolYears: SchoolYearOption[];
   sources: SourceCourse[];
+  templates: TemplateOption[];
 }) {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [schoolYearId, setSchoolYearId] = useState(defaultSchoolYearId);
-  const [basics, setBasics] = useState<Basics>({ courseName: "", courseCode: "", sectionName: "", periodNumber: "", sourceOfferingId: "" });
+  const [basics, setBasics] = useState<Basics>({ courseName: "", courseCode: "", sectionName: "", periodNumber: "", sourceOfferingId: "", templateId: "" });
   const [copyCategories, setCopyCategories] = useState(true);
   const [copyAssignmentTypes, setCopyAssignmentTypes] = useState(true);
   const [copyGradingPeriods, setCopyGradingPeriods] = useState(true);
 
   const selectedSource = useMemo(() => sources.find((source) => source.offeringId === basics.sourceOfferingId) ?? null, [sources, basics.sourceOfferingId]);
+  const selectedTemplate = useMemo(() => templates.find((template) => template.id === basics.templateId) ?? null, [templates, basics.templateId]);
   const selectedSchoolYear = useMemo(() => schoolYears.find((year) => year.id === schoolYearId) ?? schoolYears[0] ?? null, [schoolYears, schoolYearId]);
+  const selectedConfig = selectedTemplate ?? selectedSource;
 
   function update<K extends keyof Basics>(key: K, value: Basics[K]) {
     setBasics((current) => ({ ...current, [key]: value }));
@@ -70,17 +87,34 @@ export function CourseSetupForm({
     setStep(2);
   }
 
+  function chooseBlank() {
+    setBasics((current) => ({ ...current, sourceOfferingId: "", templateId: "" }));
+    setCopyCategories(false);
+    setCopyAssignmentTypes(false);
+    setCopyGradingPeriods(false);
+    setError(null);
+  }
+
   function chooseSource(value: string) {
-    update("sourceOfferingId", value);
-    if (!value) {
-      setCopyCategories(false);
-      setCopyAssignmentTypes(false);
-      setCopyGradingPeriods(false);
-    } else {
-      setCopyCategories(true);
-      setCopyAssignmentTypes(true);
-      setCopyGradingPeriods(true);
-    }
+    setBasics((current) => ({ ...current, sourceOfferingId: value, templateId: "" }));
+    setCopyCategories(true);
+    setCopyAssignmentTypes(true);
+    setCopyGradingPeriods(true);
+    setError(null);
+  }
+
+  function chooseTemplate(template: TemplateOption) {
+    setBasics((current) => ({
+      ...current,
+      sourceOfferingId: "",
+      templateId: template.id,
+      courseName: template.defaultCourseName,
+      courseCode: template.defaultCourseCode ?? "",
+    }));
+    setCopyCategories(true);
+    setCopyAssignmentTypes(true);
+    setCopyGradingPeriods(true);
+    setError(null);
   }
 
   function toggleCategories(next: boolean) {
@@ -106,6 +140,7 @@ export function CourseSetupForm({
     formData.set("sectionName", basics.sectionName);
     formData.set("periodNumber", basics.periodNumber);
     formData.set("sourceOfferingId", basics.sourceOfferingId);
+    formData.set("templateId", basics.templateId);
     formData.set("copyCategories", copyCategories ? "true" : "false");
     formData.set("copyAssignmentTypes", copyAssignmentTypes ? "true" : "false");
     formData.set("copyGradingPeriods", copyGradingPeriods ? "true" : "false");
@@ -144,13 +179,17 @@ export function CourseSetupForm({
       </section>
 
       <section className="panel">
-        <p className="eyebrow">Starting point</p>
-        <h3>Blank, existing, or previous-year course?</h3>
-        <p className="subtle">Historical courses are valid configuration sources. Copying never brings over students, rosters, assignments, scores, or grade history.</p>
+        <div className="panel-header">
+          <div><p className="eyebrow">Starting point</p><h3>Blank, reusable template, or existing course?</h3><p className="subtle">Every copied configuration becomes independent. Students, rosters, assignments, scores, and grade history are never carried over.</p></div>
+          <Link className="secondary-link" href="/settings/templates"><BookCopy size={16}/> Manage Templates</Link>
+        </div>
         <div className={styles.sourceGrid}>
-          <button type="button" className={!basics.sourceOfferingId ? styles.sourceSelected : styles.sourceCard} onClick={() => chooseSource("")}>
+          <button type="button" className={!basics.sourceOfferingId && !basics.templateId ? styles.sourceSelected : styles.sourceCard} onClick={chooseBlank}>
             <Plus size={20}/><span><strong>Blank Course</strong><small>Start with no categories, assignment types, or grading periods.</small></span>
           </button>
+          {templates.map((template) => <button type="button" key={template.id} className={basics.templateId === template.id ? styles.sourceSelected : styles.sourceCard} onClick={() => chooseTemplate(template)}>
+            <BookCopy size={20}/><span><strong>{template.name}</strong><small>Reusable template snapshot • defaults to {template.defaultCourseName}</small><small>{template.categoryCount} categories • {template.assignmentTypeCount} assignment types • {template.gradingPeriodCount} grading periods</small></span>
+          </button>)}
           {sources.map((source) => <button type="button" key={source.offeringId} className={basics.sourceOfferingId === source.offeringId ? styles.sourceSelected : styles.sourceCard} onClick={() => chooseSource(source.offeringId)}>
             <Copy size={20}/><span><strong>{source.label}</strong><small>{sourceContext(source)}</small><small>{source.categoryCount} categories • {source.assignmentTypeCount} assignment types • {source.gradingPeriodCount} grading periods</small></span>
           </button>)}
@@ -167,18 +206,18 @@ export function CourseSetupForm({
           <div><span>Course code</span><strong>{basics.courseCode || "None"}</strong></div>
           <div><span>First section</span><strong>{basics.sectionName}</strong></div>
           <div><span>Class period</span><strong>{basics.periodNumber || "Not set"}</strong></div>
-          <div className={styles.wide}><span>Starting point</span><strong>{selectedSource ? `${selectedSource.label} — ${sourceContext(selectedSource)}` : "Blank Course"}</strong></div>
+          <div className={styles.wide}><span>Starting point</span><strong>{selectedTemplate ? `${selectedTemplate.name} — reusable template snapshot` : selectedSource ? `${selectedSource.label} — ${sourceContext(selectedSource)}` : "Blank Course"}</strong></div>
         </div>
       </section>
 
-      {selectedSource ? <section className="panel">
+      {selectedConfig ? <section className="panel">
         <p className="eyebrow">Choose what to copy</p>
         <h3>Shared course configuration</h3>
-        <p className="subtle">These settings become independent copies. Changing the new course later will not change {selectedSource.label}, even when the source is historical.</p>
+        <p className="subtle">These settings become independent copies. {selectedTemplate ? "The saved template remains unchanged if this new course is edited later." : `Changing the new course later will not change ${selectedSource?.label}, even when the source is historical.`}</p>
         <div className={styles.copyList}>
-          <label><input type="checkbox" checked={copyCategories} onChange={(event) => toggleCategories(event.target.checked)}/><span><strong>Grading Categories</strong><small>{selectedSource.categoryCount} categories, including weights, calculation methods, drop-lowest, and late deductions.</small></span></label>
-          <label><input type="checkbox" checked={copyAssignmentTypes} onChange={(event) => toggleAssignmentTypes(event.target.checked)}/><span><strong>Assignment Types</strong><small>{selectedSource.assignmentTypeCount} hotlist types and their default category/points/retake settings. Requires categories.</small></span></label>
-          <label><input type="checkbox" checked={copyGradingPeriods} onChange={(event) => setCopyGradingPeriods(event.target.checked)}/><span><strong>Grading Periods</strong><small>{selectedSource.gradingPeriodCount} direct/composite periods and their component weights.</small></span></label>
+          <label><input type="checkbox" checked={copyCategories} onChange={(event) => toggleCategories(event.target.checked)}/><span><strong>Grading Categories</strong><small>{selectedConfig.categoryCount} categories, including weights, calculation methods, drop-lowest, and late deductions.</small></span></label>
+          <label><input type="checkbox" checked={copyAssignmentTypes} onChange={(event) => toggleAssignmentTypes(event.target.checked)}/><span><strong>Assignment Types</strong><small>{selectedConfig.assignmentTypeCount} hotlist types and their default category/points/retake settings. Requires categories.</small></span></label>
+          <label><input type="checkbox" checked={copyGradingPeriods} onChange={(event) => setCopyGradingPeriods(event.target.checked)}/><span><strong>Grading Periods</strong><small>{selectedConfig.gradingPeriodCount} direct/composite periods and their component weights.</small></span></label>
         </div>
       </section> : <section className="panel"><div className={styles.blankNotice}><CheckCircle2 size={24}/><div><strong>Blank configuration</strong><p className="subtle">The course will be created with its first section only. Configure categories, assignment types, and grading periods from Settings before creating assignments.</p></div></div></section>}
 
