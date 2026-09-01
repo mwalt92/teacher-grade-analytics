@@ -39,7 +39,12 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   if (!section) redirect("/");
 
   const filter: RosterFilter = params.view === "inactive" ? "inactive" : params.view === "all" ? "all" : "active";
-  const offeringSections = sections.filter((item) => item.offeringId === section.offeringId);
+  const offeringSections = sections
+    .filter((item) => item.offeringId === section.offeringId)
+    .sort((a, b) =>
+      (a.periodNumber ?? Number.MAX_SAFE_INTEGER) - (b.periodNumber ?? Number.MAX_SAFE_INTEGER)
+      || a.sortOrder - b.sortOrder
+      || a.sectionName.localeCompare(b.sectionName));
   const canShowAllSections = offeringSections.length > 1;
   const scope: "section" | "all" = params.scope === "all" && canShowAllSections ? "all" : "section";
   const requestedSectionFilter = params.section ?? "all";
@@ -62,8 +67,18 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
 
   const roster = scope === "section" ? await getSectionRoster(section.sectionId, filter) : [];
   const activeRoster = scope === "section" && filter !== "active" ? await getSectionRoster(section.sectionId, "active") : roster;
+  const allSectionEmailRosters = scope === "all"
+    ? await Promise.all(offeringSections.map(async (item) => ({
+      section: item,
+      roster: await getSectionRoster(item.sectionId, "active"),
+    })))
+    : [];
   const totalRows = scope === "all" ? combinedRows.length : roster.length;
-  const sectionOptions = sections.map((item) => ({
+  const orderedImportSections = [
+    ...offeringSections,
+    ...sections.filter((item) => item.offeringId !== section.offeringId),
+  ];
+  const sectionOptions = orderedImportSections.map((item) => ({
     id: item.sectionId,
     label: `${item.courseCode ? `${item.courseName} ${item.courseCode}` : item.courseName} — ${item.sectionName}`,
   }));
@@ -104,7 +119,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
       <div className="roster-layout">
         <article className="panel">
           <div className="panel-header"><div><p className="eyebrow">{filter} roster</p><h2>{totalRows} {totalRows === 1 ? "student" : "students"}{scope === "all" ? ` across ${visibleOfferingSections.length} ${visibleOfferingSections.length === 1 ? "section" : "sections"}` : ""}</h2></div><span className="save-indicator">● Live Supabase data</span></div>
-          {totalRows === 0 ? <div className="empty-state"><UserPlus size={30}/><h3>No students here yet</h3><p className="subtle">{scope === "all" ? "No enrollments match this combined-roster filter." : "Add a student manually for testing, or preview a PowerSchool roster before importing."}</p></div> : scope === "all" ? <div className={styles.allRosterTable}>
+          {totalRows === 0 ? <div className="empty-state"><UserPlus size={30}/><h3>No students here yet</h3><p className="subtle">{scope === "all" ? "No enrollments match this combined-roster filter. Use the Import Center below to load one or more class periods." : "Add a student manually for testing, or preview a PowerSchool roster before importing."}</p></div> : scope === "all" ? <div className={styles.allRosterTable}>
             <div className={`${styles.allRosterRow} ${styles.allRosterHead}`}><span>Student</span><span>Section</span><span>Student #</span><span>Email</span><span>Status</span><span></span></div>
             {combinedRows.map(({ student, section: rowSection }) => <div className={styles.allRosterRow} key={student.enrollmentId}>
               <strong>{student.displayName}</strong>
@@ -131,27 +146,40 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
             <input type="hidden" name="sectionId" value={section.sectionId}/><label>Student name<input name="displayName" required placeholder="Last, First"/></label><label>Student number<input name="studentNumber" required placeholder="PowerSchool student #"/></label><label>School email <span className="optional">optional</span><input name="schoolEmail" type="email" placeholder="student@school.org"/></label><button className="primary-button" type="submit"><UserPlus size={17}/> Add to roster</button>
           </form></article>
         </aside> : <aside className="roster-sidebar">
-          <article className={`panel ${styles.sectionToolsNote}`}><p className="eyebrow">Section-specific tools</p><h3>Imports and quick-add stay class-specific</h3><p>Combined view is intentionally focused on reading and managing enrollment status. Switch to a class period above before importing a PowerSchool roster, reconciling email addresses, or manually adding a student.</p></article>
+          <article className={`panel ${styles.sectionToolsNote}`}><p className="eyebrow">Roster tools</p><h3>Import and email tools work across sections</h3><p>Use the Import Center below to upload once and map each detected PowerSchool course to its destination class period. Email reconciliation is available below as a separate reviewed panel for each class period. Quick Add stays section-specific.</p></article>
         </aside>}
       </div>
 
-      {scope === "section" ? <>
-        <article className="panel full-width import-card-live">
-          <div className="panel-header"><div><p className="eyebrow">Import Center • Step 1</p><h2>Preview a PowerSchool roster export</h2><p className="subtle">Supports multi-course .xlsx exports. Student Number is the preferred identity key; Name + Course exports are accepted but flagged for review.</p></div></div>
-          <RosterImportPreview sectionId={section.sectionId} sections={sectionOptions}/>
-        </article>
+      <article className="panel full-width import-card-live">
+        <div className="panel-header"><div><p className="eyebrow">Import Center • {scope === "all" ? "Multi-section" : "Step 1"}</p><h2>{scope === "all" ? "Import PowerSchool rosters across sections" : "Preview a PowerSchool roster export"}</h2><p className="subtle">{scope === "all" ? "Upload one multi-course .xlsx export, then explicitly map each detected PowerSchool course to the correct destination section before anything is committed." : "Supports multi-course .xlsx exports. Student Number is the preferred identity key; Name + Course exports are accepted but flagged for review."}</p></div></div>
+        <RosterImportPreview sectionId={section.sectionId} sections={sectionOptions}/>
+      </article>
 
+      {scope === "section" ? <article className="panel full-width import-card-live">
+        <EmailReconciliation
+          sectionId={section.sectionId}
+          students={activeRoster.map((student) => ({
+            displayName: student.displayName,
+            studentNumber: student.externalStudentKey ?? "",
+            currentEmail: student.email,
+          }))}
+        />
+      </article> : <>
         <article className="panel full-width import-card-live">
+          <div className="panel-header"><div><p className="eyebrow">Import Center • Step 2</p><h2>Reconcile school emails by class period</h2><p className="subtle">Each class period keeps its own reviewed email list. Paste and save one section at a time below so the existing one-to-one identity checks remain unchanged.</p></div></div>
+        </article>
+        {allSectionEmailRosters.map(({ section: emailSection, roster: emailRoster }) => <article className="panel full-width import-card-live" key={emailSection.sectionId}>
+          <div className="panel-header"><div><p className="eyebrow">Email reconciliation • {emailSection.sectionName}</p><h2>{emailSection.sectionName}</h2><p className="subtle">{emailRoster.length} active {emailRoster.length === 1 ? "student" : "students"}. Paste the PowerSchool email list for this class period only.</p></div></div>
           <EmailReconciliation
-            sectionId={section.sectionId}
-            students={activeRoster.map((student) => ({
+            sectionId={emailSection.sectionId}
+            students={emailRoster.map((student) => ({
               displayName: student.displayName,
               studentNumber: student.externalStudentKey ?? "",
               currentEmail: student.email,
             }))}
           />
-        </article>
-      </> : null}
+        </article>)}
+      </>}
     </section>
   </main>;
 }
