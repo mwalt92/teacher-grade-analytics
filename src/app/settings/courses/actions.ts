@@ -38,22 +38,15 @@ export async function setCourseOfferingArchived(formData: FormData) {
     .select("id")
     .eq("offering_id", offeringId);
   if (sectionError || !offeringSections?.length) lifecycleRedirect(archived ? "archived" : "active", "This course has no accessible sections.", true);
-
   const sectionIds = offeringSections.map((section) => section.id);
-  const { data: teacherLinks, error: teacherLinkError } = await supabase
-    .from("teacher_sections")
-    .select("section_id")
-    .eq("teacher_id", userId)
-    .in("section_id", sectionIds);
-  if (teacherLinkError || !teacherLinks?.length) lifecycleRedirect(archived ? "archived" : "active", "You do not have permission to manage this course.", true);
 
   const desiredActive = !archived;
   if (Boolean(offering.active) !== desiredActive) {
-    const { error: updateError } = await supabase
-      .from("course_offerings")
-      .update({ active: desiredActive })
-      .eq("id", offeringId);
-    if (updateError) lifecycleRedirect(archived ? "archived" : "active", updateError.message, true);
+    const { data: updated, error: updateError } = await supabase.rpc("set_teacher_course_offering_active", {
+      p_offering_id: offeringId,
+      p_active: desiredActive,
+    });
+    if (updateError || !updated) lifecycleRedirect(archived ? "archived" : "active", updateError?.message ?? "Course lifecycle update was not applied.", true);
   }
 
   if (archived) {
