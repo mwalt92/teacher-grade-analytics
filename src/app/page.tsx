@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, BookOpenCheck, ClipboardPlus, RotateCcw, ShieldCheck, Users } from "lucide-react";
+import { Archive, ArrowRight, BookOpenCheck, ClipboardPlus, RotateCcw, ShieldCheck, Users } from "lucide-react";
 import { setActiveTeacherSection } from "@/app/teacher-section-actions";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { getTeacherHomeData } from "@/lib/data/teacher-home";
@@ -50,6 +50,7 @@ export default async function TeacherHomePage() {
           <p className="subtle">Live summaries from the same canonical grade calculations used inside each course.</p>
         </div>
         <div className={styles.headingActions}>
+          <Link className="secondary-link" href="/settings/courses"><Archive size={18}/> Manage Courses</Link>
           <Link className="primary-button" href="/settings/course-setup"><ClipboardPlus size={18}/> Create Course</Link>
         </div>
       </div>
@@ -113,7 +114,11 @@ export default async function TeacherHomePage() {
         }) : <article className={`panel ${styles.emptyPanel}`}>
           <BookOpenCheck size={30}/>
           <h3>No active courses yet</h3>
-          <p className="subtle">Create a course to start building sections, rosters, assignments, and live grade analytics.</p>
+          <p className="subtle">Create a course or restore an archived course to return it to Teacher Home.</p>
+          <div className={styles.headingActions}>
+            <Link className="secondary-link" href="/settings/courses?view=archived"><Archive size={17}/> View archived courses</Link>
+            <Link className="primary-button" href="/settings/course-setup"><ClipboardPlus size={17}/> Create Course</Link>
+          </div>
         </article>}
       </section>
     </section>
