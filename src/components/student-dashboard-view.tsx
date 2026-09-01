@@ -18,6 +18,7 @@ type StudentDashboardViewProps = {
   previewStudentId?: string;
   previewActionPath?: string;
   previewHeaderActions?: ReactNode;
+  studentHeaderActions?: ReactNode;
 };
 
 function formatPercent(value: number | null, digits = 1) {
@@ -54,6 +55,7 @@ export function StudentDashboardView({
   previewStudentId,
   previewActionPath = "/student/preview",
   previewHeaderActions,
+  studentHeaderActions,
 }: StudentDashboardViewProps) {
   const recentAssignments = data.assignments.slice(0, 10);
   const previewCarryFields = hiddenFields.filter((field) => field.name !== "studentId" && field.name !== "period");
@@ -66,7 +68,7 @@ export function StudentDashboardView({
         <p className="eyebrow">Student Progress</p>
         <h1>{courseName}</h1>
         <p className="subtle">{studentName} • {sectionName} • {schoolYear}</p>
-        {preview ? previewHeaderActions : null}
+        {preview ? previewHeaderActions : studentHeaderActions}
       </div>
     </header>
     {preview ? <TeacherPrimaryNav/> : null}

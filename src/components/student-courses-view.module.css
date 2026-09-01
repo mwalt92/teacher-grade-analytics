@@ -1,0 +1,244 @@
+.shell {
+  min-height: 100vh;
+}
+
+.content {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.previewBanner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 0.9rem 1rem;
+  background: var(--brand-soft);
+}
+
+.previewBanner > div:first-child {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.previewBanner span {
+  font-weight: 800;
+}
+
+.previewBanner small {
+  color: var(--muted);
+}
+
+.previewForm {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.previewForm label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.previewForm select {
+  min-width: 220px;
+}
+
+.introRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.introRow h2 {
+  margin-bottom: 0.35rem;
+}
+
+.summaryPills {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.summaryPills > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  padding: 0.45rem 0.7rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.summaryPills strong {
+  color: var(--text);
+}
+
+.warningPill {
+  background: var(--surface-soft) !important;
+}
+
+.courseGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.courseCard {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 1.15rem;
+}
+
+.courseHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.courseHeader h3 {
+  margin: 0.1rem 0 0.25rem;
+  font-size: 1.25rem;
+}
+
+.courseHeader p:last-child {
+  color: var(--muted);
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.readyBadge,
+.pendingBadge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.28rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.readyBadge {
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+}
+
+.pendingBadge {
+  background: var(--surface-soft);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.metric {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  padding: 0.72rem;
+}
+
+.metric span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.metric strong {
+  font-size: 1.05rem;
+}
+
+.metricWarning strong {
+  color: var(--danger, #a83232);
+}
+
+.courseNote {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.notReady {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 0.9rem;
+  color: var(--muted);
+  background: var(--surface-soft);
+}
+
+.courseFooter {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--line);
+  padding-top: 0.9rem;
+}
+
+@media (max-width: 980px) {
+  .courseGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .previewBanner,
+  .introRow,
+  .courseHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .summaryPills {
+    justify-content: flex-start;
+  }
+
+  .metricGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .previewForm {
+    align-items: stretch;
+  }
+
+  .previewForm label,
+  .previewForm select {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 460px) {
+  .metricGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .courseFooter :global(.primary-button) {
+    width: 100%;
+    justify-content: center;
+  }
+}
