@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getTeacherCourseLifecycleOfferings } from "@/lib/data/course-lifecycle";
+import { getTeacherCourseTemplates } from "@/lib/data/course-templates";
 import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import { CourseSetupForm } from "./course-setup-form";
@@ -17,10 +18,11 @@ export default async function CourseSetupPage() {
   const { data: claims, error: claimsError } = await supabase.auth.getClaims();
   if (claimsError || typeof claims?.claims?.sub !== "string") redirect("/login");
 
-  const [sections, activeSection, lifecycleOfferings, schoolYearResult] = await Promise.all([
+  const [sections, activeSection, lifecycleOfferings, templates, schoolYearResult] = await Promise.all([
     getTeacherSections(),
     getActiveTeacherSection(),
     getTeacherCourseLifecycleOfferings(),
+    getTeacherCourseTemplates(),
     supabase.from("school_years").select("id,label,starts_on,archived").order("starts_on", { ascending: false }),
   ]);
 
@@ -63,7 +65,7 @@ export default async function CourseSetupPage() {
     <header className="topbar"><div>
       <p className="eyebrow">Teacher Grade Analytics</p>
       <h1>Create Course</h1>
-      <p className="subtle">Choose the school year, then start blank or reuse an active or historical course configuration.</p>
+      <p className="subtle">Choose the school year, then start blank, from a reusable template, or from an active or historical course configuration.</p>
       {activeSection ? <TeacherSectionSwitcher sections={sections} activeSectionId={activeSection.sectionId} returnTo="/settings/course-setup"/> : null}
     </div></header>
     <TeacherPrimaryNav/>
@@ -72,7 +74,7 @@ export default async function CourseSetupPage() {
         <div><p className="eyebrow">Course setup</p><h2>Create once, then add class periods</h2><p className="subtle">The first section is created with the course. Additional sections share its course configuration while keeping separate rosters, assignments, and grades.</p></div>
         <Link className="secondary-link" href={activeSection ? "/settings?area=course-sections" : "/settings/courses"}>{activeSection ? "Back to Settings" : "Back to Course Library"}</Link>
       </div>
-      <CourseSetupForm defaultSchoolYearId={defaultSchoolYear.id} schoolYears={schoolYears} sources={sources}/>
+      <CourseSetupForm defaultSchoolYearId={defaultSchoolYear.id} schoolYears={schoolYears} sources={sources} templates={templates}/>
     </section>
   </main>;
 }
