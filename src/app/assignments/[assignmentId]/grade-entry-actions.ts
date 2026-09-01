@@ -20,6 +20,12 @@ type SaveGradeEntriesBulkInput = {
   entries: BulkGradeEntry[];
 };
 
+type SetGradeExemptInput = {
+  assignmentId: string;
+  studentId: string;
+  exempt: boolean;
+};
+
 type ClearGradeEntryInput = {
   assignmentId: string;
   studentId: string;
@@ -31,6 +37,10 @@ export type SaveGradeEntryResult =
 
 export type SaveGradeEntriesBulkResult =
   | { ok: true; savedAt: string; count: number }
+  | { ok: false; error: string };
+
+export type SetGradeExemptResult =
+  | { ok: true; savedAt: string; exempt: boolean }
   | { ok: false; error: string };
 
 export type ClearGradeEntryResult =
@@ -119,9 +129,13 @@ export async function saveGradeEntry(input: SaveGradeEntryInput): Promise<SaveGr
   }
 
   const oldValue = existingRecord || existingAttempt
-    ? { missing: existingRecord?.missing ?? false, points: existingAttempt ? Number(existingAttempt.points_earned) : null }
+    ? {
+        missing: existingRecord?.missing ?? false,
+        exempt: existingRecord?.exempt ?? false,
+        points: existingAttempt ? Number(existingAttempt.points_earned) : null,
+      }
     : null;
-  const newValue = { missing, points };
+  const newValue = { missing, exempt: false, points };
   const { error: auditError } = await supabase.from("grade_changes").insert({
     grade_record_id: recordId,
     changed_by: userId,
@@ -132,6 +146,64 @@ export async function saveGradeEntry(input: SaveGradeEntryInput): Promise<SaveGr
   if (auditError) return { ok: false, error: `Grade saved, but audit logging failed: ${auditError.message}` };
 
   return { ok: true, savedAt: new Date().toISOString(), points, missing };
+}
+
+export async function setGradeExempt(input: SetGradeExemptInput): Promise<SetGradeExemptResult> {
+  const { assignmentId, studentId, exempt } = input;
+  if (!assignmentId || !studentId) return { ok: false, error: "Could not identify the grade entry." };
+
+  const context = await getAuthorizedContext(assignmentId, studentId);
+  if (!context.ok) return context;
+  const { supabase, userId } = context;
+
+  const { data: existingRecord, error: recordLoadError } = await supabase
+    .from("grade_records")
+    .select("id,missing,exempt")
+    .eq("assignment_id", assignmentId)
+    .eq("student_id", studentId)
+    .maybeSingle();
+  if (recordLoadError) return { ok: false, error: recordLoadError.message };
+
+  if (!existingRecord && !exempt) {
+    return { ok: true, savedAt: new Date().toISOString(), exempt: false };
+  }
+
+  let recordId = existingRecord?.id;
+  if (!recordId) {
+    const { data: created, error: createError } = await supabase
+      .from("grade_records")
+      .insert({ assignment_id: assignmentId, student_id: studentId, missing: false, exempt: true })
+      .select("id")
+      .single();
+    if (createError || !created) return { ok: false, error: createError?.message ?? "Could not create the exempt grade record." };
+    recordId = created.id;
+  } else {
+    const { error: updateError } = await supabase
+      .from("grade_records")
+      .update({ missing: false, exempt })
+      .eq("id", recordId);
+    if (updateError) return { ok: false, error: updateError.message };
+  }
+
+  const { data: attempt } = await supabase
+    .from("grade_attempts")
+    .select("points_earned")
+    .eq("grade_record_id", recordId)
+    .eq("attempt_number", 1)
+    .maybeSingle();
+
+  const { error: auditError } = await supabase.from("grade_changes").insert({
+    grade_record_id: recordId,
+    changed_by: userId,
+    old_value: existingRecord
+      ? { missing: existingRecord.missing, exempt: existingRecord.exempt, points: attempt ? Number(attempt.points_earned) : null }
+      : null,
+    new_value: { missing: false, exempt, points: attempt ? Number(attempt.points_earned) : null },
+    action: exempt ? "grade_entry_exempted" : "grade_entry_exemption_cleared",
+  });
+  if (auditError) return { ok: false, error: `Exempt status saved, but audit logging failed: ${auditError.message}` };
+
+  return { ok: true, savedAt: new Date().toISOString(), exempt };
 }
 
 export async function saveGradeEntriesBulk(input: SaveGradeEntriesBulkInput): Promise<SaveGradeEntriesBulkResult> {
@@ -172,7 +244,7 @@ export async function saveGradeEntriesBulk(input: SaveGradeEntriesBulkInput): Pr
 
   const { data: existingRecords, error: existingRecordError } = await supabase
     .from("grade_records")
-    .select("id,student_id,missing")
+    .select("id,student_id,missing,exempt")
     .eq("assignment_id", assignmentId)
     .in("student_id", uniqueStudentIds);
   if (existingRecordError) return { ok: false, error: existingRecordError.message };
@@ -223,13 +295,17 @@ export async function saveGradeEntriesBulk(input: SaveGradeEntriesBulkInput): Pr
     const oldAttempt = oldRecord ? oldAttemptByRecord.get(oldRecord.id) : undefined;
     const recordId = recordIdByStudent.get(entry.studentId)!;
     const oldValue = oldRecord || oldAttempt
-      ? { missing: oldRecord?.missing ?? false, points: oldAttempt ? Number(oldAttempt.points_earned) : null }
+      ? {
+          missing: oldRecord?.missing ?? false,
+          exempt: oldRecord?.exempt ?? false,
+          points: oldAttempt ? Number(oldAttempt.points_earned) : null,
+        }
       : null;
     return {
       grade_record_id: recordId,
       changed_by: userId,
       old_value: oldValue,
-      new_value: { missing: entry.missing, points: entry.points },
+      new_value: { missing: entry.missing, exempt: false, points: entry.points },
       action: oldRecord || oldAttempt ? "bulk_grade_entry_updated" : "bulk_grade_entry_created",
     };
   });
@@ -274,8 +350,8 @@ export async function clearGradeEntry(input: ClearGradeEntryInput): Promise<Clea
   const { error: auditError } = await supabase.from("grade_changes").insert({
     grade_record_id: record.id,
     changed_by: userId,
-    old_value: { missing: record.missing, points: attempt ? Number(attempt.points_earned) : null },
-    new_value: { missing: false, points: null },
+    old_value: { missing: record.missing, exempt: record.exempt, points: attempt ? Number(attempt.points_earned) : null },
+    new_value: { missing: false, exempt: false, points: null },
     action: "grade_entry_cleared",
   });
   if (auditError) return { ok: false, error: `Grade cleared, but audit logging failed: ${auditError.message}` };

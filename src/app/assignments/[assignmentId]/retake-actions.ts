@@ -42,7 +42,7 @@ export async function addRetakeAttempt(input: AddRetakeInput): Promise<AddRetake
 
   const { data: record, error: recordError } = await supabase
     .from("grade_records")
-    .select("id,missing")
+    .select("id,missing,exempt")
     .eq("assignment_id", input.assignmentId)
     .eq("student_id", input.studentId)
     .maybeSingle();
@@ -69,14 +69,14 @@ export async function addRetakeAttempt(input: AddRetakeInput): Promise<AddRetake
   });
   if (insertError) return { ok: false, error: insertError.message };
 
-  const { error: missingError } = await supabase.from("grade_records").update({ missing: false }).eq("id", record.id);
-  if (missingError) return { ok: false, error: `Retake saved, but Missing could not be cleared: ${missingError.message}` };
+  const { error: statusError } = await supabase.from("grade_records").update({ missing: false, exempt: false }).eq("id", record.id);
+  if (statusError) return { ok: false, error: `Retake saved, but grade status could not be cleared: ${statusError.message}` };
 
   const { error: auditError } = await supabase.from("grade_changes").insert({
     grade_record_id: record.id,
     changed_by: userId,
-    old_value: { attempt_count: attempts.length, missing: record.missing },
-    new_value: { attempt_number: attemptNumber, points, missing: false },
+    old_value: { attempt_count: attempts.length, missing: record.missing, exempt: record.exempt },
+    new_value: { attempt_number: attemptNumber, points, missing: false, exempt: false },
     action: "retake_added",
   });
   if (auditError) return { ok: false, error: `Retake saved, but audit logging failed: ${auditError.message}` };
