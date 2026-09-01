@@ -6,6 +6,7 @@ export type GradeSnapshot = {
   studentId: string;
   points: number | null;
   missing: boolean;
+  exempt: boolean;
 };
 
 type RestoreGradeEntriesBulkInput = {
@@ -31,7 +32,7 @@ export async function restoreGradeEntriesBulk(input: RestoreGradeEntriesBulkInpu
   }
 
   const invalidSnapshot = snapshots.some((snapshot) => {
-    if (!snapshot.studentId) return true;
+    if (!snapshot.studentId || (snapshot.missing && snapshot.exempt)) return true;
     if (snapshot.points == null) return snapshot.missing;
     return !Number.isFinite(Number(snapshot.points)) || Number(snapshot.points) < 0;
   });
@@ -73,7 +74,7 @@ export async function restoreGradeEntriesBulk(input: RestoreGradeEntriesBulkInpu
 
   const { data: currentRecords, error: recordLoadError } = await supabase
     .from("grade_records")
-    .select("id,student_id,missing")
+    .select("id,student_id,missing,exempt")
     .eq("assignment_id", assignmentId)
     .in("student_id", uniqueStudentIds);
   if (recordLoadError) return { ok: false, error: recordLoadError.message };
@@ -90,33 +91,32 @@ export async function restoreGradeEntriesBulk(input: RestoreGradeEntriesBulkInpu
 
   const currentRecordByStudent = new Map((currentRecords ?? []).map((record) => [record.student_id, record]));
   const currentAttemptByRecord = new Map((currentAttempts ?? []).map((attempt) => [attempt.grade_record_id, attempt]));
-
-  const scoredSnapshots = snapshots.filter((snapshot) => snapshot.points != null);
-  const blankSnapshots = snapshots.filter((snapshot) => snapshot.points == null && !snapshot.missing);
-
   const restoredRecordIdByStudent = new Map<string, string>();
   (currentRecords ?? []).forEach((record) => restoredRecordIdByStudent.set(record.student_id, record.id));
 
-  if (scoredSnapshots.length) {
+  const recordSnapshots = snapshots.filter((snapshot) => snapshot.points != null || snapshot.missing || snapshot.exempt);
+  if (recordSnapshots.length) {
     const { data: restoredRecords, error: restoreRecordError } = await supabase
       .from("grade_records")
       .upsert(
-        scoredSnapshots.map((snapshot) => ({
+        recordSnapshots.map((snapshot) => ({
           assignment_id: assignmentId,
           student_id: snapshot.studentId,
           missing: snapshot.missing,
-          exempt: false,
+          exempt: snapshot.exempt,
         })),
         { onConflict: "assignment_id,student_id" },
       )
       .select("id,student_id");
 
-    if (restoreRecordError || !restoredRecords || restoredRecords.length !== scoredSnapshots.length) {
+    if (restoreRecordError || !restoredRecords || restoredRecords.length !== recordSnapshots.length) {
       return { ok: false, error: restoreRecordError?.message ?? "Could not restore all grade records." };
     }
-
     restoredRecords.forEach((record) => restoredRecordIdByStudent.set(record.student_id, record.id));
+  }
 
+  const scoredSnapshots = snapshots.filter((snapshot) => snapshot.points != null);
+  if (scoredSnapshots.length) {
     const { error: restoreAttemptError } = await supabase
       .from("grade_attempts")
       .upsert(
@@ -133,25 +133,29 @@ export async function restoreGradeEntriesBulk(input: RestoreGradeEntriesBulkInpu
     if (restoreAttemptError) return { ok: false, error: restoreAttemptError.message };
   }
 
-  if (blankSnapshots.length) {
-    const blankRecordIds = blankSnapshots
-      .map((snapshot) => restoredRecordIdByStudent.get(snapshot.studentId))
-      .filter((id): id is string => Boolean(id));
+  const noScoreSnapshots = snapshots.filter((snapshot) => snapshot.points == null);
+  const noScoreRecordIds = noScoreSnapshots
+    .map((snapshot) => restoredRecordIdByStudent.get(snapshot.studentId))
+    .filter((id): id is string => Boolean(id));
+  if (noScoreRecordIds.length) {
+    const { error: deleteAttemptError } = await supabase
+      .from("grade_attempts")
+      .delete()
+      .eq("attempt_number", 1)
+      .in("grade_record_id", noScoreRecordIds);
+    if (deleteAttemptError) return { ok: false, error: deleteAttemptError.message };
+  }
 
-    if (blankRecordIds.length) {
-      const { error: deleteAttemptError } = await supabase
-        .from("grade_attempts")
-        .delete()
-        .eq("attempt_number", 1)
-        .in("grade_record_id", blankRecordIds);
-      if (deleteAttemptError) return { ok: false, error: deleteAttemptError.message };
-
-      const { error: clearRecordError } = await supabase
-        .from("grade_records")
-        .update({ missing: false, exempt: false })
-        .in("id", blankRecordIds);
-      if (clearRecordError) return { ok: false, error: clearRecordError.message };
-    }
+  const blankSnapshots = snapshots.filter((snapshot) => snapshot.points == null && !snapshot.missing && !snapshot.exempt);
+  const blankRecordIds = blankSnapshots
+    .map((snapshot) => restoredRecordIdByStudent.get(snapshot.studentId))
+    .filter((id): id is string => Boolean(id));
+  if (blankRecordIds.length) {
+    const { error: clearRecordError } = await supabase
+      .from("grade_records")
+      .update({ missing: false, exempt: false })
+      .in("id", blankRecordIds);
+    if (clearRecordError) return { ok: false, error: clearRecordError.message };
   }
 
   const auditRows = snapshots.flatMap((snapshot) => {
@@ -165,11 +169,13 @@ export async function restoreGradeEntriesBulk(input: RestoreGradeEntriesBulkInpu
       old_value: currentRecord || currentAttempt
         ? {
             missing: currentRecord?.missing ?? false,
+            exempt: currentRecord?.exempt ?? false,
             points: currentAttempt ? Number(currentAttempt.points_earned) : null,
           }
         : null,
       new_value: {
         missing: snapshot.missing,
+        exempt: snapshot.exempt,
         points: snapshot.points == null ? null : snapshot.missing ? 0 : Number(snapshot.points),
       },
       action: "bulk_grade_entry_restored",
