@@ -6,8 +6,8 @@ This package is the **read-only development connector** for Teacher Grade Analyt
 
 - Every requested database field is `ViewOnly`.
 - The plugin does not request grade, assignment, category, or write access.
-- The two bundled PowerQueries only read teacher-owned section identity and section roster identity.
-- Student Number is used only as the external roster matching key.
+- The bundled PowerQuery reads only the authenticated teacher's section identity plus current roster Student Numbers.
+- Student Number is used server-side only to count/match roster records and is not returned to the browser by the connection-test UI.
 
 ## Package layout
 
@@ -35,8 +35,9 @@ Never commit those values to GitHub.
 The website's connection test uses OAuth client credentials, then executes only:
 
 - `com.unorth.teacher_grade_analytics.teacher_sections_by_email`
-- `com.unorth.teacher_grade_analytics.section_roster_by_id`
 
-The teacher email argument comes from the authenticated Teacher Grade Analytics profile, not from a browser-supplied email field. Section roster queries are only executed for section IDs returned by that teacher lookup.
+The teacher email argument comes from the authenticated Teacher Grade Analytics profile, not from a browser-supplied email field. The query returns one row per current roster relationship so the server can group rows into sections and count unique Student Numbers. The browser receives only section metadata and roster counts.
 
-If the local PowerSchool schema differs from the relationship assumptions in the sample district plugin (`USERS -> SCHOOLSTAFF -> SECTIONS`), adjust the named query before enabling any broader integration. Do not add `FullAccess` merely to make discovery work.
+The query deliberately uses current-enrollment filters (`CC.DATEENROLLED`, `CC.DATELEFT`, and `STUDENTS.ENROLL_STATUS`) so historical schedule rows do not inflate the connection test.
+
+If the local PowerSchool schema or Oracle date semantics differ from the relationship assumptions in the working district sample (`USERS -> SCHOOLSTAFF -> SECTIONS`, `CC -> STUDENTS`), adjust the named query with district staff before installing. Do not add `FullAccess` merely to make discovery work.
