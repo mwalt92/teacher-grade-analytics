@@ -123,7 +123,7 @@ export default async function PowerSchoolSettingsPage() {
         <article className="panel">
           <div className={styles.statusHeader}><PlugZap size={19}/><strong>PowerSchool connection</strong></div>
           <span className={`status ${connectionStatus.configured ? "success-pill" : "warning-pill"}`}>{connectionStatus.configured ? "Configured" : "Not configured"}</span>
-          <p className="subtle">{connectionStatus.configured ? "Server-side credentials are present. The read-only test below can authenticate and run only the two approved discovery queries; writes remain disabled." : "No PowerSchool OAuth credentials are exposed to this app yet. This page cannot contact or change PowerSchool."}</p>
+          <p className="subtle">{connectionStatus.configured ? "Server-side credentials are present. The read-only test below can authenticate and run only the approved discovery PowerQuery; writes remain disabled." : "No PowerSchool OAuth credentials are exposed to this app yet. This page cannot contact or change PowerSchool."}</p>
         </article>
         <article className="panel">
           <div className={styles.statusHeader}><ShieldCheck size={19}/><strong>Write safety gate</strong></div>
