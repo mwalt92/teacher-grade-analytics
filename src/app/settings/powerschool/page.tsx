@@ -2,8 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DatabaseBackup, History, LockKeyhole, PlugZap, RotateCcw, ShieldCheck, TriangleAlert } from "lucide-react";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
+import { getPowerSchoolConfigStatus } from "@/lib/powerschool/client";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/database.types";
+import { PowerSchoolConnectionProbe } from "./connection-probe";
 import styles from "./powerschool.module.css";
 
 type SyncEvent = {
@@ -95,7 +97,7 @@ export default async function PowerSchoolSettingsPage() {
     newestAt: operationEvents.reduce((latest, event) => event.created_at > latest ? event.created_at : latest, operationEvents[0]?.created_at ?? ""),
   })).sort((a, b) => b.newestAt.localeCompare(a.newestAt));
 
-  const connectionConfigured = Boolean(process.env.POWERSCHOOL_BASE_URL && process.env.POWERSCHOOL_CLIENT_ID && process.env.POWERSCHOOL_CLIENT_SECRET);
+  const connectionStatus = getPowerSchoolConfigStatus();
 
   return <main className="app-shell">
     <header className="topbar">
@@ -120,8 +122,8 @@ export default async function PowerSchoolSettingsPage() {
       <div className={styles.statusGrid}>
         <article className="panel">
           <div className={styles.statusHeader}><PlugZap size={19}/><strong>PowerSchool connection</strong></div>
-          <span className={`status ${connectionConfigured ? "success-pill" : "warning-pill"}`}>{connectionConfigured ? "Configured" : "Not configured"}</span>
-          <p className="subtle">{connectionConfigured ? "Server-side credentials are present. Writes remain disabled until the connector and recovery gate are explicitly implemented." : "No PowerSchool OAuth credentials are exposed to this app yet. This page cannot contact or change PowerSchool."}</p>
+          <span className={`status ${connectionStatus.configured ? "success-pill" : "warning-pill"}`}>{connectionStatus.configured ? "Configured" : "Not configured"}</span>
+          <p className="subtle">{connectionStatus.configured ? "Server-side credentials are present. The read-only test below can authenticate and run only the two approved discovery queries; writes remain disabled." : "No PowerSchool OAuth credentials are exposed to this app yet. This page cannot contact or change PowerSchool."}</p>
         </article>
         <article className="panel">
           <div className={styles.statusHeader}><ShieldCheck size={19}/><strong>Write safety gate</strong></div>
@@ -135,6 +137,8 @@ export default async function PowerSchoolSettingsPage() {
         </article>
       </div>
 
+      <PowerSchoolConnectionProbe configured={connectionStatus.configured} host={connectionStatus.host}/>
+
       <article className={`panel ${styles.recoveryCallout}`}>
         <DatabaseBackup size={22}/>
         <div><strong>Restore operations remain reversible.</strong><p className="subtle">Before restoring an older snapshot, the connector will first snapshot whatever is currently in PowerSchool. Restoring never deletes the intervening history.</p></div>
@@ -147,7 +151,7 @@ export default async function PowerSchoolSettingsPage() {
 
       {!operations.length ? <article className={`panel ${styles.emptyState}`}>
         <History size={28}/>
-        <div><h3>No PowerSchool writes have occurred</h3><p className="subtle">That is expected. The connector is not configured and the safety ledger contains no events. Once read-only integration work begins, snapshots and dry-run previews can appear here before live writes are enabled.</p></div>
+        <div><h3>No PowerSchool operations recorded yet</h3><p className="subtle">That is expected until the first read-only connection test runs. Successful and failed connection probes are recorded without storing OAuth credentials or access tokens.</p></div>
       </article> : <div className={styles.operationList}>{operations.map((operation) => {
         const first = operation.events[0];
         const status = statusFor(operation.events);
