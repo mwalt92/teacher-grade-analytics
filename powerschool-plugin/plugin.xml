@@ -29,15 +29,12 @@
     <field table="COURSES" field="COURSE_NUMBER" access="ViewOnly" />
     <field table="COURSES" field="COURSE_NAME" access="ViewOnly" />
 
-    <!-- Section roster identity. Student Number is the external matching key; no grades are requested. -->
+    <!-- Current roster counting only. Student Number is never returned to the browser. -->
     <field table="CC" field="STUDENTID" access="ViewOnly" />
     <field table="CC" field="SECTIONID" access="ViewOnly" />
     <field table="CC" field="DATEENROLLED" access="ViewOnly" />
     <field table="CC" field="DATELEFT" access="ViewOnly" />
     <field table="STUDENTS" field="ID" access="ViewOnly" />
-    <field table="STUDENTS" field="DCID" access="ViewOnly" />
-    <field table="STUDENTS" field="FIRST_NAME" access="ViewOnly" />
-    <field table="STUDENTS" field="LAST_NAME" access="ViewOnly" />
     <field table="STUDENTS" field="STUDENT_NUMBER" access="ViewOnly" />
     <field table="STUDENTS" field="ENROLL_STATUS" access="ViewOnly" />
   </access_request>
