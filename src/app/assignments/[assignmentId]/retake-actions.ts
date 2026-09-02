@@ -8,9 +8,46 @@ type AddRetakeInput = {
   points: number;
 };
 
+type EditRetakeInput = {
+  assignmentId: string;
+  studentId: string;
+  attemptNumber: number;
+  points: number;
+};
+
 export type AddRetakeResult =
   | { ok: true; attemptNumber: number; points: number; savedAt: string }
   | { ok: false; error: string };
+
+export type EditRetakeResult =
+  | { ok: true; attemptNumber: number; points: number; occurredOn: string }
+  | { ok: false; error: string };
+
+async function authorizeRetakeWrite(assignmentId: string, studentId: string) {
+  const supabase = await createClient();
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
+  const userId = claimsData?.claims?.sub;
+  if (claimsError || typeof userId !== "string") {
+    return { ok: false as const, error: "Your session expired. Sign in again." };
+  }
+
+  const { data: assignment, error: assignmentError } = await supabase
+    .from("assignments")
+    .select("id,section_id,assignment_date,allow_retakes,archived")
+    .eq("id", assignmentId)
+    .maybeSingle();
+  if (assignmentError || !assignment) return { ok: false as const, error: "Assignment not found." };
+  if (assignment.archived) return { ok: false as const, error: "This assignment is archived. Restore it before editing retakes." };
+  if (!assignment.allow_retakes) return { ok: false as const, error: "Retakes are not enabled for this assignment." };
+
+  const [{ data: teacherSection }, { data: enrollment }] = await Promise.all([
+    supabase.from("teacher_sections").select("section_id").eq("teacher_id", userId).eq("section_id", assignment.section_id).maybeSingle(),
+    supabase.from("enrollments").select("id").eq("section_id", assignment.section_id).eq("student_id", studentId).eq("active", true).maybeSingle(),
+  ]);
+  if (!teacherSection || !enrollment) return { ok: false as const, error: "You do not have access to edit this retake." };
+
+  return { ok: true as const, supabase, userId, assignment };
+}
 
 export async function addRetakeAttempt(input: AddRetakeInput): Promise<AddRetakeResult> {
   const points = Number(input.points);
@@ -18,27 +55,9 @@ export async function addRetakeAttempt(input: AddRetakeInput): Promise<AddRetake
     return { ok: false, error: "Enter a valid non-negative retake score." };
   }
 
-  const supabase = await createClient();
-  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
-  const userId = claimsData?.claims?.sub;
-  if (claimsError || typeof userId !== "string") {
-    return { ok: false, error: "Your session expired. Sign in again." };
-  }
-
-  const { data: assignment, error: assignmentError } = await supabase
-    .from("assignments")
-    .select("id,section_id,assignment_date,allow_retakes,archived")
-    .eq("id", input.assignmentId)
-    .maybeSingle();
-  if (assignmentError || !assignment) return { ok: false, error: "Assignment not found." };
-  if (assignment.archived) return { ok: false, error: "This assignment is archived. Restore it before adding a retake." };
-  if (!assignment.allow_retakes) return { ok: false, error: "Retakes are not enabled for this assignment." };
-
-  const [{ data: teacherSection }, { data: enrollment }] = await Promise.all([
-    supabase.from("teacher_sections").select("section_id").eq("teacher_id", userId).eq("section_id", assignment.section_id).maybeSingle(),
-    supabase.from("enrollments").select("id").eq("section_id", assignment.section_id).eq("student_id", input.studentId).eq("active", true).maybeSingle(),
-  ]);
-  if (!teacherSection || !enrollment) return { ok: false, error: "You do not have access to enter this retake." };
+  const auth = await authorizeRetakeWrite(input.assignmentId, input.studentId);
+  if (!auth.ok) return auth;
+  const { supabase, userId } = auth;
 
   const { data: record, error: recordError } = await supabase
     .from("grade_records")
@@ -82,4 +101,69 @@ export async function addRetakeAttempt(input: AddRetakeInput): Promise<AddRetake
   if (auditError) return { ok: false, error: `Retake saved, but audit logging failed: ${auditError.message}` };
 
   return { ok: true, attemptNumber, points, savedAt: new Date().toISOString() };
+}
+
+export async function editRetakeAttempt(input: EditRetakeInput): Promise<EditRetakeResult> {
+  const points = Number(input.points);
+  const attemptNumber = Number(input.attemptNumber);
+  if (!input.assignmentId || !input.studentId || !Number.isInteger(attemptNumber) || attemptNumber < 2 || !Number.isFinite(points) || points < 0) {
+    return { ok: false, error: "Enter a valid retake attempt and non-negative score." };
+  }
+
+  const auth = await authorizeRetakeWrite(input.assignmentId, input.studentId);
+  if (!auth.ok) return auth;
+  const { supabase, userId } = auth;
+
+  const { data: record, error: recordError } = await supabase
+    .from("grade_records")
+    .select("id,missing,exempt")
+    .eq("assignment_id", input.assignmentId)
+    .eq("student_id", input.studentId)
+    .maybeSingle();
+  if (recordError || !record) return { ok: false, error: "Grade record not found." };
+
+  const { data: attempt, error: attemptError } = await supabase
+    .from("grade_attempts")
+    .select("id,attempt_number,points_earned,occurred_on,is_late")
+    .eq("grade_record_id", record.id)
+    .eq("attempt_number", attemptNumber)
+    .maybeSingle();
+  if (attemptError || !attempt) return { ok: false, error: `Retake A${attemptNumber} was not found.` };
+
+  const previousPoints = Number(attempt.points_earned);
+  if (previousPoints === points) {
+    return { ok: true, attemptNumber, points, occurredOn: attempt.occurred_on };
+  }
+
+  const { error: updateError } = await supabase
+    .from("grade_attempts")
+    .update({ points_earned: points, entered_by: userId })
+    .eq("id", attempt.id)
+    .eq("grade_record_id", record.id);
+  if (updateError) return { ok: false, error: updateError.message };
+
+  const { error: auditError } = await supabase.from("grade_changes").insert({
+    grade_record_id: record.id,
+    changed_by: userId,
+    old_value: {
+      attempt_number: attemptNumber,
+      points: previousPoints,
+      occurred_on: attempt.occurred_on,
+      is_late: attempt.is_late,
+      missing: record.missing,
+      exempt: record.exempt,
+    },
+    new_value: {
+      attempt_number: attemptNumber,
+      points,
+      occurred_on: attempt.occurred_on,
+      is_late: attempt.is_late,
+      missing: record.missing,
+      exempt: record.exempt,
+    },
+    action: "retake_edited",
+  });
+  if (auditError) return { ok: false, error: `Retake score was updated, but audit logging failed: ${auditError.message}` };
+
+  return { ok: true, attemptNumber, points, occurredOn: attempt.occurred_on };
 }
