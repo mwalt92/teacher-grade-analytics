@@ -1,0 +1,73 @@
+<queries>
+  <query name="com.unorth.teacher_grade_analytics.teacher_sections_by_email" coreTable="USERS" flattened="true">
+    <description>Returns sections assigned to one teacher matched by exact school email.</description>
+    <args>
+      <arg name="teacher_email" column="USERS.EMAIL_ADDR" type="primitive" required="true" description="Teacher school email address" />
+    </args>
+    <columns>
+      <column column="USERS.DCID">teacher_users_dcid</column>
+      <column column="USERS.FIRST_NAME">teacher_first_name</column>
+      <column column="USERS.LAST_NAME">teacher_last_name</column>
+      <column column="USERS.EMAIL_ADDR">teacher_email</column>
+      <column column="SCHOOLSTAFF.ID">schoolstaff_id</column>
+      <column column="SECTIONS.ID">section_id</column>
+      <column column="SECTIONS.COURSE_NUMBER">course_number</column>
+      <column column="SECTIONS.ROOM">room</column>
+      <column column="SECTIONS.EXPRESSION">expression</column>
+      <column column="COURSES.COURSE_NAME">course_name</column>
+    </columns>
+    <sql><![CDATA[
+      SELECT
+        USERS.DCID,
+        USERS.FIRST_NAME,
+        USERS.LAST_NAME,
+        USERS.EMAIL_ADDR,
+        SCHOOLSTAFF.ID,
+        SECTIONS.ID,
+        SECTIONS.COURSE_NUMBER,
+        SECTIONS.ROOM,
+        SECTIONS.EXPRESSION,
+        COURSES.COURSE_NAME
+      FROM USERS
+      JOIN SCHOOLSTAFF ON SCHOOLSTAFF.USERS_DCID = USERS.DCID
+      JOIN SECTIONS ON SECTIONS.TEACHER = SCHOOLSTAFF.ID
+      LEFT JOIN COURSES ON COURSES.COURSE_NUMBER = SECTIONS.COURSE_NUMBER
+      WHERE LOWER(USERS.EMAIL_ADDR) = LOWER(:teacher_email)
+      ORDER BY SECTIONS.COURSE_NUMBER, SECTIONS.EXPRESSION, SECTIONS.ID
+    ]]></sql>
+  </query>
+
+  <query name="com.unorth.teacher_grade_analytics.section_roster_by_id" coreTable="CC" flattened="true">
+    <description>Returns roster identity fields for one section. Used only after the section has been discovered for the authenticated teacher.</description>
+    <args>
+      <arg name="section_id" column="CC.SECTIONID" type="primitive" required="true" description="PowerSchool section ID" />
+    </args>
+    <columns>
+      <column column="CC.SECTIONID">section_id</column>
+      <column column="CC.DATEENROLLED">date_enrolled</column>
+      <column column="CC.DATELEFT">date_left</column>
+      <column column="STUDENTS.ID">student_id</column>
+      <column column="STUDENTS.DCID">student_dcid</column>
+      <column column="STUDENTS.STUDENT_NUMBER">student_number</column>
+      <column column="STUDENTS.FIRST_NAME">first_name</column>
+      <column column="STUDENTS.LAST_NAME">last_name</column>
+      <column column="STUDENTS.ENROLL_STATUS">enroll_status</column>
+    </columns>
+    <sql><![CDATA[
+      SELECT
+        CC.SECTIONID,
+        CC.DATEENROLLED,
+        CC.DATELEFT,
+        STUDENTS.ID,
+        STUDENTS.DCID,
+        STUDENTS.STUDENT_NUMBER,
+        STUDENTS.FIRST_NAME,
+        STUDENTS.LAST_NAME,
+        STUDENTS.ENROLL_STATUS
+      FROM CC
+      JOIN STUDENTS ON STUDENTS.ID = CC.STUDENTID
+      WHERE CC.SECTIONID = :section_id
+      ORDER BY STUDENTS.LAST_NAME, STUDENTS.FIRST_NAME, STUDENTS.STUDENT_NUMBER
+    ]]></sql>
+  </query>
+</queries>
