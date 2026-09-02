@@ -19,7 +19,7 @@ export function PowerSchoolConnectionProbe({ configured, host }: ConnectionProbe
       <div>
         <p className="eyebrow">Read-only connector</p>
         <h3>Connection test</h3>
-        <p className="subtle">OAuth authentication and the two approved discovery PowerQueries only. This test cannot change assignments, scores, or any SIS field.</p>
+        <p className="subtle">OAuth authentication and the approved read-only discovery PowerQuery only. This test cannot change assignments, scores, or any SIS field.</p>
       </div>
       <span className={`status ${configured ? "success-pill" : "warning-pill"}`}>{configured ? "Ready to test" : "Needs credentials"}</span>
     </div>
@@ -54,7 +54,7 @@ export function PowerSchoolConnectionProbe({ configured, host }: ConnectionProbe
           <span>{section.rosterCount} student{section.rosterCount === 1 ? "" : "s"}</span>
         </div>)}
       </div>
-      <p className={styles.discoveryFootnote}>Only roster counts are returned to this browser view. Student names and Student Numbers used by the read-only roster query remain server-side during this connection test.</p>
+      <p className={styles.discoveryFootnote}>Only roster counts are returned to this browser view. Student Numbers used by the read-only discovery query remain server-side during this connection test.</p>
     </div> : null}
   </article>;
 }
