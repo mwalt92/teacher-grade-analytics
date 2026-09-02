@@ -28,8 +28,7 @@ export type PowerSchoolTeacherDiscovery = {
 };
 
 const TEACHER_SECTIONS_QUERY = "com.unorth.teacher_grade_analytics.teacher_sections_by_email";
-const SECTION_ROSTER_QUERY = "com.unorth.teacher_grade_analytics.section_roster_by_id";
-const ALLOWED_POWERQUERIES = new Set([TEACHER_SECTIONS_QUERY, SECTION_ROSTER_QUERY]);
+const ALLOWED_POWERQUERIES = new Set([TEACHER_SECTIONS_QUERY]);
 const REQUEST_TIMEOUT_MS = 10_000;
 const MAX_DISCOVERED_SECTIONS = 24;
 
@@ -178,32 +177,27 @@ export async function discoverPowerSchoolTeacher(teacherEmail: string): Promise<
   const teacherPayload = await executeReadOnlyPowerQuery(config, accessToken, TEACHER_SECTIONS_QUERY, { teacher_email: normalizedEmail });
   const teacherRecords = extractRecords(teacherPayload).filter((record) => textValue(record, "teacher_email", "email_addr")?.toLowerCase() === normalizedEmail);
 
-  const uniqueSectionRecords = new Map<string, JsonRecord>();
+  const sectionRecords = new Map<string, { record: JsonRecord; studentNumbers: Set<string>; rowCount: number }>();
   for (const record of teacherRecords) {
-    const sectionId = textValue(record, "section_id", "id");
-    if (sectionId && !uniqueSectionRecords.has(sectionId)) uniqueSectionRecords.set(sectionId, record);
+    const sectionId = textValue(record, "section_id");
+    if (!sectionId) continue;
+    const existing = sectionRecords.get(sectionId) ?? { record, studentNumbers: new Set<string>(), rowCount: 0 };
+    existing.rowCount += 1;
+    const studentNumber = textValue(record, "student_number");
+    if (studentNumber) existing.studentNumbers.add(studentNumber);
+    sectionRecords.set(sectionId, existing);
   }
 
-  if (uniqueSectionRecords.size > MAX_DISCOVERED_SECTIONS) throw new Error("PowerSchool returned an unexpectedly large section set; discovery stopped for safety.");
+  if (sectionRecords.size > MAX_DISCOVERED_SECTIONS) throw new Error("PowerSchool returned an unexpectedly large current section set; discovery stopped for safety.");
 
-  const sections: PowerSchoolTeacherSection[] = [];
-  for (const [sectionId, record] of uniqueSectionRecords) {
-    const rosterPayload = await executeReadOnlyPowerQuery(config, accessToken, SECTION_ROSTER_QUERY, { section_id: sectionId });
-    const rosterRecords = extractRecords(rosterPayload);
-    const studentNumbers = new Set(rosterRecords.flatMap((student) => {
-      const studentNumber = textValue(student, "student_number");
-      return studentNumber ? [studentNumber] : [];
-    }));
-
-    sections.push({
-      sectionId,
-      courseNumber: textValue(record, "course_number"),
-      courseName: textValue(record, "course_name"),
-      expression: textValue(record, "expression"),
-      room: textValue(record, "room"),
-      rosterCount: studentNumbers.size || rosterRecords.length,
-    });
-  }
+  const sections = [...sectionRecords.entries()].map(([sectionId, entry]) => ({
+    sectionId,
+    courseNumber: textValue(entry.record, "course_number"),
+    courseName: textValue(entry.record, "course_name"),
+    expression: textValue(entry.record, "expression"),
+    room: textValue(entry.record, "room"),
+    rosterCount: entry.studentNumbers.size || entry.rowCount,
+  })).sort((a, b) => (a.courseNumber ?? "").localeCompare(b.courseNumber ?? "") || (a.expression ?? "").localeCompare(b.expression ?? ""));
 
   const first = teacherRecords[0];
   const firstName = first ? textValue(first, "teacher_first_name", "first_name") : null;
@@ -213,6 +207,6 @@ export async function discoverPowerSchoolTeacher(teacherEmail: string): Promise<
   return {
     teacherEmail: normalizedEmail,
     teacherName,
-    sections: sections.sort((a, b) => (a.courseNumber ?? "").localeCompare(b.courseNumber ?? "") || (a.expression ?? "").localeCompare(b.expression ?? "")),
+    sections,
   };
 }
