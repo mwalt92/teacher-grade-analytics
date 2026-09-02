@@ -151,6 +151,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <Link className={area === "assignment-types" ? styles.settingsNavActive : ""} href="/settings">Assignment Types</Link>
         <Link className={area === "grading-categories" ? styles.settingsNavActive : ""} href="/settings?area=grading-categories">Grading Categories</Link>
         <Link className={area === "grading-periods" ? styles.settingsNavActive : ""} href="/settings?area=grading-periods">Grading Periods</Link>
+        <Link href="/settings/powerschool">PowerSchool Sync</Link>
       </nav>
 
       {area === "course-sections" ? <>
