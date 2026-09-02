@@ -1,6 +1,6 @@
 <queries>
   <query name="com.unorth.teacher_grade_analytics.teacher_sections_by_email" coreTable="USERS" flattened="true">
-    <description>Returns current sections and roster Student Numbers for one teacher matched by exact school email. Student Numbers are used server-side only to compute roster counts.</description>
+    <description>Returns current rostered sections and Student Numbers for one teacher matched by exact school email. Student Numbers are used server-side only to compute roster counts.</description>
     <args>
       <arg name="teacher_email" column="USERS.EMAIL_ADDR" type="primitive" required="true" description="Teacher school email address" />
     </args>
@@ -34,10 +34,10 @@
       JOIN SCHOOLSTAFF ON SCHOOLSTAFF.USERS_DCID = USERS.DCID
       JOIN SECTIONS ON SECTIONS.TEACHER = SCHOOLSTAFF.ID
       LEFT JOIN COURSES ON COURSES.COURSE_NUMBER = SECTIONS.COURSE_NUMBER
-      LEFT JOIN CC ON CC.SECTIONID = SECTIONS.ID
+      JOIN CC ON CC.SECTIONID = SECTIONS.ID
         AND CC.DATEENROLLED <= TRUNC(SYSDATE)
         AND CC.DATELEFT >= TRUNC(SYSDATE)
-      LEFT JOIN STUDENTS ON STUDENTS.ID = CC.STUDENTID
+      JOIN STUDENTS ON STUDENTS.ID = CC.STUDENTID
         AND STUDENTS.ENROLL_STATUS = 0
       WHERE LOWER(USERS.EMAIL_ADDR) = LOWER(:teacher_email)
       ORDER BY SECTIONS.COURSE_NUMBER, SECTIONS.EXPRESSION, SECTIONS.ID, STUDENTS.STUDENT_NUMBER
