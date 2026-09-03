@@ -1,0 +1,184 @@
+.content {
+  display: grid;
+  gap: 18px;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.statCard {
+  border: 1px solid var(--border-color, #d9dee7);
+  border-radius: 16px;
+  background: var(--panel-bg, #fff);
+  padding: 18px;
+  display: grid;
+  gap: 4px;
+}
+
+.statCard span,
+.statCard small {
+  color: var(--muted-color, #657084);
+}
+
+.statCard strong {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.explainer {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.explainer p {
+  margin: 4px 0 0;
+  color: var(--muted-color, #657084);
+  line-height: 1.55;
+}
+
+.guideList,
+.skillList,
+.resourceList {
+  display: grid;
+  gap: 10px;
+}
+
+.guideRow {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(260px, 1.4fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 0;
+  border-top: 1px solid var(--border-color, #e4e7ed);
+}
+
+.guideRow:first-child {
+  border-top: 0;
+}
+
+.guideIdentity {
+  display: grid;
+  gap: 4px;
+}
+
+.guideIdentity small,
+.skillCard small,
+.resourceCard small {
+  color: var(--muted-color, #657084);
+}
+
+.guideMeta {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  align-items: center;
+  color: var(--muted-color, #657084);
+  font-size: 0.86rem;
+}
+
+.guideMeta > span:not(.statusPill) {
+  border: 1px solid var(--border-color, #dfe3ea);
+  border-radius: 999px;
+  padding: 5px 8px;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-weight: 700;
+}
+
+.live {
+  background: #eaf8ef;
+  color: #21683b;
+}
+
+.draft {
+  background: #fff5d9;
+  color: #785d11;
+}
+
+.emptyStatus {
+  background: #eef1f5;
+  color: #596273;
+}
+
+.twoColumn {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.skillCard,
+.resourceCard {
+  border: 1px solid var(--border-color, #e0e4eb);
+  border-radius: 12px;
+  padding: 12px 13px;
+}
+
+.skillCard {
+  display: grid;
+  gap: 4px;
+}
+
+.resourceCard {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.resourceCard > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.resourceCard p {
+  margin: 3px 0 0;
+  color: var(--muted-color, #657084);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.resourceActions {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  color: var(--muted-color, #657084);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.iconLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px;
+  border: 1px solid var(--border-color, #dfe3ea);
+  border-radius: 9px;
+}
+
+.empty {
+  color: var(--muted-color, #657084);
+  padding: 16px 0;
+}
+
+@media (max-width: 900px) {
+  .statsGrid,
+  .twoColumn {
+    grid-template-columns: 1fr;
+  }
+
+  .guideRow {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+}
