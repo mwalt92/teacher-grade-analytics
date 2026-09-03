@@ -3,26 +3,35 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const items = [
-  { label: "Dashboard", href: "/student" },
-  { label: "Study Library", href: "/student/study-library" },
-];
+type StudentPrimaryNavProps = {
+  preview?: boolean;
+  dashboardHref?: string;
+  studyLibraryHref?: string;
+};
 
-function isActive(pathname: string, href: string) {
-  if (href === "/student") {
-    return pathname === "/student" || pathname.startsWith("/student/assignments/");
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-export function StudentPrimaryNav() {
+export function StudentPrimaryNav({
+  preview = false,
+  dashboardHref,
+  studyLibraryHref,
+}: StudentPrimaryNavProps = {}) {
   const pathname = usePathname();
+  const items = [
+    { label: "Dashboard", href: dashboardHref ?? (preview ? "/student/preview" : "/student") },
+    { label: "Study Library", href: studyLibraryHref ?? (preview ? "/student/preview/study-library" : "/student/study-library") },
+  ];
 
-  return <nav className="main-nav" aria-label="Student navigation">
+  const dashboardActive = preview
+    ? pathname === "/student/preview" || pathname.startsWith("/student/preview/assignments/")
+    : pathname === "/student" || pathname.startsWith("/student/assignments/");
+  const studyActive = preview
+    ? pathname === "/student/preview/study-library" || pathname.startsWith("/student/preview/study-library/")
+    : pathname === "/student/study-library" || pathname.startsWith("/student/study-library/");
+
+  return <nav className="main-nav" aria-label={preview ? "Previewed student navigation" : "Student navigation"}>
     {items.map((item) => {
-      const active = isActive(pathname, item.href);
+      const active = item.label === "Dashboard" ? dashboardActive : studyActive;
       return <Link
-        key={item.href}
+        key={item.label}
         href={item.href}
         className={active ? "nav-button active" : "nav-button"}
         aria-current={active ? "page" : undefined}
