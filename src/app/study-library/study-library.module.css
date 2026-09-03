@@ -60,6 +60,10 @@
   border-top: 0;
 }
 
+.guideRow > div:last-child > a:nth-of-type(2) {
+  display: none;
+}
+
 .guideIdentity {
   display: grid;
   gap: 4px;
