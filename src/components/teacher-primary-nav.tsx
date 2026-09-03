@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { StudentPrimaryNav } from "@/components/student-primary-nav";
 
 const items = [
   { label: "Home", href: "/" },
@@ -22,18 +23,36 @@ function isActive(pathname: string, href: string) {
 
 export function TeacherPrimaryNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const inStudentPreview = pathname === "/student/preview" || pathname.startsWith("/student/preview/");
 
-  return <nav className="main-nav" aria-label="Teacher navigation">
-    {items.map((item) => {
-      const active = isActive(pathname, item.href);
-      return <Link
-        key={item.href}
-        href={item.href}
-        className={active ? "nav-button active" : "nav-button"}
-        aria-current={active ? "page" : undefined}
-      >
-        {item.label}
-      </Link>;
-    })}
-  </nav>;
+  const previewBase = new URLSearchParams();
+  for (const key of ["studentId", "sectionId", "anchorSectionId"]) {
+    const value = searchParams.get(key);
+    if (value) previewBase.set(key, value);
+  }
+  const dashboardParams = new URLSearchParams(previewBase);
+  if (previewBase.get("sectionId")) dashboardParams.set("view", "course");
+  else dashboardParams.set("view", "courses");
+  const dashboardQuery = dashboardParams.toString();
+  const studyQuery = previewBase.toString();
+  const dashboardHref = dashboardQuery ? `/student/preview?${dashboardQuery}` : "/student/preview";
+  const studyLibraryHref = studyQuery ? `/student/preview/study-library?${studyQuery}` : "/student/preview/study-library";
+
+  return <>
+    <nav className="main-nav" aria-label="Teacher navigation">
+      {items.map((item) => {
+        const active = isActive(pathname, item.href);
+        return <Link
+          key={item.href}
+          href={item.href}
+          className={active ? "nav-button active" : "nav-button"}
+          aria-current={active ? "page" : undefined}
+        >
+          {item.label}
+        </Link>;
+      })}
+    </nav>
+    {inStudentPreview ? <StudentPrimaryNav preview dashboardHref={dashboardHref} studyLibraryHref={studyLibraryHref}/> : null}
+  </>;
 }
