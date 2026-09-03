@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { GradeSimulator } from "@/components/grade-simulator";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
@@ -140,7 +141,7 @@ export function StudentDashboardView({
         <div className={styles.assignmentList}>
           <div className={`${styles.assignmentRow} ${styles.assignmentHead}`}><span>Assignment</span><span>Score</span><span>Status</span><span>Attempts</span></div>
           {recentAssignments.length ? recentAssignments.map((assignment) => <div className={styles.assignmentRow} key={assignment.assignmentId}>
-            <span className={styles.assignmentInfo}><strong>{assignment.title}</strong><small>{assignment.date ?? "No date"} • {categoryLabel(assignment.category)}</small></span>
+            <span className={styles.assignmentInfo}>{preview ? <strong>{assignment.title}</strong> : <Link href={`/student/assignments/${assignment.assignmentId}`} style={{ color: "inherit", textDecoration: "none" }}><strong>{assignment.title}</strong></Link>}<small>{assignment.date ?? "No date"} • {categoryLabel(assignment.category)}</small></span>
             <span className={styles.assignmentScore}>{assignment.missing ? "0.0%" : formatPercent(assignment.percent)}</span>
             <span>
               {assignment.missing ? <span className={`${styles.status} ${styles.statusMissing}`}>Missing</span> : <span className={`${styles.status} ${statusClass(assignment.status)}`}>{statusLabel(assignment.status)}</span>}
