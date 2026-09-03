@@ -124,7 +124,7 @@ export default async function StudyLibraryPage() {
       </article>
 
       <article className="panel">
-        <div className="panel-header"><div><p className="eyebrow">Assessment guides</p><h2>Study / Retake Preparation</h2><p className="subtle">Open any assessment to edit its skills, resources, release rules, and student visibility.</p></div></div>
+        <div className="panel-header"><div><p className="eyebrow">Assessment guides</p><h2>Study / Retake Preparation</h2><p className="subtle">Open any assessment to edit its study guide or preview the student-facing assessment screen.</p></div></div>
         <div className={styles.guideList}>
           {assignments.length ? assignments.map((assignment) => {
             const guide = assignment.study_guide_id ? guideById.get(assignment.study_guide_id) : null;
@@ -141,7 +141,10 @@ export default async function StudyLibraryPage() {
                   {(recommendedCountByGuide.get(guide.id) ?? 0) > 0 ? <span>{recommendedCountByGuide.get(guide.id)} recommended first</span> : null}
                 </> : <span className={`${styles.statusPill} ${styles.emptyStatus}`}>No guide yet</span>}
               </div>
-              <Link className="secondary-link" href={`/assignments/${assignment.id}/study`}>{guide ? "Manage guide" : "Create guide"}</Link>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <Link className="secondary-link" href={`/assignments/${assignment.id}/study`}>{guide ? "Manage guide" : "Create guide"}</Link>
+                {guide ? <Link className="secondary-link" href={`/student/preview/assignments/${assignment.id}`}>Student preview</Link> : null}
+              </div>
             </div>;
           }) : <div className={styles.empty}>No retake-ready assessments are available in this section yet.</div>}
         </div>
