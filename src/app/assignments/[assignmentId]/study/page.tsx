@@ -228,7 +228,7 @@ export default async function StudyResourcePage({ params, searchParams }: StudyP
               <div className={styles.resourceTop}>
                 <div className={styles.resourceTitle}>
                   <strong>{item.resource.title}</strong>
-                  <div className={styles.resourceMeta}><span>{provider?.name ?? "Resource"}</span><span>{resourceTypeLabels[item.resource.resource_type] ?? item.resource.resource_type}</span><span>{availabilityLabels[item.availability_rule] ?? item.availability_rule}</span>{skill ? <span>{skill.code ? `${skill.code} — ` : ""}{skill.title}</span> : null}{item.featured ? <span className={styles.featured}>Featured</span> : null}</div>
+                  <div className={styles.resourceMeta}><span>{provider?.name ?? "Resource"}</span><span>{resourceTypeLabels[item.resource.resource_type] ?? item.resource.resource_type}</span><span>{availabilityLabels[item.availability_rule] ?? item.availability_rule}</span>{skill ? <span>{skill.code ? `${skill.code} — ` : ""}{skill.title}</span> : null}{item.featured ? <span className={styles.featured}>Recommended first</span> : null}</div>
                   {item.resource.description ? <small className={styles.muted}>{item.resource.description}</small> : null}
                   {item.resource.external_code ? <small className={styles.muted}>Code: {item.resource.external_code}</small> : null}
                   {item.resource.url ? <a className={styles.link} href={item.resource.url} target="_blank" rel="noreferrer"><ExternalLink size={13}/> Open resource</a> : null}
@@ -243,7 +243,7 @@ export default async function StudyResourcePage({ params, searchParams }: StudyP
                 <input type="hidden" name="assignmentId" value={assignmentId}/><input type="hidden" name="guideId" value={guideId}/><input type="hidden" name="itemId" value={item.id}/>
                 <label>Release<select name="availabilityRule" defaultValue={item.availability_rule}><option value="always">Always available</option><option value="after_first_attempt">After first attempt</option><option value="retake_preparation">Retake preparation</option><option value="teacher_only">Teacher only</option></select></label>
                 <label>Teacher note<input name="teacherNote" defaultValue={item.teacher_note ?? ""} placeholder="Optional guidance shown with this resource"/></label>
-                <label className={styles.checkbox}><input type="checkbox" name="featured" value="true" defaultChecked={item.featured}/> Featured</label>
+                <label className={styles.checkbox} title="Adds a Recommended first badge for students. It does not change order or release timing."><input type="checkbox" name="featured" value="true" defaultChecked={item.featured}/> Recommended first</label>
                 <button className={styles.miniButton} type="submit">Save</button>
               </form>
             </div>;
@@ -263,7 +263,7 @@ export default async function StudyResourcePage({ params, searchParams }: StudyP
           <label>Skill association<select name="skillId" defaultValue=""><option value="">General guide resource</option>{guideSkills.map((skill) => <option value={skill.id} key={skill.id}>{skill.code ? `${skill.code} — ` : ""}{skill.title}</option>)}</select></label>
           <label>Alignment<select name="alignmentKind" defaultValue="direct"><option value="direct">Direct match</option><option value="supporting">Supporting practice</option><option value="prerequisite">Prerequisite skill</option></select></label>
           <label>Release rule<select name="availabilityRule" defaultValue={assignment.allow_retakes ? "retake_preparation" : "always"}><option value="always">Always available</option><option value="after_first_attempt">After first attempt</option><option value="retake_preparation">Retake preparation</option><option value="teacher_only">Teacher only</option></select></label>
-          <label className={styles.checkbox}><input type="checkbox" name="featured" value="true"/> Feature this recommendation</label>
+          <label className={styles.checkbox} title="Adds a Recommended first badge for students. It does not change order or release timing."><input type="checkbox" name="featured" value="true"/> Recommend this first</label>
           <label className={styles.wide}>Description<textarea name="description" placeholder="What this resource helps the student practice."/></label>
           <label className={styles.wide}>Teacher note<textarea name="teacherNote" placeholder="Optional instructions such as: Start here before attempting the next retake."/></label>
           <div className={`${styles.actionRow} ${styles.wide}`}><span className={styles.providerHint}>Teacher-only resources remain protected by database access rules, not just hidden in the interface.</span><button className="primary-button" type="submit"><Plus size={15}/> Add Resource</button></div>
