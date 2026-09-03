@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
+import { StudentPrimaryNav } from "@/components/student-primary-nav";
 import { createClient } from "@/lib/supabase/server";
 import styles from "./student-assignment.module.css";
 
@@ -95,7 +96,6 @@ export default async function StudentAssignmentPage({ params }: { params: Promis
     : { data: [] as { id: string; name: string }[] };
   const resourceById = new Map((resourcesData ?? []).map((resource) => [resource.id, resource]));
   const providerById = new Map((providersData ?? []).map((provider) => [provider.id, provider]));
-  const skillById = new Map(skills.map((skill) => [skill.id, skill]));
   const visibleResources = resourceItems.flatMap((item) => {
     const resource = resourceById.get(item.resource_id);
     return resource ? [{ ...item, resource, provider: providerById.get(resource.provider_id)?.name ?? "Resource" }] : [];
@@ -115,8 +115,9 @@ export default async function StudentAssignmentPage({ params }: { params: Promis
 
   return <main className="app-shell">
     <header className="topbar"><div><p className="eyebrow">Assessment Review</p><h1>{assignment.title}</h1><p className="subtle">{courseName} • {section.name} • {assignment.assignment_date}</p></div></header>
+    <StudentPrimaryNav/>
     <section className={`content-wrap ${styles.content}`}>
-      <div className={styles.backRow}><Link className="secondary-link" href={backHref}><ArrowLeft size={17}/> Back to Progress</Link></div>
+      <div className={styles.backRow}><Link className="secondary-link" href={backHref}><ArrowLeft size={17}/> Back to Progress</Link><Link className="secondary-link" href={`/student/study-library?sectionId=${encodeURIComponent(assignment.section_id)}`}>Study Library</Link></div>
 
       <section className={styles.hero}>
         <article className={`panel ${styles.scoreCard}`}>
