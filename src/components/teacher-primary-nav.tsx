@@ -7,6 +7,7 @@ const items = [
   { label: "Home", href: "/" },
   { label: "Dashboard", href: "/dashboard" },
   { label: "Students", href: "/students" },
+  { label: "Student Preview", href: "/student/preview" },
   { label: "Assignments", href: "/assignments" },
   { label: "Study Library", href: "/study-library" },
   { label: "Gradebook", href: "/gradebook" },
