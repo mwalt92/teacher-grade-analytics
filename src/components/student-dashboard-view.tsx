@@ -63,6 +63,18 @@ export function StudentDashboardView({
   const previewCarryFields = hiddenFields.filter((field) => field.name !== "studentId" && field.name !== "period");
   const categoryLabel = (category: string) => data.simulator.rules.categoryLabels?.[category] ?? category;
   const hasSeparateSummary = data.summaryPeriodCode !== data.periodCode;
+  const previewSectionId = hiddenFields.find((field) => field.name === "sectionId")?.value;
+  const previewAnchorSectionId = hiddenFields.find((field) => field.name === "anchorSectionId")?.value;
+
+  function assignmentHref(assignmentId: string) {
+    if (!preview) return `/student/assignments/${assignmentId}`;
+    const params = new URLSearchParams();
+    if (previewStudentId) params.set("studentId", previewStudentId);
+    if (previewSectionId) params.set("sectionId", previewSectionId);
+    if (previewAnchorSectionId) params.set("anchorSectionId", previewAnchorSectionId);
+    const query = params.toString();
+    return `/student/preview/assignments/${assignmentId}${query ? `?${query}` : ""}`;
+  }
 
   return <main className={`app-shell ${styles.shell}`}>
     <header className="topbar">
@@ -142,7 +154,7 @@ export function StudentDashboardView({
         <div className={styles.assignmentList}>
           <div className={`${styles.assignmentRow} ${styles.assignmentHead}`}><span>Assignment</span><span>Score</span><span>Status</span><span>Attempts</span></div>
           {recentAssignments.length ? recentAssignments.map((assignment) => <div className={styles.assignmentRow} key={assignment.assignmentId}>
-            <span className={styles.assignmentInfo}>{preview ? <strong>{assignment.title}</strong> : <Link href={`/student/assignments/${assignment.assignmentId}`} style={{ color: "inherit", textDecoration: "none" }}><strong>{assignment.title}</strong></Link>}<small>{assignment.date ?? "No date"} • {categoryLabel(assignment.category)}</small></span>
+            <span className={styles.assignmentInfo}><Link href={assignmentHref(assignment.assignmentId)} style={{ color: "inherit", textDecoration: "none" }}><strong>{assignment.title}</strong></Link><small>{assignment.date ?? "No date"} • {categoryLabel(assignment.category)}</small></span>
             <span className={styles.assignmentScore}>{assignment.missing ? "0.0%" : formatPercent(assignment.percent)}</span>
             <span>
               {assignment.missing ? <span className={`${styles.status} ${styles.statusMissing}`}>Missing</span> : <span className={`${styles.status} ${statusClass(assignment.status)}`}>{statusLabel(assignment.status)}</span>}
