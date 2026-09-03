@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Edit3 } from "lucide-react";
+import { ArrowLeft, BookOpen, CheckCircle2, Edit3 } from "lucide-react";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getSectionRoster } from "@/lib/data/roster";
@@ -82,7 +82,7 @@ export default async function AssignmentGradePage({ params, searchParams }: { pa
       {publishedCount > 1 ? <div className="import-message success"><strong>Assignment published to {publishedCount} sections.</strong> Each section has its own grade records.</div> : null}
       {linkedAssignments.length > 1 ? <article className="panel" style={{ marginBottom: 16 }}><div className="panel-header"><div><p className="eyebrow">Linked assignment</p><h3>Grade each section separately</h3><p className="subtle">These records were created together and are explicitly linked as the same course assignment.</p></div><div className="toolbar-group">{linkedAssignments.map((linked) => <Link key={linked.assignmentId} className={linked.assignmentId === assignmentId ? "primary-button" : "secondary-link"} href={`/assignments/${linked.assignmentId}`}>{linked.section.sectionName}</Link>)}</div></div></article> : null}
       <article className="panel">
-        <div className="panel-header"><div><p className="eyebrow">Active roster</p><h2>{roster.length} students</h2><p className="subtle">Enter scores directly. Changes save automatically and are recorded in grade history.</p></div><div className="grade-audit-header-actions"><Link className="secondary-link" href={returnTo}><ArrowLeft size={17}/> {backLabel}</Link><Link className="secondary-link" href={editHref}><Edit3 size={16}/> Edit Assignment</Link><Link className="secondary-link" href="/assignments/new">New assignment</Link><span className="status success-pill"><CheckCircle2 size={14}/> Autosave on</span></div></div>
+        <div className="panel-header"><div><p className="eyebrow">Active roster</p><h2>{roster.length} students</h2><p className="subtle">Enter scores directly. Changes save automatically and are recorded in grade history.</p></div><div className="grade-audit-header-actions"><Link className="secondary-link" href={returnTo}><ArrowLeft size={17}/> {backLabel}</Link><Link className="secondary-link" href={`/assignments/${assignmentId}/study`}><BookOpen size={16}/> Study Resources</Link><Link className="secondary-link" href={editHref}><Edit3 size={16}/> Edit Assignment</Link><Link className="secondary-link" href="/assignments/new">New assignment</Link><span className="status success-pill"><CheckCircle2 size={14}/> Autosave on</span></div></div>
         <GradeEntryGrid assignmentId={assignmentId} pointsPossible={Number(assignment.points_possible)} allowRetakes={assignment.allow_retakes} students={students}/>
       </article>
     </section>
