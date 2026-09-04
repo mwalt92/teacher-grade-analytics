@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Check, CircleEllipsis, CircleOff, Pencil, Plus, RotateCcw, Sparkles, TriangleAlert, X } from "lucide-react";
+import { setGradeExemptBulk } from "./bulk-exempt-actions";
 import { restoreGradeEntriesBulk } from "./bulk-undo-actions";
 import { saveGradeEntriesBulk, saveGradeEntry, setGradeExempt } from "./grade-entry-actions";
 import { addRetakeAttempt, editRetakeAttempt } from "./retake-actions";
@@ -30,6 +31,7 @@ type LocalRow = StudentRow & {
 type Snapshot = { studentId: string; points: number | null; missing: boolean; exempt: boolean };
 type UndoAction = { label: string; rows: Snapshot[] };
 type RetakeEditDraft = { attemptNumber: number; value: string };
+type RemainingFillMode = "score" | "missing" | "exempt";
 
 type GradeEntryGridProps = {
   assignmentId: string;
@@ -49,6 +51,7 @@ export function GradeEntryGrid({ assignmentId, pointsPossible, allowRetakes, stu
     saveState: student.points == null && !student.missing && !student.exempt ? "idle" : "saved",
   })));
   const [bulkScore, setBulkScore] = useState("");
+  const [remainingFillMode, setRemainingFillMode] = useState<RemainingFillMode>("score");
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkMessage, setBulkMessage] = useState<string | null>(null);
   const [undoStack, setUndoStack] = useState<UndoAction[]>([]);
@@ -285,10 +288,14 @@ export function GradeEntryGrid({ assignmentId, pointsPossible, allowRetakes, stu
     setRetakeBusy((current) => ({ ...current, [row.studentId]: false }));
   }
 
-  async function applyBulk(kind: "full" | "score" | "missing") {
+  function isBlank(row: LocalRow) {
+    return row.value.trim() === "" && row.points == null && !row.savedMissing && !row.savedExempt;
+  }
+
+  async function applyBulk(kind: "full" | "remaining") {
     if (bulkBusy) return;
     const numericBulk = Number(bulkScore);
-    if (kind === "score" && (bulkScore.trim() === "" || !Number.isFinite(numericBulk) || numericBulk < 0)) {
+    if (kind === "remaining" && remainingFillMode === "score" && (bulkScore.trim() === "" || !Number.isFinite(numericBulk) || numericBulk < 0)) {
       setBulkMessage("Enter a valid non-negative score first.");
       return;
     }
@@ -296,30 +303,55 @@ export function GradeEntryGrid({ assignmentId, pointsPossible, allowRetakes, stu
     const currentRows = rowsRef.current;
     const nonExemptRows = currentRows.filter((row) => !row.savedExempt);
     const exemptSkipped = currentRows.length - nonExemptRows.length;
-    const targets = kind === "missing"
-      ? nonExemptRows.filter((row) => row.value.trim() === "" && row.points == null && !row.savedMissing)
-      : nonExemptRows;
+    const targets = kind === "full" ? nonExemptRows : currentRows.filter(isBlank);
     if (!targets.length) {
-      setBulkMessage(kind === "missing" ? "There are no remaining non-exempt blanks." : "No non-exempt students to update.");
+      setBulkMessage(kind === "remaining" ? "There are no remaining blank scores to fill." : "No non-exempt students to update.");
       return;
     }
 
-    const desiredPoints = kind === "full" ? pointsPossible : kind === "score" ? numericBulk : 0;
-    const desiredMissing = kind === "missing";
-    const changedTargets = targets.filter((row) => row.points !== desiredPoints || row.savedMissing !== desiredMissing);
+    const snapshots = targets.map((row) => ({ studentId: row.studentId, points: row.points, missing: row.savedMissing, exempt: row.savedExempt }));
+    setBulkBusy(true);
+    targets.forEach((row) => clearTimer(row.studentId));
+
+    if (kind === "remaining" && remainingFillMode === "exempt") {
+      setBulkMessage(`Marking ${targets.length} remaining blank${targets.length === 1 ? "" : "s"} Exempt…`);
+      targets.forEach((row) => patchRow(row.studentId, { missing: false, exempt: true, saveState: "saving", error: undefined }));
+      const result = await setGradeExemptBulk({ assignmentId, studentIds: targets.map((row) => row.studentId) });
+      if (!result.ok) {
+        targets.forEach((row) => patchRow(row.studentId, { exempt: false, saveState: "error", error: result.error }));
+        setBulkBusy(false);
+        setBulkMessage(`Bulk exemption failed: ${result.error}`);
+        return;
+      }
+      targets.forEach((row) => patchRow(row.studentId, {
+        value: "",
+        points: null,
+        missing: false,
+        savedMissing: false,
+        exempt: true,
+        savedExempt: true,
+        saveState: "saved",
+        error: undefined,
+      }));
+      pushUndo({ label: "Fill remaining blanks as Exempt", rows: snapshots });
+      setBulkBusy(false);
+      setBulkMessage(`${result.count} remaining blank${result.count === 1 ? " was" : "s were"} marked Exempt.`);
+      return;
+    }
+
+    const desiredPoints = kind === "full" ? pointsPossible : remainingFillMode === "missing" ? 0 : numericBulk;
+    const desiredMissing = kind === "remaining" && remainingFillMode === "missing";
+    const changedTargets = kind === "full"
+      ? targets.filter((row) => row.points !== desiredPoints || row.savedMissing !== desiredMissing)
+      : targets;
     if (!changedTargets.length) {
+      setBulkBusy(false);
       setBulkMessage("Those non-exempt grades already match this bulk action.");
       return;
     }
 
-    const snapshots = changedTargets.map((row) => ({ studentId: row.studentId, points: row.points, missing: row.savedMissing, exempt: row.savedExempt }));
-    setBulkBusy(true);
     setBulkMessage(`Saving ${changedTargets.length} grades together…`);
-    changedTargets.forEach((row) => {
-      clearTimer(row.studentId);
-      patchRow(row.studentId, { value: String(desiredPoints), missing: desiredMissing, exempt: false, saveState: "saving", error: undefined });
-    });
-
+    changedTargets.forEach((row) => patchRow(row.studentId, { value: String(desiredPoints), missing: desiredMissing, exempt: false, saveState: "saving", error: undefined }));
     const result = await saveGradeEntriesBulk({ assignmentId, entries: changedTargets.map((row) => ({ studentId: row.studentId, points: desiredPoints, missing: desiredMissing })) });
     if (!result.ok) {
       changedTargets.forEach((row) => patchRow(row.studentId, { saveState: "error", error: result.error }));
@@ -339,10 +371,14 @@ export function GradeEntryGrid({ assignmentId, pointsPossible, allowRetakes, stu
       saveState: "saved",
       error: undefined,
     }));
-    const label = kind === "full" ? "Fill all with full credit" : kind === "score" ? `Set all scores to ${numericBulk}` : "Fill remaining blanks as Missing";
-    pushUndo({ label, rows: snapshots });
+    const label = kind === "full"
+      ? "Fill all with full credit"
+      : desiredMissing
+        ? "Fill remaining blanks with 0 + Missing"
+        : `Fill remaining blanks with ${numericBulk}`;
+    pushUndo({ label, rows: kind === "full" ? changedTargets.map((row) => ({ studentId: row.studentId, points: row.points, missing: row.savedMissing, exempt: row.savedExempt })) : snapshots });
     setBulkBusy(false);
-    const skipMessage = exemptSkipped ? ` ${exemptSkipped} exempt student${exemptSkipped === 1 ? " was" : "s were"} skipped.` : "";
+    const skipMessage = kind === "full" && exemptSkipped ? ` ${exemptSkipped} exempt student${exemptSkipped === 1 ? " was" : "s were"} skipped.` : "";
     setBulkMessage(`${result.count} grades updated in one bulk save.${skipMessage}`);
   }
 
@@ -388,14 +424,21 @@ export function GradeEntryGrid({ assignmentId, pointsPossible, allowRetakes, stu
       <div><strong>{savedCount}/{rows.length}</strong><span>entered</span></div>
       <div><strong>{missingCount}</strong><span>missing</span></div>
       <div><strong>{exemptCount}</strong><span>exempt</span></div>
-      <p>Scores autosave after you stop typing. Press Enter to save and move to the next student. A real score or Missing clears Exempt. Bulk score actions skip Exempt students.</p>
+      <p>Scores autosave after you stop typing. Press Enter to save and move to the next student. Fill remaining only touches blank rows; existing scores and flags stay intact. Fill all with full credit skips Exempt students.</p>
     </div>
 
     <div className={styles.bulkBar}>
       <div className={styles.bulkActions}>
         <button type="button" className={styles.bulkButton} disabled={bulkBusy} onClick={() => void applyBulk("full")}><Sparkles size={15}/> Fill all with full credit</button>
-        <div className={styles.setAllGroup}><input aria-label="Score for set all" type="number" min="0" step="0.5" placeholder="Score" value={bulkScore} onChange={(event) => setBulkScore(event.target.value)}/><button type="button" className={styles.bulkButton} disabled={bulkBusy} onClick={() => void applyBulk("score")}>Set all scores to…</button></div>
-        <button type="button" className={styles.bulkButton} disabled={bulkBusy} onClick={() => void applyBulk("missing")}><TriangleAlert size={15}/> Fill remaining blanks with 0 + Missing</button>
+        <div className={styles.setAllGroup}>
+          <input aria-label="Score for remaining blank grades" type="number" min="0" step="0.5" placeholder={remainingFillMode === "score" ? "Score" : remainingFillMode === "missing" ? "0" : "—"} value={remainingFillMode === "score" ? bulkScore : ""} disabled={remainingFillMode !== "score" || bulkBusy} onChange={(event) => setBulkScore(event.target.value)}/>
+          <select aria-label="Status for remaining blank grades" value={remainingFillMode} disabled={bulkBusy} onChange={(event) => setRemainingFillMode(event.target.value as RemainingFillMode)}>
+            <option value="score">Score only</option>
+            <option value="missing">0 + Missing</option>
+            <option value="exempt">Exempt</option>
+          </select>
+          <button type="button" className={styles.bulkButton} disabled={bulkBusy} onClick={() => void applyBulk("remaining")}>Fill remaining</button>
+        </div>
       </div>
       <div className={styles.undoArea}>{bulkMessage ? <span className={styles.bulkMessage}>{bulkMessage}</span> : null}<button type="button" className={styles.undoButton} disabled={!lastUndo || bulkBusy} onClick={() => void undoLast()} title={lastUndo ? `Undo: ${lastUndo.label}` : "Nothing to undo"}><RotateCcw size={15}/> Undo{lastUndo ? `: ${lastUndo.label}` : ""}</button></div>
     </div>
