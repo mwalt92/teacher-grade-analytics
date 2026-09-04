@@ -1,122 +1,134 @@
-.shell { display: grid; gap: 16px; }
-.hourScope { margin-bottom: 16px; padding: 13px 14px; border: 1px solid #c7d5e6; border-radius: 14px; background: #f5f8fc; }
-.hourScopeIntro { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.hourScopeIntro > div:first-child { display: grid; gap: 3px; }
-.hourScopeIntro > div:first-child strong { font-size: .92rem; }
-.hourScopeIntro > div:first-child span { color: var(--muted); font-size: .78rem; }
-.hourButtons { display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
-.hourButton, .hourButtonActive { min-height: 36px; display: inline-flex; align-items: center; justify-content: center; padding: 0 11px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--muted); font-size: .77rem; font-weight: 800; white-space: nowrap; }
+.shell { display: grid; gap: 12px; }
+.hourScope { margin-bottom: 12px; padding: 11px 12px; border: 1px solid #c7d5e6; border-radius: 12px; background: #f5f8fc; }
+.hourScopeIntro { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.hourScopeIntro > div:first-child { display: grid; gap: 2px; }
+.hourScopeIntro > div:first-child strong { font-size: .9rem; }
+.hourScopeIntro > div:first-child span { color: var(--muted); font-size: .75rem; }
+.hourButtons { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.hourButton, .hourButtonActive { min-height: 34px; display: inline-flex; align-items: center; justify-content: center; padding: 0 10px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--muted); font-size: .74rem; font-weight: 800; white-space: nowrap; }
 .hourButton:hover { border-color: #b9c8e6; color: var(--brand); }
 .hourButtonActive { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
-.linkedSectionStack { display: grid; gap: 30px; }
-.linkedSectionBlock { display: grid; gap: 14px; scroll-margin-top: 16px; }
-.linkedSectionBlock + .linkedSectionBlock { padding-top: 4px; border-top: 2px solid #ccd7e5; }
-.linkedSectionBanner { position: sticky; top: 0; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 12px; border: 1px solid #b9cbe1; border-radius: 12px; background: rgba(245,248,252,.97); box-shadow: 0 8px 20px rgba(31,41,55,.08); backdrop-filter: blur(8px); }
-.linkedSectionBanner > div { display: grid; gap: 2px; }
-.linkedSectionBanner span { color: var(--brand); font-size: .68rem; font-weight: 850; text-transform: uppercase; letter-spacing: .08em; }
-.linkedSectionBanner strong { font-size: .98rem; }
-.linkedSectionBanner small { color: var(--muted); font-size: .73rem; }
-.summary { display: flex; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 14px; background: var(--surface-soft); border: 1px solid var(--line); }
-.summary > div { display: grid; min-width: 80px; }
-.summary strong { font-size: 1.15rem; }
-.summary span { color: var(--muted); font-size: .78rem; }
-.summary p { margin-left: auto; color: var(--muted); font-size: .84rem; }
-.bulkBar { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
-.bulkActions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-.bulkButton, .undoButton { min-height: 40px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 700; font-size: .82rem; cursor: pointer; }
+.linkedSectionStack { display: grid; gap: 24px; }
+.linkedSectionBlock { display: grid; gap: 10px; scroll-margin-top: 16px; }
+.linkedSectionBlock + .linkedSectionBlock { padding-top: 2px; border-top: 2px solid #ccd7e5; }
+.linkedSectionBanner { position: sticky; top: 0; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 11px; border: 1px solid #b9cbe1; border-radius: 11px; background: rgba(245,248,252,.97); box-shadow: 0 7px 18px rgba(31,41,55,.07); backdrop-filter: blur(8px); }
+.linkedSectionBanner > div { display: grid; gap: 1px; }
+.linkedSectionBanner span { color: var(--brand); font-size: .65rem; font-weight: 850; text-transform: uppercase; letter-spacing: .08em; }
+.linkedSectionBanner strong { font-size: .94rem; }
+.linkedSectionBanner small { color: var(--muted); font-size: .7rem; }
+.summary { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--surface-soft); border: 1px solid var(--line); }
+.summary > div { display: grid; min-width: 72px; }
+.summary strong { font-size: 1.02rem; }
+.summary span { color: var(--muted); font-size: .72rem; }
+.summary p { margin-left: auto; color: var(--muted); font-size: .78rem; }
+.bulkBar { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.bulkActions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.bulkButton, .undoButton { min-height: 36px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-soft); padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-weight: 700; font-size: .76rem; cursor: pointer; }
 .bulkButton:hover, .undoButton:hover { border-color: #b9c8e6; background: var(--brand-soft); }
+.bulkButton:focus-visible, .undoButton:focus-visible, .missingButton:focus-visible, .exemptButton:focus-visible, .retakeButton:focus-visible, .attemptEditButton:focus-visible, .retakeEditor button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .bulkButton:disabled, .undoButton:disabled { opacity: .5; cursor: not-allowed; }
 .setAllGroup { display: flex; align-items: stretch; }
-.setAllGroup input, .setAllGroup select { min-height: 40px; border: 1px solid var(--line); border-right: 0; border-radius: 0; padding: 0 10px; background: #fff; color: var(--text); }
-.setAllGroup input { width: 88px; border-radius: 10px 0 0 10px; }
-.setAllGroup select { min-width: 130px; font-size: .8rem; font-weight: 700; }
+.setAllGroup input, .setAllGroup select { min-height: 36px; border: 1px solid var(--line); border-right: 0; border-radius: 0; padding: 0 9px; background: #fff; color: var(--text); }
+.setAllGroup input { width: 80px; border-radius: 9px 0 0 9px; }
+.setAllGroup select { min-width: 122px; font-size: .76rem; font-weight: 700; }
 .setAllGroup input:disabled, .setAllGroup select:disabled { background: var(--surface-soft); color: var(--muted); }
-.setAllGroup .bulkButton { border-radius: 0 10px 10px 0; }
-.undoArea { display: flex; gap: 10px; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 10px; }
-.bulkMessage { color: var(--muted); font-size: .82rem; }
-.undoButton { background: #fff; max-width: min(100%, 420px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.table { display: grid; }
-.row { position: relative; display: grid; grid-template-columns: minmax(180px, 1.5fr) .7fr minmax(150px, .8fr) minmax(130px, .72fr) minmax(170px, .9fr); gap: 14px; align-items: center; padding: 12px 8px; border-top: 1px solid var(--line); }
-.head { border-top: 0; color: var(--muted); font-size: .76rem; font-weight: 750; padding-top: 4px; }
-.missingRow { background: var(--warning-soft); border-radius: 10px; }
-.exemptRow { background: var(--brand-soft); border-radius: 10px; }
-.muted { color: var(--muted); font-size: .84rem; }
-.studentLink { width: fit-content; max-width: 100%; border-radius: 6px; }
+.setAllGroup .bulkButton { border-radius: 0 9px 9px 0; }
+.undoArea { display: flex; gap: 8px; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 8px; }
+.bulkMessage { color: var(--muted); font-size: .76rem; }
+.undoButton { background: #fff; max-width: min(100%, 400px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.table { display: grid; overflow-x: auto; scrollbar-gutter: stable; }
+.row { --row-bg: #fff; position: relative; display: grid; grid-template-columns: minmax(190px, 1.25fr) 86px 132px 118px minmax(150px, .9fr) minmax(280px, 1.55fr); gap: 10px; align-items: center; min-width: 1080px; padding: 8px 6px; border-top: 1px solid var(--line); background: var(--row-bg); font-size: .81rem; }
+.head { border-top: 0; color: var(--muted); font-size: .7rem; font-weight: 800; padding-top: 3px; padding-bottom: 6px; }
+.head::after { content: "Attempts"; }
+.missingRow { --row-bg: var(--warning-soft); border-radius: 9px; }
+.exemptRow { --row-bg: var(--brand-soft); border-radius: 9px; }
+.muted { color: var(--muted); font-size: .76rem; }
+.studentLink { position: sticky; left: 0; z-index: 2; width: fit-content; max-width: 100%; border-radius: 6px; background: var(--row-bg); padding: 4px 8px 4px 4px; margin-left: -4px; }
+.head > span:first-child { position: sticky; left: 0; z-index: 3; background: #fff; padding: 4px 8px 4px 4px; margin-left: -4px; }
 .studentLink strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .studentLink:hover { color: var(--brand); text-decoration: underline; text-underline-offset: 2px; }
-.studentLink:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
-.scoreField { display: flex; align-items: center; gap: 8px; }
-.scoreField input { width: 92px; min-height: 40px; border: 1px solid var(--line); border-radius: 9px; padding: 0 10px; background: #fff; }
+.studentLink:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.scoreField { display: flex; align-items: center; gap: 6px; }
+.scoreField input { width: 78px; min-height: 34px; border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; background: #fff; }
 .scoreField input:focus, .setAllGroup input:focus, .setAllGroup select:focus, .retakeEditor input:focus { outline: 2px solid var(--brand-soft); border-color: var(--brand); }
-.scoreField span { color: var(--muted); font-size: .84rem; white-space: nowrap; }
-.saveState { display: inline-flex; align-items: center; gap: 5px; width: fit-content; font-size: .8rem; font-weight: 700; }
+.scoreField span { color: var(--muted); font-size: .76rem; white-space: nowrap; }
+.saveState { display: inline-flex; align-items: center; gap: 4px; width: fit-content; font-size: .73rem; font-weight: 700; white-space: nowrap; }
 .saving, .idle { color: var(--muted); }
 .saved { color: var(--success); }
 .error { color: var(--danger); }
 .missing { color: var(--warning); }
 .exempt { color: var(--brand); }
-.statusActions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-start; }
-.missingButton, .exemptButton { border: 1px solid var(--line); background: #fff; border-radius: 9px; min-height: 38px; padding: 0 9px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-weight: 700; font-size: .78rem; cursor: pointer; }
+.statusActions { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-start; }
+.missingButton, .exemptButton { border: 1px solid var(--line); background: #fff; border-radius: 8px; min-height: 32px; padding: 0 7px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-weight: 700; font-size: .71rem; cursor: pointer; }
 .missingButton:hover { border-color: #e1b66f; }
 .missingButtonActive { border-color: #e1b66f; background: #fff7e8; color: var(--warning); }
 .exemptButton:hover { border-color: #b9c8e6; background: var(--brand-soft); }
 .exemptButtonActive { border-color: var(--brand); background: #fff; color: var(--brand); }
-.rowError { grid-column: 3 / -1; display: flex; align-items: center; gap: 6px; color: var(--danger); font-size: .78rem; margin-top: -7px; }
-.attemptArea { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 12px; background: #f8fafc; border: 1px solid #e7ecf3; }
-.attemptList { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.attemptChip { display: inline-flex; align-items: center; gap: 5px; padding: 6px 9px; border-radius: 999px; background: #fff; border: 1px solid var(--line); font-size: .78rem; color: var(--muted); }
-.attemptChip strong { color: var(--text); font-size: .78rem; }
-.attemptChip em { font-style: normal; font-weight: 800; color: var(--success); margin-left: 2px; }
+.rowError { grid-column: 3 / -1; grid-row: 2; display: flex; align-items: center; gap: 5px; color: var(--danger); font-size: .72rem; margin-top: -2px; }
+.attemptArea { grid-column: 6; grid-row: 1; display: flex; gap: 6px; align-items: center; justify-content: flex-start; min-width: 0; padding: 0; background: transparent; border: 0; }
+.attemptList { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; min-width: 0; }
+.attemptChip { display: inline-flex; align-items: center; gap: 4px; min-height: 28px; padding: 3px 7px; border-radius: 999px; background: #fff; border: 1px solid var(--line); font-size: .69rem; color: var(--muted); white-space: nowrap; }
+.attemptChip strong { color: var(--text); font-size: .7rem; }
+.attemptChip em { font-style: normal; font-weight: 800; color: var(--success); margin-left: 1px; }
 .bestAttempt { background: var(--success-soft); border-color: #b8dfc9; color: var(--success); }
 .exemptAttempt { background: var(--brand-soft); border-color: #b9c8e6; color: var(--brand); }
 .exemptAttempt em { color: var(--brand); }
-.attemptEditButton { min-height: 24px; border: 0; border-left: 1px solid currentColor; background: transparent; color: inherit; padding: 0 2px 0 7px; display: inline-flex; align-items: center; gap: 3px; font: inherit; font-weight: 800; cursor: pointer; opacity: .82; }
-.attemptEditButton:hover { opacity: 1; }
-.attemptEditButton:disabled { opacity: .35; cursor: wait; }
-.retakeButton { min-height: 36px; border: 1px solid #b9c8e6; background: var(--brand-soft); color: var(--brand); border-radius: 9px; padding: 0 11px; display: inline-flex; align-items: center; gap: 5px; font-weight: 750; font-size: .8rem; cursor: pointer; white-space: nowrap; }
+.attemptEditButton { min-height: 20px; border: 0; border-left: 1px solid currentColor; background: transparent; color: inherit; padding: 0 1px 0 5px; display: inline-flex; align-items: center; gap: 2px; font: inherit; font-weight: 800; cursor: pointer; opacity: .82; }
+.attemptEditButton:hover { opacity: 1; text-decoration: underline; text-underline-offset: 2px; }
+.attemptEditButton:disabled { opacity: .35; cursor: wait; text-decoration: none; }
+.retakeButton { min-height: 30px; border: 1px solid #b9c8e6; background: var(--brand-soft); color: var(--brand); border-radius: 8px; padding: 0 8px; display: inline-flex; align-items: center; gap: 4px; font-weight: 750; font-size: .71rem; cursor: pointer; white-space: nowrap; }
 .retakeButton:disabled { opacity: .45; cursor: not-allowed; }
-.retakeEditor { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-.retakeEditorLabel { font-size: .78rem; white-space: nowrap; }
-.retakeEditor input { width: 108px; min-height: 36px; border: 1px solid var(--line); border-radius: 8px; padding: 0 9px; background: #fff; }
-.retakeEditor span { font-size: .78rem; color: var(--muted); }
-.retakeEditor button { min-height: 36px; border: 1px solid var(--brand); border-radius: 8px; background: var(--brand); color: #fff; padding: 0 10px; font-weight: 750; font-size: .78rem; cursor: pointer; }
+.retakeEditor { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; min-width: 0; }
+.retakeEditorLabel { font-size: .7rem; white-space: nowrap; }
+.retakeEditor input { width: 76px; min-height: 30px; border: 1px solid var(--line); border-radius: 7px; padding: 0 7px; background: #fff; }
+.retakeEditor span { font-size: .7rem; color: var(--muted); }
+.retakeEditor button { min-height: 30px; border: 1px solid var(--brand); border-radius: 7px; background: var(--brand); color: #fff; padding: 0 8px; font-weight: 750; font-size: .7rem; cursor: pointer; }
 .retakeEditor button:disabled { opacity: .55; cursor: wait; }
-.retakeEditor .iconButton { width: 36px; padding: 0; background: #fff; color: var(--muted); border-color: var(--line); }
+.retakeEditor .iconButton { width: 30px; padding: 0; background: #fff; color: var(--muted); border-color: var(--line); }
+
+@media (max-width: 1100px) {
+  .row { grid-template-columns: minmax(180px, 1.25fr) 122px 112px minmax(145px, .85fr) minmax(250px, 1.45fr); min-width: 920px; }
+  .row > :nth-child(2), .head > :nth-child(2) { display: none; }
+  .attemptArea { grid-column: 5; }
+}
 
 @media (max-width: 850px) {
   .hourScopeIntro { align-items: flex-start; flex-direction: column; }
   .hourButtons { justify-content: flex-start; }
   .linkedSectionBanner { align-items: flex-start; }
-  .row { grid-template-columns: 1.4fr .7fr 1fr minmax(165px, .9fr); }
-  .row > :nth-child(2), .head > :nth-child(2) { display: none; }
+  .row { grid-template-columns: minmax(170px, 1.25fr) 120px 108px minmax(150px, .9fr); min-width: 720px; }
+  .head::after { display: none; }
   .summary { align-items: flex-start; flex-wrap: wrap; }
   .summary p { width: 100%; margin-left: 0; }
-  .rowError { grid-column: 2 / -1; }
+  .rowError { grid-column: 2 / -1; grid-row: 3; }
   .undoArea { align-items: flex-start; flex-direction: column; }
   .undoButton { max-width: 100%; }
-  .attemptArea { align-items: flex-start; flex-direction: column; }
+  .attemptArea { grid-column: 1 / -1; grid-row: 2; align-items: flex-start; padding-top: 5px; border-top: 1px solid #e7ecf3; }
 }
 
 @media (max-width: 620px) {
   .hourButtons { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
   .hourButton, .hourButtonActive { width: 100%; }
-  .linkedSectionStack { gap: 24px; }
+  .linkedSectionStack { gap: 20px; }
   .linkedSectionBanner { position: static; flex-direction: column; }
   .linkedSectionBanner :global(.secondary-link) { width: 100%; justify-content: center; }
+  .summary { padding: 10px; }
   .bulkActions { display: grid; }
   .setAllGroup { width: 100%; flex-wrap: wrap; }
-  .setAllGroup input { flex: 0 0 88px; border-radius: 10px 0 0 10px; }
-  .setAllGroup select { flex: 1; min-width: 120px; border-right: 1px solid var(--line); border-radius: 0 10px 10px 0; }
-  .setAllGroup .bulkButton { flex: 1 0 100%; margin-top: 6px; border-radius: 10px; }
+  .setAllGroup input { flex: 0 0 80px; border-radius: 9px 0 0 9px; }
+  .setAllGroup select { flex: 1; min-width: 118px; border-right: 1px solid var(--line); border-radius: 0 9px 9px 0; }
+  .setAllGroup .bulkButton { flex: 1 0 100%; margin-top: 5px; border-radius: 9px; }
   .bulkButton { width: 100%; }
-  .row { grid-template-columns: 1fr minmax(140px, .9fr); }
+  .table { overflow-x: visible; }
+  .row { grid-template-columns: 1fr minmax(132px, .9fr); min-width: 0; gap: 8px; padding: 9px 4px; }
   .head span:nth-child(4), .head span:nth-child(5) { display: none; }
   .row > :nth-child(4) { grid-column: 1; }
   .row > :nth-child(5) { grid-column: 2; grid-row: 2; }
-  .rowError { grid-column: 1 / -1; }
+  .rowError { grid-column: 1 / -1; grid-row: 4; }
   .scoreField { justify-content: flex-end; }
   .statusActions { justify-content: flex-end; }
-  .attemptArea { grid-column: 1 / -1; }
+  .studentLink, .head > span:first-child { position: static; background: transparent; padding-left: 0; margin-left: 0; }
+  .attemptArea { grid-column: 1 / -1; grid-row: 3; flex-direction: column; align-items: flex-start; }
   .retakeEditor { width: 100%; }
-  .retakeEditor input { flex: 1; min-width: 100px; }
+  .retakeEditor input { flex: 1; min-width: 96px; }
 }
