@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { GradebookWorkspaceNav } from "@/components/gradebook-workspace-nav";
-import { SectionScopeNav } from "@/components/section-scope-nav";
+import { TeacherContextBar } from "@/components/teacher-context-bar";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
-import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getSectionGradebook, getSectionGradingPeriods } from "@/lib/data/grade-calculation";
 import { getSectionRoster } from "@/lib/data/roster";
 import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
@@ -46,10 +45,15 @@ export default async function GradebookPage({searchParams}:GradebookPageProps){
  const tableMinWidth=620+detailColumns.length*115;
  const sectionHref=selectedPeriod?`/gradebook?period=${encodeURIComponent(selectedPeriod.code)}`:"/gradebook";
  const allHref=selectedPeriod?`/gradebook?scope=all&period=${encodeURIComponent(selectedPeriod.code)}`:"/gradebook?scope=all";
- return <main className="app-shell"><header className="topbar"><div><p className="eyebrow">Teacher Gradebook</p><h1>{section.courseCode?`${section.courseName} ${section.courseCode}`:section.courseName}</h1><p className="subtle">{section.sectionName} • live grades from the canonical grading engine</p><TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={sectionHref}/></div></header>
+ return <main className="app-shell"><header className="topbar"><div><p className="eyebrow">Teacher Gradebook</p><h1>{section.courseCode?`${section.courseName} ${section.courseCode}`:section.courseName}</h1><p className="subtle">{section.sectionName} • live grades from the canonical grading engine</p></div></header>
  <TeacherPrimaryNav/>
  <GradebookWorkspaceNav active="overview" period={selectedPeriod?.code}/>
- {canShowAllSections?<SectionScopeNav sectionLabel={section.sectionName} sectionHref={sectionHref} allLabel={`All Sections (${offeringSections.length})`} allHref={allHref} activeScope="section" ariaLabel="Gradebook section scope"/>:null}
+ <TeacherContextBar
+  sections={sections}
+  activeSectionId={section.sectionId}
+  returnTo={sectionHref}
+  scope={canShowAllSections?{active:"section",sectionLabel:section.sectionName,sectionHref,allLabel:`All Sections (${offeringSections.length})`,allHref,ariaLabel:"Gradebook section scope"}:undefined}
+ />
  <section className={`content-wrap ${styles.content}`}><article className={`panel ${styles.controls}`}><div className="panel-header"><div><p className="eyebrow">Class view</p><h3>Current grades</h3></div></div><form method="get" className={styles.periodForm}><label><span>Grading period</span><select name="period" defaultValue={selectedPeriod?.code} aria-label="Select grading period">{periods.map(period=><option key={period.id} value={period.code}>{period.code} — {period.name}</option>)}</select></label><button className="primary-button" type="submit">View Gradebook</button></form></article>
  <section className={`metric-grid ${styles.metrics}`} aria-label="Gradebook summary"><article className="metric-card"><span className="metric-label">Active students</span><strong>{roster.length}</strong></article><article className="metric-card"><span className="metric-label">Class average</span><strong>{formatPercent(classAverage)}</strong></article><article className="metric-card"><span className="metric-label">Missing flags</span><strong>{missingCount}</strong></article><article className="metric-card"><span className="metric-label">Unentered scores</span><strong>{unenteredCount}</strong></article></section>
  <article className={`panel full-width ${styles.tablePanel}`}><div className="panel-header"><div><p className="eyebrow">{selectedPeriod?.code??"Gradebook"}</p><h3>{calculation?.mode==="composite"?"Composite period overview":selectedPeriod?.periodRole==="exam"?"Exam grade overview":"Category grade overview"}</h3></div><span className="subtle">{gradedRows.length} of {roster.length} students currently have a computed grade</span></div>
