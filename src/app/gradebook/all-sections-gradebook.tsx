@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { setActiveTeacherSection } from "@/app/teacher-section-actions";
+import { GradebookWorkspaceNav } from "@/components/gradebook-workspace-nav";
 import { SectionScopeNav } from "@/components/section-scope-nav";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
@@ -83,6 +84,7 @@ export async function AllSectionsGradebook({
       <TeacherSectionSwitcher sections={sections} activeSectionId={activeSection.sectionId} returnTo={allHref}/>
     </div></header>
     <TeacherPrimaryNav/>
+    <GradebookWorkspaceNav active="overview" period={selectedPeriod.code}/>
     <SectionScopeNav
       sectionLabel={activeSection.sectionName}
       sectionHref={sectionHref}
