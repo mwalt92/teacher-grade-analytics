@@ -68,6 +68,36 @@ export function StudentDashboardView({
   const previewSectionId = hiddenFields.find((field) => field.name === "sectionId")?.value;
   const previewAnchorSectionId = hiddenFields.find((field) => field.name === "anchorSectionId")?.value;
 
+  const dashboardParams = new URLSearchParams();
+  const gradesParams = new URLSearchParams();
+  const studyParams = new URLSearchParams();
+  if (previewStudentId) {
+    dashboardParams.set("studentId", previewStudentId);
+    gradesParams.set("studentId", previewStudentId);
+    studyParams.set("studentId", previewStudentId);
+  }
+  if (previewSectionId) {
+    dashboardParams.set("sectionId", previewSectionId);
+    gradesParams.set("sectionId", previewSectionId);
+    studyParams.set("sectionId", previewSectionId);
+  }
+  if (previewAnchorSectionId) {
+    dashboardParams.set("anchorSectionId", previewAnchorSectionId);
+    gradesParams.set("anchorSectionId", previewAnchorSectionId);
+  }
+  dashboardParams.set("period", data.periodCode);
+  gradesParams.set("period", data.periodCode);
+  if (preview) dashboardParams.set("view", "course");
+  const contextualDashboardHref = preview
+    ? `/student/preview?${dashboardParams.toString()}`
+    : previewSectionId ? `/student?sectionId=${encodeURIComponent(previewSectionId)}&period=${encodeURIComponent(data.periodCode)}` : "/student";
+  const contextualGradesHref = preview
+    ? `/student/preview/grades?${gradesParams.toString()}`
+    : previewSectionId ? `/student/grades?sectionId=${encodeURIComponent(previewSectionId)}&period=${encodeURIComponent(data.periodCode)}` : `/student/grades?period=${encodeURIComponent(data.periodCode)}`;
+  const contextualStudyHref = preview
+    ? `/student/preview/study-library?${studyParams.toString()}`
+    : previewSectionId ? `/student/study-library?sectionId=${encodeURIComponent(previewSectionId)}` : "/student/study-library";
+
   function assignmentHref(assignmentId: string) {
     if (!preview) return `/student/assignments/${assignmentId}`;
     const params = new URLSearchParams();
@@ -87,7 +117,7 @@ export function StudentDashboardView({
         {preview ? previewHeaderActions : studentHeaderActions}
       </div>
     </header>
-    {preview ? <TeacherPrimaryNav/> : <StudentPrimaryNav/>}
+    {preview ? <><TeacherPrimaryNav/><StudentPrimaryNav preview dashboardHref={contextualDashboardHref} gradesHref={contextualGradesHref} studyLibraryHref={contextualStudyHref}/></> : <StudentPrimaryNav dashboardHref={contextualDashboardHref} gradesHref={contextualGradesHref} studyLibraryHref={contextualStudyHref}/>}
 
     <section className={`content-wrap ${styles.content}`}>
       {preview ? <div className={styles.previewBanner}>
@@ -158,7 +188,7 @@ export function StudentDashboardView({
       <div id="grade-simulator" className={styles.simulatorAnchor}><GradeSimulator data={data.simulator}/></div>
 
       <article className={`panel full-width ${styles.assignmentsPanel}`}>
-        <div className="panel-header"><div><p className="eyebrow">Recent work</p><h3>{data.periodCode} assignments</h3></div><span className="subtle">Most recent 10</span></div>
+        <div className="panel-header"><div><p className="eyebrow">Recent work</p><h3>{data.periodCode} assignments</h3></div><Link className="secondary-link" href={contextualGradesHref}>View all grades</Link></div>
         <div className={styles.assignmentList}>
           <div className={`${styles.assignmentRow} ${styles.assignmentHead}`}><span>Assignment</span><span>Score</span><span>Status</span><span>Attempts</span></div>
           {recentAssignments.length ? recentAssignments.map((assignment) => <div className={styles.assignmentRow} key={assignment.assignmentId}>
