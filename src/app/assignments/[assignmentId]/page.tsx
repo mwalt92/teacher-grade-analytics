@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { BookOpen, CheckCircle2, Edit3 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
+import { AssignmentWorkspaceNav } from "@/components/assignment-workspace-nav";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getSectionRoster } from "@/lib/data/roster";
@@ -135,7 +136,6 @@ export default async function AssignmentGradePage({ params, searchParams }: {
   const previousHref = currentGroupIndex > 0 ? assignmentHref(assignmentGroups[currentGroupIndex - 1].representative.id, returnTo) : null;
   const nextHref = currentGroupIndex >= 0 && currentGroupIndex < assignmentGroups.length - 1 ? assignmentHref(assignmentGroups[currentGroupIndex + 1].representative.id, returnTo) : null;
 
-  const editHref = `/assignments/${assignmentId}/edit?returnTo=${encodeURIComponent(returnTo.startsWith("/assignments") ? returnTo : "/assignments")}`;
   const publishedCount = Number(query.published ?? 0);
   const totalVisibleStudents = gradeEntryViews.reduce((sum, view) => sum + view.students.length, 0);
   const currentGradeEntryHref = assignmentHref(assignmentId, returnTo, query.scope === "section" ? "section" : undefined);
@@ -143,6 +143,7 @@ export default async function AssignmentGradePage({ params, searchParams }: {
   return <main className="app-shell">
     <header className="topbar"><div><p className="eyebrow">Grade Entry</p><h1>{assignment.title}</h1><p className="subtle">{assignment.assignment_date} • {assignment.points_possible} points • {assignmentTypeLabel} → {categoryLabel}{assignment.allow_retakes ? " • Retakes allowed" : " • Single attempt"}</p><TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo="/assignments"/></div></header>
     <TeacherPrimaryNav/>
+    <AssignmentWorkspaceNav assignmentId={assignmentId} active="grade" returnTo={returnTo}/>
     <section className="content-wrap">
       <AssignmentNavigator items={navigatorItems} currentKey={currentGroupKey} previousHref={previousHref} nextHref={nextHref}/>
 
@@ -163,7 +164,7 @@ export default async function AssignmentGradePage({ params, searchParams }: {
       {publishedCount > 1 ? <div className="import-message success"><strong>Assignment published to {publishedCount} sections.</strong> Each section has its own grade records.</div> : null}
 
       <article className="panel">
-        <div className="panel-header"><div><p className="eyebrow">{showAllHours ? "Linked assignment roster" : "Active roster"}</p><h2>{showAllHours ? `${totalVisibleStudents} students across ${gradeEntryViews.length} hours` : `${gradeEntryViews[0]?.students.length ?? 0} students`}</h2><p className="subtle">Enter scores directly. Changes save automatically and are recorded in grade history. Bulk actions remain hour-specific in All Hours view.</p></div><div className="grade-audit-header-actions"><Link className="secondary-link" href={`/assignments/${assignmentId}/study`}><BookOpen size={16}/> Study Resources</Link><Link className="secondary-link" href={editHref}><Edit3 size={16}/> Edit Assignment</Link><span className="status success-pill"><CheckCircle2 size={14}/> Autosave on</span></div></div>
+        <div className="panel-header"><div><p className="eyebrow">{showAllHours ? "Linked assignment roster" : "Active roster"}</p><h2>{showAllHours ? `${totalVisibleStudents} students across ${gradeEntryViews.length} hours` : `${gradeEntryViews[0]?.students.length ?? 0} students`}</h2><p className="subtle">Enter scores directly. Changes save automatically and are recorded in grade history. Bulk actions remain hour-specific in All Hours view.</p></div><span className="status success-pill"><CheckCircle2 size={14}/> Autosave on</span></div>
 
         {showAllHours ? <div className={styles.linkedSectionStack}>
           {gradeEntryViews.map((view, index) => <section className={styles.linkedSectionBlock} id={`hour-${view.section.sectionId}`} key={view.assignmentId}>
