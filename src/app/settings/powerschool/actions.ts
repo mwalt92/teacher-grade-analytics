@@ -12,14 +12,6 @@ export type PowerSchoolProbeState = {
   testedAt: string | null;
 };
 
-export const initialPowerSchoolProbeState: PowerSchoolProbeState = {
-  status: "idle",
-  message: "Run a read-only connection test after the district plugin and server credentials are configured.",
-  teacherName: null,
-  sections: [],
-  testedAt: null,
-};
-
 async function appendConnectionEvent(
   teacherId: string,
   phase: "verified_after" | "warning" | "error",
