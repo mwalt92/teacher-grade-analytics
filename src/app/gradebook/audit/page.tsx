@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { GradebookWorkspaceNav } from "@/components/gradebook-workspace-nav";
+import { TeacherContextBar } from "@/components/teacher-context-bar";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
-import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getSectionRoster } from "@/lib/data/roster";
 import { getSectionGradingPeriods, getStudentPeriodCalculation, type StudentPeriodCalculation } from "@/lib/data/grade-calculation";
 import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
@@ -25,9 +25,10 @@ export default async function GradeAuditPage({searchParams}:GradeAuditPageProps)
  const fromPeriod=periods.find(period=>period.code===fromPeriodCode)??null;
  const calculation=selectedStudent&&selectedPeriod?await getStudentPeriodCalculation(section.sectionId,selectedStudent.studentId,selectedPeriod.code):null;
  const returnTo=selectedStudent&&selectedPeriod?`/gradebook/audit?studentId=${encodeURIComponent(selectedStudent.studentId)}&period=${encodeURIComponent(selectedPeriod.code)}`:"/gradebook/audit";
- return <main className="app-shell grade-audit-shell"><header className="topbar"><div><p className="eyebrow">Teacher Gradebook</p><h1>Grade calculation audit</h1><p className="subtle">{section.courseCode?`${section.courseName} ${section.courseCode}`:section.courseName} • {section.sectionName} • deterministic engine output</p><TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/></div></header>
+ return <main className="app-shell grade-audit-shell"><header className="topbar"><div><p className="eyebrow">Teacher Gradebook</p><h1>Grade calculation audit</h1><p className="subtle">{section.courseCode?`${section.courseName} ${section.courseCode}`:section.courseName} • {section.sectionName} • deterministic engine output</p></div></header>
  <TeacherPrimaryNav/>
  <GradebookWorkspaceNav active="audit" period={selectedPeriod?.code}/>
+ <TeacherContextBar sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/>
  <section className="content-wrap grade-audit-content"><article className="panel grade-audit-controls"><div className="panel-header"><div><p className="eyebrow">Audit controls</p><h3>Choose a student and grading period</h3></div>{selectedStudent&&calculation&&fromPeriod?<div className="grade-audit-header-actions"><Link className="secondary-link" href={`?studentId=${selectedStudent.studentId}&period=${fromPeriod.code}`}>Back to {fromPeriod.code} audit</Link></div>:null}</div><form method="get" className="grade-audit-form"><label><span>Student</span><select name="studentId" defaultValue={selectedStudent?.studentId} aria-label="Select student">{roster.map(student=><option key={student.studentId} value={student.studentId}>{student.displayName}{student.active?"":" (Inactive)"}</option>)}</select></label><label><span>Grading period</span><select name="period" defaultValue={selectedPeriod?.code} aria-label="Select grading period">{periods.map(period=><option key={period.id} value={period.code}>{period.code} — {period.name}</option>)}</select></label><button className="primary-button grade-audit-submit" type="submit">View Calculation</button></form></article>
  {selectedStudent&&calculation?calculation.mode==="composite"?<CompositeAudit studentName={selectedStudent.displayName} calculation={calculation}/>:<DirectAudit studentName={selectedStudent.displayName} calculation={calculation} fromPeriod={fromPeriod}/>:<article className="panel full-width"><p className="subtle">No calculation data is available for this selection.</p></article>}
  </section></main>;
