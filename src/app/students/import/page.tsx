@@ -58,7 +58,7 @@ export default async function StudentsImportPage() {
           <div>
             <p className="eyebrow">PowerSchool roster import</p>
             <h2>Upload once, review, then map sections</h2>
-            <p className="subtle">Upload a multi-course .xlsx export, preview every detected course, and explicitly choose the destination website section before any enrollment changes are committed.</p>
+            <p className="subtle">Upload a multi-course .xlsx export, preview every detected course, and explicitly choose the destination website section before any enrollment changes are committed. Destination choices can include any section you teach.</p>
           </div>
           <FileSpreadsheet size={26}/>
         </div>
@@ -70,7 +70,7 @@ export default async function StudentsImportPage() {
           <div>
             <p className="eyebrow">School account linking</p>
             <h2>Reconcile student emails by class period</h2>
-            <p className="subtle">PowerSchool roster exports and school-email lists arrive separately. Review each class period below; nothing is linked until its mapping is complete and confirmed.</p>
+            <p className="subtle">Email reconciliation below follows the course in your working context. Switch courses above when you need to prepare student accounts for another course.</p>
           </div>
           <MailCheck size={26}/>
         </div>
