@@ -11,7 +11,9 @@ type ConnectionProbeProps = {
 };
 
 export function PowerSchoolConnectionProbe({ configured, host }: ConnectionProbeProps) {
-  const [state, action, pending] = useActionState(testPowerSchoolConnection, initialPowerSchoolProbeState);
+  const [actionState, action, pending] = useActionState(testPowerSchoolConnection, initialPowerSchoolProbeState);
+  const state = actionState ?? initialPowerSchoolProbeState;
+  const sections = Array.isArray(state.sections) ? state.sections : [];
   const tone = state.status === "success" ? styles.probeSuccess : state.status === "error" ? styles.probeDanger : state.status === "warning" ? styles.probeWarning : styles.probeNeutral;
 
   return <article className={`panel ${styles.connectionPanel}`}>
@@ -28,7 +30,7 @@ export function PowerSchoolConnectionProbe({ configured, host }: ConnectionProbe
       {state.status === "success" ? <CheckCircle2 size={19}/> : state.status === "error" || state.status === "warning" ? <TriangleAlert size={19}/> : <PlugZap size={19}/>}
       <div>
         <strong>{state.status === "idle" ? "No live test run yet" : state.status === "success" ? "Connection verified" : state.status === "warning" ? "Connection needs attention" : "Connection failed safely"}</strong>
-        <p>{state.message}</p>
+        <p>{state.message ?? initialPowerSchoolProbeState.message}</p>
         {host ? <p className={styles.hostLine}>Configured host: {host}</p> : null}
         {state.testedAt ? <p className={styles.hostLine}>Tested {new Date(state.testedAt).toLocaleString()}</p> : null}
       </div>
@@ -40,13 +42,13 @@ export function PowerSchoolConnectionProbe({ configured, host }: ConnectionProbe
       </button>
     </form>
 
-    {state.sections.length ? <div className={styles.discoveryBlock}>
+    {sections.length ? <div className={styles.discoveryBlock}>
       <div className={styles.discoveryHeading}>
         <div><p className="eyebrow">Teacher match</p><h4>{state.teacherName ?? "PowerSchool teacher"}</h4></div>
-        <span>{state.sections.length} section{state.sections.length === 1 ? "" : "s"}</span>
+        <span>{sections.length} section{sections.length === 1 ? "" : "s"}</span>
       </div>
       <div className={styles.sectionList}>
-        {state.sections.map((section) => <div className={styles.sectionRow} key={section.sectionId}>
+        {sections.map((section) => <div className={styles.sectionRow} key={section.sectionId}>
           <div>
             <strong>{section.courseName ?? section.courseNumber ?? `Section ${section.sectionId}`}</strong>
             <p>{[section.courseNumber, section.expression, section.room ? `Room ${section.room}` : null].filter(Boolean).join(" • ") || `PowerSchool section ${section.sectionId}`}</p>
