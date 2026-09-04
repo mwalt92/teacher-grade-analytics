@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, BookOpenCheck, ClipboardPlus, RotateCcw, ShieldCheck, Users } from "lucide-react";
-import { SectionScopeNav } from "@/components/section-scope-nav";
+import { TeacherContextBar } from "@/components/teacher-context-bar";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
-import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import type { TeacherDashboardData } from "@/lib/data/dashboard";
 
 type TeacherSectionOption = {
@@ -51,18 +50,22 @@ export function DashboardShell({ courseName, schoolYear, sectionName, sections, 
         <p className="eyebrow">Teacher Grade Analytics</p>
         <h1>{courseName}</h1>
         <p className="subtle">{schoolYear} • {sectionName}{selectedPeriod ? ` • ${selectedPeriod.code}` : ""}</p>
-        <TeacherSectionSwitcher sections={sections} activeSectionId={activeSectionId} returnTo={sectionHref}/>
       </div>
     </header>
     <TeacherPrimaryNav/>
-    {canShowAllSections ? <SectionScopeNav
-      sectionLabel={sectionName}
-      sectionHref={sectionHref}
-      allLabel="All Sections"
-      allHref={allHref}
-      activeScope="section"
-      ariaLabel="Dashboard section scope"
-    /> : null}
+    <TeacherContextBar
+      sections={sections}
+      activeSectionId={activeSectionId}
+      returnTo={sectionHref}
+      scope={canShowAllSections ? {
+        active: "section",
+        sectionLabel: sectionName,
+        sectionHref,
+        allLabel: "All Sections",
+        allHref,
+        ariaLabel: "Dashboard section scope",
+      } : undefined}
+    />
     <section className="content-wrap">
       <div className="section-heading">
         <div><p className="eyebrow">Dashboard</p><h2>What needs your attention?</h2><p className="subtle">● Live canonical course data</p></div>
