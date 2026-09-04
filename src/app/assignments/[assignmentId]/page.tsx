@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, BookOpen, CheckCircle2, Edit3 } from "lucide-react";
+import { BookOpen, CheckCircle2, Edit3 } from "lucide-react";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getSectionRoster } from "@/lib/data/roster";
@@ -135,7 +135,6 @@ export default async function AssignmentGradePage({ params, searchParams }: {
   const previousHref = currentGroupIndex > 0 ? assignmentHref(assignmentGroups[currentGroupIndex - 1].representative.id, returnTo) : null;
   const nextHref = currentGroupIndex >= 0 && currentGroupIndex < assignmentGroups.length - 1 ? assignmentHref(assignmentGroups[currentGroupIndex + 1].representative.id, returnTo) : null;
 
-  const backLabel = returnTo.startsWith("/assignments") ? "Back to Assignments" : "Back to Assignment Gradebook";
   const editHref = `/assignments/${assignmentId}/edit?returnTo=${encodeURIComponent(returnTo.startsWith("/assignments") ? returnTo : "/assignments")}`;
   const publishedCount = Number(query.published ?? 0);
   const totalVisibleStudents = gradeEntryViews.reduce((sum, view) => sum + view.students.length, 0);
@@ -163,7 +162,7 @@ export default async function AssignmentGradePage({ params, searchParams }: {
       {publishedCount > 1 ? <div className="import-message success"><strong>Assignment published to {publishedCount} sections.</strong> Each section has its own grade records.</div> : null}
 
       <article className="panel">
-        <div className="panel-header"><div><p className="eyebrow">{showAllHours ? "Linked assignment roster" : "Active roster"}</p><h2>{showAllHours ? `${totalVisibleStudents} students across ${gradeEntryViews.length} hours` : `${gradeEntryViews[0]?.students.length ?? 0} students`}</h2><p className="subtle">Enter scores directly. Changes save automatically and are recorded in grade history. Bulk actions remain hour-specific in All Hours view.</p></div><div className="grade-audit-header-actions"><Link className="secondary-link" href={returnTo}><ArrowLeft size={17}/> {backLabel}</Link><Link className="secondary-link" href={`/assignments/${assignmentId}/study`}><BookOpen size={16}/> Study Resources</Link><Link className="secondary-link" href={editHref}><Edit3 size={16}/> Edit Assignment</Link><Link className="secondary-link" href="/assignments/new">New assignment</Link><span className="status success-pill"><CheckCircle2 size={14}/> Autosave on</span></div></div>
+        <div className="panel-header"><div><p className="eyebrow">{showAllHours ? "Linked assignment roster" : "Active roster"}</p><h2>{showAllHours ? `${totalVisibleStudents} students across ${gradeEntryViews.length} hours` : `${gradeEntryViews[0]?.students.length ?? 0} students`}</h2><p className="subtle">Enter scores directly. Changes save automatically and are recorded in grade history. Bulk actions remain hour-specific in All Hours view.</p></div><div className="grade-audit-header-actions"><Link className="secondary-link" href={`/assignments/${assignmentId}/study`}><BookOpen size={16}/> Study Resources</Link><Link className="secondary-link" href={editHref}><Edit3 size={16}/> Edit Assignment</Link><span className="status success-pill"><CheckCircle2 size={14}/> Autosave on</span></div></div>
 
         {showAllHours ? <div className={styles.linkedSectionStack}>
           {gradeEntryViews.map((view, index) => <section className={styles.linkedSectionBlock} id={`hour-${view.section.sectionId}`} key={view.assignmentId}>
