@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { GradebookWorkspaceNav } from "@/components/gradebook-workspace-nav";
+import { TeacherContextBar } from "@/components/teacher-context-bar";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
-import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getAssignmentMatrix } from "@/lib/data/assignment-matrix";
 import { getSectionGradingPeriods } from "@/lib/data/grade-calculation";
 import { getSectionRoster } from "@/lib/data/roster";
@@ -42,10 +42,11 @@ export default async function AssignmentMatrixPage({ searchParams }: PageProps) 
 
   return <main className="app-shell">
     <header className="topbar">
-      <div><p className="eyebrow">Teacher Gradebook</p><h1>Score Matrix</h1><p className="subtle">{section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName} • {section.sectionName} • students × assignments</p><TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/></div>
+      <div><p className="eyebrow">Teacher Gradebook</p><h1>Score Matrix</h1><p className="subtle">{section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName} • {section.sectionName} • students × assignments</p></div>
     </header>
     <TeacherPrimaryNav/>
     <GradebookWorkspaceNav active="matrix" period={selectedPeriod?.code}/>
+    <TeacherContextBar sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/>
 
     <section className={`content-wrap ${styles.content}`}>
       <article className={`panel ${styles.controls}`}>
