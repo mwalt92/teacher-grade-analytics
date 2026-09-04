@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, BookOpenCheck, ClipboardPlus, Layers3, ShieldCheck, Users } from "lucide-react";
 import { setActiveTeacherSection } from "@/app/teacher-section-actions";
-import { SectionScopeNav } from "@/components/section-scope-nav";
+import { TeacherContextBar } from "@/components/teacher-context-bar";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
-import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import type { TeacherOfferingDashboardData } from "@/lib/data/dashboard";
 import type { TeacherSectionSummary } from "@/lib/data/teacher-context";
 import styles from "./all-sections-dashboard.module.css";
@@ -54,18 +53,21 @@ export function AllSectionsDashboard({
         <p className="eyebrow">Teacher Grade Analytics</p>
         <h1>{courseName}</h1>
         <p className="subtle">{schoolYear} • All Sections{selectedPeriod ? ` • ${selectedPeriod.code}` : ""}</p>
-        <TeacherSectionSwitcher sections={sections} activeSectionId={activeSectionId} returnTo={allHref}/>
       </div>
     </header>
     <TeacherPrimaryNav/>
-
-    <SectionScopeNav
-      sectionLabel={currentSectionLabel}
-      sectionHref={sectionHref}
-      allLabel={`All Sections (${dashboard.sectionCount})`}
-      allHref={allHref}
-      activeScope="all"
-      ariaLabel="Dashboard section scope"
+    <TeacherContextBar
+      sections={sections}
+      activeSectionId={activeSectionId}
+      returnTo={allHref}
+      scope={{
+        active: "all",
+        sectionLabel: currentSectionLabel,
+        sectionHref,
+        allLabel: `All Sections (${dashboard.sectionCount})`,
+        allHref,
+        ariaLabel: "Dashboard section scope",
+      }}
     />
 
     <section className="content-wrap">
