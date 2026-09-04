@@ -4,8 +4,8 @@
 .editorIntro strong { font-size: .9rem; }
 .editorIntro span { color: var(--muted); font-size: .76rem; }
 .tableScroll { overflow-x: auto; }
-.table { display: grid; min-width: 1220px; }
-.row { position: relative; display: grid; grid-template-columns: minmax(230px, 1.45fr) 145px 115px 120px minmax(300px, 1.25fr) minmax(210px, 1.2fr); gap: 12px; align-items: center; padding: 12px 8px; border-top: 1px solid var(--line); font-size: .83rem; }
+.table { display: grid; min-width: 1260px; }
+.row { position: relative; display: grid; grid-template-columns: minmax(230px, 1.45fr) 145px 115px 120px minmax(300px, 1.2fr) minmax(280px, 1.35fr); gap: 12px; align-items: center; padding: 12px 8px; border-top: 1px solid var(--line); font-size: .83rem; }
 .head { border-top: 0; color: var(--muted); font-size: .72rem; font-weight: 800; }
 .missingRow { background: var(--warning-soft); border-radius: 10px; }
 .exemptRow { background: var(--brand-soft); border-radius: 10px; }
@@ -43,7 +43,17 @@
 .retakeEditor > button { min-height: 34px; border: 1px solid var(--brand); border-radius: 8px; background: var(--brand); color: #fff; padding: 0 8px; font-weight: 750; font-size: .72rem; cursor: pointer; }
 .retakeEditor > button:disabled { opacity: .55; cursor: wait; }
 .retakeEditor > .cancelRetake { width: 34px; padding: 0; border-color: var(--line); background: #fff; color: var(--muted); }
-.attempts { color: var(--muted); font-size: .74rem; line-height: 1.45; }
+.editLabel { font-size: .72rem; white-space: nowrap; }
+.attemptArea { display: grid; gap: 7px; min-width: 0; }
+.attemptList { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.attemptChip { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 4px 7px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--muted); font-size: .7rem; white-space: nowrap; }
+.attemptChip > strong { color: var(--text); }
+.attemptChip > em { font-style: normal; font-weight: 800; color: var(--success); }
+.countedAttempt { border-color: #b8dfc9; background: var(--success-soft); }
+.attemptEditButton { min-height: 22px; display: inline-flex; align-items: center; gap: 3px; border: 0; border-left: 1px solid currentColor; background: transparent; color: var(--brand); padding: 0 2px 0 6px; font-size: .68rem; font-weight: 800; cursor: pointer; }
+.attemptEditButton:hover { text-decoration: underline; text-underline-offset: 2px; }
+.attemptEditButton:disabled { opacity: .35; cursor: not-allowed; text-decoration: none; }
+.noAttempts { color: var(--muted); font-size: .72rem; }
 .error { grid-column: 2 / -1; display: inline-flex; align-items: center; gap: 5px; color: var(--danger); font-size: .74rem; margin-top: -5px; }
 
 @media (max-width: 720px) {
