@@ -138,6 +138,7 @@ export default async function AssignmentGradePage({ params, searchParams }: {
   const editHref = `/assignments/${assignmentId}/edit?returnTo=${encodeURIComponent(returnTo.startsWith("/assignments") ? returnTo : "/assignments")}`;
   const publishedCount = Number(query.published ?? 0);
   const totalVisibleStudents = gradeEntryViews.reduce((sum, view) => sum + view.students.length, 0);
+  const currentGradeEntryHref = assignmentHref(assignmentId, returnTo, query.scope === "section" ? "section" : undefined);
 
   return <main className="app-shell">
     <header className="topbar"><div><p className="eyebrow">Grade Entry</p><h1>{assignment.title}</h1><p className="subtle">{assignment.assignment_date} • {assignment.points_possible} points • {assignmentTypeLabel} → {categoryLabel}{assignment.allow_retakes ? " • Retakes allowed" : " • Single attempt"}</p><TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo="/assignments"/></div></header>
@@ -170,9 +171,9 @@ export default async function AssignmentGradePage({ params, searchParams }: {
               <div><span>Hour {index + 1} of {gradeEntryViews.length}</span><strong>{sectionDisplay(view.section)}</strong><small>{view.students.length} active {view.students.length === 1 ? "student" : "students"}</small></div>
               <Link className="secondary-link" href={assignmentHref(view.assignmentId, returnTo, "section")}>View only this hour</Link>
             </div>
-            <GradeEntryGrid assignmentId={view.assignmentId} pointsPossible={Number(assignment.points_possible)} allowRetakes={assignment.allow_retakes} students={view.students}/>
+            <GradeEntryGrid assignmentId={view.assignmentId} pointsPossible={Number(assignment.points_possible)} allowRetakes={assignment.allow_retakes} students={view.students} sectionId={view.section.sectionId} profileReturnTo={currentGradeEntryHref}/>
           </section>)}
-        </div> : gradeEntryViews[0] ? <GradeEntryGrid assignmentId={gradeEntryViews[0].assignmentId} pointsPossible={Number(assignment.points_possible)} allowRetakes={assignment.allow_retakes} students={gradeEntryViews[0].students}/> : null}
+        </div> : gradeEntryViews[0] ? <GradeEntryGrid assignmentId={gradeEntryViews[0].assignmentId} pointsPossible={Number(assignment.points_possible)} allowRetakes={assignment.allow_retakes} students={gradeEntryViews[0].students} sectionId={gradeEntryViews[0].section.sectionId} profileReturnTo={currentGradeEntryHref}/> : null}
       </article>
     </section>
   </main>;
