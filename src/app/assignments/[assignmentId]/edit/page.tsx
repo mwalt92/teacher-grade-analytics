@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Archive, ArrowLeft, BookOpen, Link2, RotateCcw } from "lucide-react";
+import { Archive, Link2, RotateCcw } from "lucide-react";
+import { AssignmentWorkspaceNav } from "@/components/assignment-workspace-nav";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getAssignmentManagementData } from "@/lib/data/assignment-management";
@@ -58,8 +58,6 @@ export default async function EditAssignmentPage({ params, searchParams }: EditA
   const activity = management.assignments.find((item) => item.id === assignmentId);
   if (!activity) notFound();
 
-  const gradeHref = `/assignments/${assignmentId}?returnTo=${encodeURIComponent(returnTo)}`;
-  const studyHref = `/assignments/${assignmentId}/study`;
   const clearedCount = query.cleared == null ? null : Number(query.cleared);
   const savedCount = query.count == null ? null : Number(query.count);
   const currentType = management.assignmentTypes.find((type) => type.id === assignment.assignment_type_id);
@@ -79,11 +77,11 @@ export default async function EditAssignmentPage({ params, searchParams }: EditA
       </div>
     </header>
     <TeacherPrimaryNav/>
+    <AssignmentWorkspaceNav assignmentId={assignmentId} active="edit" returnTo={returnTo} archived={assignment.archived}/>
 
     <section className={`content-wrap ${styles.content}`}>
       <div className="section-heading">
         <div><p className="eyebrow">Assignment setup</p><h2>Edit grading behavior and metadata</h2></div>
-        <div className="grade-audit-header-actions"><Link className="secondary-link" href={returnTo}><ArrowLeft size={17}/> Back to Assignments</Link>{!assignment.archived ? <Link className="secondary-link" href={gradeHref}>Open Grade Entry</Link> : null}<Link className="secondary-link" href={studyHref}><BookOpen size={16}/> Study Resources</Link></div>
       </div>
       {query.saved ? <div className={styles.notice}>{query.saved === "linked" ? `Assignment changes saved across ${savedCount ?? linkedCount} linked sections.` : `Assignment changes saved for ${section.sectionName}.`} Grade calculations now use the updated setup.</div> : null}
       {clearedCount != null && Number.isFinite(clearedCount) ? <div className={styles.notice}>Cleared {clearedCount} student grade record{clearedCount === 1 ? "" : "s"} from {section.sectionName}. This assignment is now empty in this section and ready for permanent deletion if that is what you intended.</div> : null}
