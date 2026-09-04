@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowRight, BookOpenCheck, CircleAlert, Layers3 } from "lucide-react";
+import { StudentPrimaryNav } from "@/components/student-primary-nav";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import type { StudentDashboardData } from "@/lib/data/student-dashboard";
 import styles from "./student-courses-view.module.css";
@@ -64,7 +65,7 @@ export function StudentCoursesView({
         {preview ? previewHeaderActions : null}
       </div>
     </header>
-    {preview ? <TeacherPrimaryNav/> : null}
+    {preview ? <TeacherPrimaryNav/> : <StudentPrimaryNav/>}
 
     <section className={`content-wrap ${styles.content}`}>
       {preview ? <div className={styles.previewBanner}>

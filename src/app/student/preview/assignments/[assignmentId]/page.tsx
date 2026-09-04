@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
-import { StudentPrimaryNav } from "@/components/student-primary-nav";
+import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
+import { getSectionRoster } from "@/lib/data/roster";
+import { getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
-import styles from "./student-assignment.module.css";
+import styles from "../../../assignments/[assignmentId]/student-assignment.module.css";
 
 const resourceTypeLabels: Record<string, string> = {
   skill_practice: "Skill practice",
@@ -16,26 +18,27 @@ const resourceTypeLabels: Record<string, string> = {
   other: "Other",
 };
 
+type PreviewAssignmentProps = {
+  params: Promise<{ assignmentId: string }>;
+  searchParams: Promise<{ studentId?: string; anchorSectionId?: string }>;
+};
+
 function formatPercent(points: number | null, possible: number) {
   if (points === null || !possible) return "—";
   return `${((points / possible) * 100).toFixed(1)}%`;
 }
 
-export default async function StudentAssignmentPage({ params }: { params: Promise<{ assignmentId: string }> }) {
-  const { assignmentId } = await params;
+export default async function PreviewStudentAssignmentPage({ params, searchParams }: PreviewAssignmentProps) {
+  const [{ assignmentId }, query] = await Promise.all([params, searchParams]);
   const supabase = await createClient();
   const { data: claims, error: claimsError } = await supabase.auth.getClaims();
   const profileId = claims?.claims?.sub;
   if (claimsError || typeof profileId !== "string") redirect("/login");
 
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", profileId).maybeSingle();
-  if (!profile) redirect("/");
-  if (profile.role === "teacher" || profile.role === "admin") redirect("/student/preview");
+  if (!profile || (profile.role !== "teacher" && profile.role !== "admin")) redirect("/student");
 
-  const { data: studentAccount } = await supabase.from("student_accounts").select("student_id").eq("profile_id", profileId).maybeSingle();
-  if (!studentAccount?.student_id) redirect("/student");
-  const studentId = studentAccount.student_id;
-
+  const sections = await getTeacherSections();
   const { data: assignment } = await supabase
     .from("assignments")
     .select("id,section_id,title,assignment_date,points_possible,allow_retakes,study_guide_id,archived")
@@ -44,34 +47,36 @@ export default async function StudentAssignmentPage({ params }: { params: Promis
     .maybeSingle();
   if (!assignment) notFound();
 
-  const { data: enrollment } = await supabase.from("enrollments").select("id").eq("student_id", studentId).eq("section_id", assignment.section_id).eq("active", true).maybeSingle();
-  if (!enrollment) notFound();
+  const teacherSection = sections.find((section) => section.sectionId === assignment.section_id);
+  if (!teacherSection) notFound();
+  const roster = await getSectionRoster(assignment.section_id, "active");
+  const student = roster.find((item) => item.studentId === query.studentId) ?? roster[0];
+  if (!student) notFound();
 
-  const [{ data: section }, { data: gradeRecord }] = await Promise.all([
-    supabase.from("sections").select("id,name,course_id").eq("id", assignment.section_id).maybeSingle(),
-    supabase.from("grade_records").select("id,missing,exempt").eq("assignment_id", assignmentId).eq("student_id", studentId).maybeSingle(),
+  const [{ data: gradeRecord }, { data: course }] = await Promise.all([
+    supabase.from("grade_records").select("id,missing,exempt").eq("assignment_id", assignmentId).eq("student_id", student.studentId).maybeSingle(),
+    supabase.from("courses").select("name,code").eq("id", teacherSection.courseId).maybeSingle(),
   ]);
-  if (!section) notFound();
-
-  const { data: course } = await supabase.from("courses").select("name,code").eq("id", section.course_id).maybeSingle();
   const { data: attemptsData } = gradeRecord?.id
     ? await supabase.from("grade_attempts").select("attempt_number,points_earned,occurred_on").eq("grade_record_id", gradeRecord.id).order("attempt_number", { ascending: true })
     : { data: [] as { attempt_number: number; points_earned: number | string; occurred_on: string }[] };
   const attempts = attemptsData ?? [];
+  const hasAttempt = attempts.length > 0;
   const possible = Number(assignment.points_possible);
   const bestPoints = attempts.length ? Math.max(...attempts.map((attempt) => Number(attempt.points_earned))) : null;
   const bestPercent = gradeRecord?.missing ? 0 : bestPoints === null ? null : (bestPoints / possible) * 100;
 
   let guide: { id: string; title: string; description: string | null; student_visible: boolean } | null = null;
   let skills: { id: string; code: string | null; title: string; description: string | null }[] = [];
-  let resourceItems: { id: string; skill_id: string | null; featured: boolean; teacher_note: string | null; resource_id: string; sort_order: number }[] = [];
+  let allResourceItems: { id: string; skill_id: string | null; featured: boolean; teacher_note: string | null; resource_id: string; sort_order: number; availability_rule: string }[] = [];
+
   if (assignment.study_guide_id) {
     const { data: guideData } = await supabase.from("study_guides").select("id,title,description,student_visible").eq("id", assignment.study_guide_id).maybeSingle();
     guide = guideData ?? null;
     if (guide) {
       const [{ data: guideSkillRows }, { data: guideResourceRows }] = await Promise.all([
         supabase.from("study_guide_skills").select("skill_id,sort_order").eq("guide_id", guide.id).order("sort_order"),
-        supabase.from("study_guide_resources").select("id,skill_id,featured,teacher_note,resource_id,sort_order").eq("guide_id", guide.id).order("sort_order"),
+        supabase.from("study_guide_resources").select("id,skill_id,featured,teacher_note,resource_id,sort_order,availability_rule").eq("guide_id", guide.id).order("sort_order"),
       ]);
       const skillIds = (guideSkillRows ?? []).map((row) => row.skill_id);
       if (skillIds.length) {
@@ -82,9 +87,18 @@ export default async function StudentAssignmentPage({ params }: { params: Promis
           return skill ? [skill] : [];
         });
       }
-      resourceItems = guideResourceRows ?? [];
+      allResourceItems = guideResourceRows ?? [];
     }
   }
+
+  const resourceItems = allResourceItems.filter((item) => {
+    if (item.availability_rule === "teacher_only") return false;
+    if (item.availability_rule === "always") return true;
+    if (item.availability_rule === "after_first_attempt") return hasAttempt;
+    if (item.availability_rule === "retake_preparation") return assignment.allow_retakes && hasAttempt;
+    return false;
+  });
+  const lockedCount = allResourceItems.length - resourceItems.length;
 
   const resourceIds = resourceItems.map((item) => item.resource_id);
   const { data: resourcesData } = resourceIds.length
@@ -110,14 +124,23 @@ export default async function StudentAssignmentPage({ params }: { params: Promis
     resourcesBySkill.set(item.skill_id, list);
   }
 
-  const courseName = course?.code && !course.name.toLowerCase().includes(course.code.toLowerCase()) ? `${course.name} ${course.code}` : course?.name ?? "Course";
-  const backHref = `/student?sectionId=${encodeURIComponent(assignment.section_id)}`;
+  const courseName = course?.code && !course.name.toLowerCase().includes(course.code.toLowerCase()) ? `${course.name} ${course.code}` : course?.name ?? teacherSection.courseName;
+  const backParams = new URLSearchParams({ studentId: student.studentId, sectionId: assignment.section_id, view: "course" });
+  if (query.anchorSectionId) backParams.set("anchorSectionId", query.anchorSectionId);
+  const backHref = `/student/preview?${backParams.toString()}`;
 
   return <main className="app-shell">
-    <header className="topbar"><div><p className="eyebrow">Assessment Review</p><h1>{assignment.title}</h1><p className="subtle">{courseName} • {section.name} • {assignment.assignment_date}</p></div></header>
-    <StudentPrimaryNav/>
+    <header className="topbar"><div><p className="eyebrow">Student Assessment Preview</p><h1>{assignment.title}</h1><p className="subtle">{student.displayName} • {courseName} • {teacherSection.sectionName}</p></div></header>
+    <TeacherPrimaryNav/>
     <section className={`content-wrap ${styles.content}`}>
-      <div className={styles.backRow}><Link className="secondary-link" href={backHref}><ArrowLeft size={17}/> Back to Progress</Link><Link className="secondary-link" href={`/student/study-library?sectionId=${encodeURIComponent(assignment.section_id)}`}>Study Library</Link></div>
+      <div className={styles.backRow}><Link className="secondary-link" href={backHref}><ArrowLeft size={17}/> Back to Student Preview</Link></div>
+
+      <div style={{ padding: "14px 16px", border: "1px solid var(--border)", borderRadius: 14, background: "var(--panel)", marginBottom: 16 }}>
+        <strong>Teacher preview</strong>
+        <p className="subtle" style={{ margin: "4px 0 0" }}>
+          This simulates what {student.displayName} can access. Teacher-only and attempt-locked resources are excluded. {guide && !guide.student_visible ? "This guide is still a draft, so students cannot open it yet; the preview below shows how it will look once published." : "This guide is currently published to students."}{lockedCount ? ` ${lockedCount} resource${lockedCount === 1 ? " is" : "s are"} currently hidden from this student by release rules.` : ""}
+        </p>
+      </div>
 
       <section className={styles.hero}>
         <article className={`panel ${styles.scoreCard}`}>
@@ -141,11 +164,11 @@ export default async function StudentAssignmentPage({ params }: { params: Promis
             const items = resourcesBySkill.get(skill.id) ?? [];
             return <section className={styles.skillSection} key={skill.id}>
               <div className={styles.skillHeading}><h3>{skill.code ? `${skill.code} — ` : ""}{skill.title}</h3>{skill.description ? <p>{skill.description}</p> : null}</div>
-              {items.length ? <div className={styles.resourceGrid}>{items.map((item) => <ResourceCard key={item.id} item={item}/>)}</div> : <div className={styles.empty}>No released resources are available for this skill yet.</div>}
+              {items.length ? <div className={styles.resourceGrid}>{items.map((item) => <ResourceCard key={item.id} item={item}/>)}</div> : <div className={styles.empty}>No resources are currently released for this skill.</div>}
             </section>;
           })}
-          {!skills.length && !generalResources.length ? <div className={styles.empty}>Your teacher has created this study guide, but no resources are available to you yet.</div> : null}
-        </> : <div className={styles.empty}>No study guide has been published for this assessment yet.</div>}
+          {!skills.length && !generalResources.length ? <div className={styles.empty}>No study resources would currently be visible to this student.</div> : null}
+        </> : <div className={styles.empty}>No study guide has been created for this assessment yet.</div>}
       </article>
     </section>
   </main>;
