@@ -196,7 +196,7 @@ export default async function StudentProfilePage({ params, searchParams }: PageP
 
         <article className={`panel full-width ${styles.tablePanel}`}>
           <div className="panel-header"><div><p className="eyebrow">Assignment grades</p><h3>Grade {student.displayName} in {selectedPeriod.code}</h3><p className="subtle">Edit this student's original assignment scores directly here. Missing and Exempt use the same rules as normal grade entry; existing retake attempts remain visible for context.</p></div><Link className="secondary-link" href={auditHref}>Open calculation details</Link></div>
-          {editableRows.length ? <StudentAssignmentEditor studentId={student.studentId} rows={editableRows} profileHref={currentProfileHref}/> : <div className={styles.empty}>No assignments are configured in this grading period yet.</div>}
+          {editableRows.length ? <StudentAssignmentEditor key={`${student.studentId}:${selectedPeriod.code}`} studentId={student.studentId} rows={editableRows} profileHref={currentProfileHref}/> : <div className={styles.empty}>No assignments are configured in this grading period yet.</div>}
         </article>
       </> : <article className="panel"><h2>No grading periods are configured yet.</h2><p className="subtle">Once grading periods exist, this profile will show the student's complete grade picture here.</p></article>}
     </section>
