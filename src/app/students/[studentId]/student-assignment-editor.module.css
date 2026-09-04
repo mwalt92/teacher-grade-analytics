@@ -4,6 +4,7 @@
 .editorIntro strong { font-size: .9rem; }
 .editorIntro span { color: var(--muted); font-size: .76rem; }
 .tableScroll { overflow-x: auto; }
+/* Keep this deliberately dense: this profile table is the reference pattern for a future compact full-assignment grading layout. */
 .table { display: grid; min-width: 1260px; }
 .row { position: relative; display: grid; grid-template-columns: minmax(230px, 1.45fr) 145px 115px 120px minmax(300px, 1.2fr) minmax(280px, 1.35fr); gap: 12px; align-items: center; padding: 12px 8px; border-top: 1px solid var(--line); font-size: .83rem; }
 .head { border-top: 0; color: var(--muted); font-size: .72rem; font-weight: 800; }
