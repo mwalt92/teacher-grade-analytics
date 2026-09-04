@@ -51,6 +51,7 @@ export default async function PreviewGradesPage({ searchParams }: PreviewGradesP
     actionPath="/student/preview/grades"
     hiddenFields={[
       { name: "studentId", value: student.studentId },
+      { name: "sectionId", value: section.sectionId },
       { name: "anchorSectionId", value: anchorSectionId },
     ]}
     selectedSectionId={section.sectionId}
