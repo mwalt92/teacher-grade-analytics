@@ -94,8 +94,9 @@ export function DashboardShell({ courseName, schoolYear, sectionName, sections, 
               const reason = student.missingCount > 0
                 ? `${student.missingCount} missing${mismatch ? " • PowerSchool mismatch" : ""}`
                 : "PowerSchool mismatch";
-              const auditHref = selectedPeriod ? `/gradebook/audit?studentId=${student.studentId}&period=${encodeURIComponent(selectedPeriod.code)}` : "/gradebook/audit";
-              return <Link className="student-row" key={student.studentId} href={auditHref}>
+              const profileParams = new URLSearchParams({ sectionId: activeSectionId, returnTo: sectionHref });
+              if (selectedPeriod) profileParams.set("period", selectedPeriod.code);
+              return <Link className="student-row" key={student.studentId} href={`/students/${student.studentId}?${profileParams.toString()}`}>
                 <div><strong>{student.displayName}</strong><span>{reason}</span></div><strong>{formatPercent(student.currentGrade)}</strong>
               </Link>;
             }) : <div className="empty-state"><ShieldCheck size={28}/><h3>Nothing needs review right now</h3><p className="subtle">No Missing flags or captured PowerSchool mismatches for this period.</p></div>}
