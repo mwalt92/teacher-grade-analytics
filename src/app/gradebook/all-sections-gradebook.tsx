@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { setActiveTeacherSection } from "@/app/teacher-section-actions";
 import { GradebookWorkspaceNav } from "@/components/gradebook-workspace-nav";
-import { SectionScopeNav } from "@/components/section-scope-nav";
+import { TeacherContextBar } from "@/components/teacher-context-bar";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
-import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getSectionGradebook, type GradingPeriodSummary } from "@/lib/data/grade-calculation";
 import { getSectionRoster } from "@/lib/data/roster";
 import type { TeacherSectionSummary } from "@/lib/data/teacher-context";
@@ -81,17 +80,21 @@ export async function AllSectionsGradebook({
       <p className="eyebrow">Teacher Gradebook</p>
       <h1>{courseName}</h1>
       <p className="subtle">All Sections • live grades from the canonical grading engine</p>
-      <TeacherSectionSwitcher sections={sections} activeSectionId={activeSection.sectionId} returnTo={allHref}/>
     </div></header>
     <TeacherPrimaryNav/>
     <GradebookWorkspaceNav active="overview" period={selectedPeriod.code}/>
-    <SectionScopeNav
-      sectionLabel={activeSection.sectionName}
-      sectionHref={sectionHref}
-      allLabel={`All Sections (${offeringSections.length})`}
-      allHref={allHref}
-      activeScope="all"
-      ariaLabel="Gradebook section scope"
+    <TeacherContextBar
+      sections={sections}
+      activeSectionId={activeSection.sectionId}
+      returnTo={allHref}
+      scope={{
+        active:"all",
+        sectionLabel:activeSection.sectionName,
+        sectionHref,
+        allLabel:`All Sections (${offeringSections.length})`,
+        allHref,
+        ariaLabel:"Gradebook section scope",
+      }}
     />
     <section className={`content-wrap ${styles.content}`}>
       <article className={`panel ${styles.controls}`}>
