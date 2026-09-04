@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { CheckCircle2, Loader2, PlugZap, TriangleAlert } from "lucide-react";
-import { initialPowerSchoolProbeState, testPowerSchoolConnection } from "./actions";
+import { testPowerSchoolConnection, type PowerSchoolProbeState } from "./actions";
 import styles from "./powerschool.module.css";
 
 type ConnectionProbeProps = {
@@ -10,9 +10,18 @@ type ConnectionProbeProps = {
   host: string | null;
 };
 
+const initialPowerSchoolProbeState: PowerSchoolProbeState = {
+  status: "idle",
+  message: "Run a read-only connection test after the district plugin and server credentials are configured.",
+  teacherName: null,
+  sections: [],
+  testedAt: null,
+};
+
 export function PowerSchoolConnectionProbe({ configured, host }: ConnectionProbeProps) {
   const [actionState, action, pending] = useActionState(testPowerSchoolConnection, initialPowerSchoolProbeState);
-  const state = actionState ?? initialPowerSchoolProbeState;
+  const validStatus = actionState?.status === "idle" || actionState?.status === "success" || actionState?.status === "warning" || actionState?.status === "error";
+  const state = validStatus ? actionState : initialPowerSchoolProbeState;
   const sections = Array.isArray(state.sections) ? state.sections : [];
   const tone = state.status === "success" ? styles.probeSuccess : state.status === "error" ? styles.probeDanger : state.status === "warning" ? styles.probeWarning : styles.probeNeutral;
 
@@ -30,7 +39,7 @@ export function PowerSchoolConnectionProbe({ configured, host }: ConnectionProbe
       {state.status === "success" ? <CheckCircle2 size={19}/> : state.status === "error" || state.status === "warning" ? <TriangleAlert size={19}/> : <PlugZap size={19}/>}
       <div>
         <strong>{state.status === "idle" ? "No live test run yet" : state.status === "success" ? "Connection verified" : state.status === "warning" ? "Connection needs attention" : "Connection failed safely"}</strong>
-        <p>{state.message ?? initialPowerSchoolProbeState.message}</p>
+        <p>{state.message}</p>
         {host ? <p className={styles.hostLine}>Configured host: {host}</p> : null}
         {state.testedAt ? <p className={styles.hostLine}>Tested {new Date(state.testedAt).toLocaleString()}</p> : null}
       </div>
