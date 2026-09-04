@@ -1,0 +1,71 @@
+.shell {
+  background: var(--surface-soft);
+  border-bottom: 1px solid var(--line);
+}
+
+.inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 12px 40px;
+  display: flex;
+  align-items: end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.identity {
+  min-width: 190px;
+  display: grid;
+  gap: 2px;
+}
+
+.identity > span,
+.scopeGroup > span {
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.identity strong { font-size: .92rem; }
+.identity small { color: var(--muted); font-size: .72rem; }
+
+.scopeGroup {
+  margin-left: auto;
+  display: grid;
+  gap: 5px;
+}
+
+.scopeNav {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 10px;
+  background: #e9eef5;
+}
+
+.scopeLink,
+.scopeActive {
+  min-height: 36px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.scopeLink:hover { color: var(--brand); background: rgba(255,255,255,.65); }
+.scopeActive { background: #fff; color: var(--brand); box-shadow: 0 2px 8px rgba(31,41,55,.08); }
+
+@media (max-width: 720px) {
+  .inner { padding: 12px 18px; align-items: stretch; }
+  .identity { width: 100%; }
+  .scopeGroup { margin-left: 0; width: 100%; }
+  .scopeNav { width: 100%; }
+  .scopeLink, .scopeActive { flex: 1; }
+}

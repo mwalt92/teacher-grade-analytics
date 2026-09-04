@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Layers3, UserPlus } from "lucide-react";
+import { StudentsWorkspaceNav } from "@/components/students-workspace-nav";
+import { TeacherContextBar } from "@/components/teacher-context-bar";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
-import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getSectionRoster } from "@/lib/data/roster";
 import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import { addStudent, setEnrollmentActive } from "./actions";
-import { EmailReconciliation } from "./email-reconciliation";
-import { RosterImportPreview } from "./roster-import-preview";
 import styles from "./students.module.css";
 
 type RosterFilter = "active" | "inactive" | "all";
@@ -66,42 +65,37 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
     : [];
 
   const roster = scope === "section" ? await getSectionRoster(section.sectionId, filter) : [];
-  const activeRoster = scope === "section" && filter !== "active" ? await getSectionRoster(section.sectionId, "active") : roster;
-  const allSectionEmailRosters = scope === "all"
-    ? await Promise.all(offeringSections.map(async (item) => ({
-      section: item,
-      roster: await getSectionRoster(item.sectionId, "active"),
-    })))
-    : [];
   const totalRows = scope === "all" ? combinedRows.length : roster.length;
-  const orderedImportSections = [
-    ...offeringSections,
-    ...sections.filter((item) => item.offeringId !== section.offeringId),
-  ];
-  const sectionOptions = orderedImportSections.map((item) => ({
-    id: item.sectionId,
-    label: `${item.courseCode ? `${item.courseName} ${item.courseCode}` : item.courseName} — ${item.sectionName}`,
-  }));
   const returnTo = filterHref(filter, scope, sectionFilter);
   const courseLabel = section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName;
+  const sectionHref = filterHref(filter, "section", "all");
+  const allHref = filterHref(filter, "all", "all");
 
   return <main className="app-shell">
     <header className="topbar">
       <div>
-        <p className="eyebrow">Teacher Grade Analytics</p>
+        <p className="eyebrow">Students</p>
         <h1>Roster</h1>
         <p className="subtle">{courseLabel} • {scope === "all" ? "All Sections" : section.sectionName}</p>
-        <TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/>
       </div>
     </header>
     <TeacherPrimaryNav/>
+    <TeacherContextBar
+      sections={sections}
+      activeSectionId={section.sectionId}
+      returnTo={returnTo}
+      scope={canShowAllSections ? {
+        active: scope,
+        sectionLabel: section.sectionName,
+        sectionHref,
+        allLabel: `All Sections (${offeringSections.length})`,
+        allHref,
+        ariaLabel: "Roster section scope",
+      } : undefined}
+    />
+    <StudentsWorkspaceNav active="roster"/>
 
-    {canShowAllSections ? <nav className="main-nav" aria-label="Roster section scope" style={{ background: "var(--surface-soft)", paddingTop: 8, paddingBottom: 4 }}>
-      <Link className={scope === "section" ? "nav-button active" : "nav-button"} href={filterHref(filter, "section", "all")}>{section.sectionName}</Link>
-      <Link className={scope === "all" ? "nav-button active" : "nav-button"} href={filterHref(filter, "all", "all")}>All Sections ({offeringSections.length})</Link>
-    </nav> : null}
-
-    <nav className="main-nav" aria-label="Roster filters" style={{ background: "var(--surface-soft)", paddingTop: canShowAllSections ? 4 : 8 }}>
+    <nav className="main-nav" aria-label="Roster filters" style={{ background: "var(--surface-soft)", paddingTop: 8, paddingBottom: 4 }}>
       <Link className={filter === "active" ? "nav-button active" : "nav-button"} href={filterHref("active", scope, sectionFilter)}>Active</Link>
       <Link className={filter === "inactive" ? "nav-button active" : "nav-button"} href={filterHref("inactive", scope, sectionFilter)}>Inactive</Link>
       <Link className={filter === "all" ? "nav-button active" : "nav-button"} href={filterHref("all", scope, sectionFilter)}>All students</Link>
@@ -119,7 +113,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
       <div className="roster-layout">
         <article className="panel">
           <div className="panel-header"><div><p className="eyebrow">{filter} roster</p><h2>{totalRows} {totalRows === 1 ? "student" : "students"}{scope === "all" ? ` across ${visibleOfferingSections.length} ${visibleOfferingSections.length === 1 ? "section" : "sections"}` : ""}</h2></div><span className="save-indicator">● Live Supabase data</span></div>
-          {totalRows === 0 ? <div className="empty-state"><UserPlus size={30}/><h3>No students here yet</h3><p className="subtle">{scope === "all" ? "No enrollments match this combined-roster filter. Use the Import Center below to load one or more class periods." : "Add a student manually for testing, or preview a PowerSchool roster before importing."}</p></div> : scope === "all" ? <div className={styles.allRosterTable}>
+          {totalRows === 0 ? <div className="empty-state"><UserPlus size={30}/><h3>No students here yet</h3><p className="subtle">{scope === "all" ? "No enrollments match this combined-roster filter." : "Add a student manually for testing, or use the Import Center for a PowerSchool roster."}</p></div> : scope === "all" ? <div className={styles.allRosterTable}>
             <div className={`${styles.allRosterRow} ${styles.allRosterHead}`}><span>Student</span><span>Section</span><span>Student #</span><span>Email</span><span>Status</span><span></span></div>
             {combinedRows.map(({ student, section: rowSection }) => {
               const profileParams = new URLSearchParams({ sectionId: rowSection.sectionId, returnTo });
@@ -152,40 +146,9 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
             <input type="hidden" name="sectionId" value={section.sectionId}/><label>Student name<input name="displayName" required placeholder="Last, First"/></label><label>Student number<input name="studentNumber" required placeholder="PowerSchool student #"/></label><label>School email <span className="optional">optional</span><input name="schoolEmail" type="email" placeholder="student@school.org"/></label><button className="primary-button" type="submit"><UserPlus size={17}/> Add to roster</button>
           </form></article>
         </aside> : <aside className="roster-sidebar">
-          <article className={`panel ${styles.sectionToolsNote}`}><p className="eyebrow">Roster tools</p><h3>Import and email tools work across sections</h3><p>Use the Import Center below to upload once and map each detected PowerSchool course to its destination class period. Email reconciliation is available below as a separate reviewed panel for each class period. Quick Add stays section-specific.</p></article>
+          <article className={`panel ${styles.sectionToolsNote}`}><p className="eyebrow">Roster tools</p><h3>Keep imports separate from daily roster work</h3><p>Use this page for student status and individual roster maintenance. PowerSchool uploads and email reconciliation now live in the dedicated Import Center.</p><Link className="secondary-link" href="/students/import">Open Import Center</Link></article>
         </aside>}
       </div>
-
-      <article className="panel full-width import-card-live">
-        <div className="panel-header"><div><p className="eyebrow">Import Center • {scope === "all" ? "Multi-section" : "Step 1"}</p><h2>{scope === "all" ? "Import PowerSchool rosters across sections" : "Preview a PowerSchool roster export"}</h2><p className="subtle">{scope === "all" ? "Upload one multi-course .xlsx export, then explicitly map each detected PowerSchool course to the correct destination section before anything is committed." : "Supports multi-course .xlsx exports. Student Number is the preferred identity key; Name + Course exports are accepted but flagged for review."}</p></div></div>
-        <RosterImportPreview sectionId={section.sectionId} sections={sectionOptions}/>
-      </article>
-
-      {scope === "section" ? <article className="panel full-width import-card-live">
-        <EmailReconciliation
-          sectionId={section.sectionId}
-          students={activeRoster.map((student) => ({
-            displayName: student.displayName,
-            studentNumber: student.externalStudentKey ?? "",
-            currentEmail: student.email,
-          }))}
-        />
-      </article> : <>
-        <article className="panel full-width import-card-live">
-          <div className="panel-header"><div><p className="eyebrow">Import Center • Step 2</p><h2>Reconcile school emails by class period</h2><p className="subtle">Each class period keeps its own reviewed email list. Paste and save one section at a time below so the existing one-to-one identity checks remain unchanged.</p></div></div>
-        </article>
-        {allSectionEmailRosters.map(({ section: emailSection, roster: emailRoster }) => <article className="panel full-width import-card-live" key={emailSection.sectionId}>
-          <div className="panel-header"><div><p className="eyebrow">Email reconciliation • {emailSection.sectionName}</p><h2>{emailSection.sectionName}</h2><p className="subtle">{emailRoster.length} active {emailRoster.length === 1 ? "student" : "students"}. Paste the PowerSchool email list for this class period only.</p></div></div>
-          <EmailReconciliation
-            sectionId={emailSection.sectionId}
-            students={emailRoster.map((student) => ({
-              displayName: student.displayName,
-              studentNumber: student.externalStudentKey ?? "",
-              currentEmail: student.email,
-            }))}
-          />
-        </article>)}
-      </>}
     </section>
   </main>;
 }

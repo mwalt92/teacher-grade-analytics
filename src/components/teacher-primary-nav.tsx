@@ -5,10 +5,9 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { StudentPrimaryNav } from "@/components/student-primary-nav";
 
 const items = [
-  { label: "Home", href: "/" },
-  { label: "Dashboard", href: "/dashboard" },
+  { label: "Courses", href: "/" },
+  { label: "Course Dashboard", href: "/dashboard" },
   { label: "Students", href: "/students" },
-  { label: "Student Preview", href: "/student/preview" },
   { label: "Assignments", href: "/assignments" },
   { label: "Study Library", href: "/study-library" },
   { label: "Gradebook", href: "/gradebook" },

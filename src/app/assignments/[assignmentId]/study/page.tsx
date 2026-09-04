@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowDown, ArrowLeft, ArrowUp, BookOpen, ExternalLink, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpen, ExternalLink, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
+import { AssignmentWorkspaceNav } from "@/components/assignment-workspace-nav";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getTeacherSections } from "@/lib/data/teacher-context";
@@ -21,7 +21,7 @@ import styles from "./study.module.css";
 
 type StudyPageProps = {
   params: Promise<{ assignmentId: string }>;
-  searchParams: Promise<{ notice?: string; error?: string }>;
+  searchParams: Promise<{ notice?: string; error?: string; returnTo?: string }>;
 };
 
 type SkillRow = { id: string; code: string | null; title: string; description: string | null; active: boolean };
@@ -64,8 +64,15 @@ const availabilityLabels: Record<string, string> = {
   teacher_only: "Teacher only",
 };
 
+function safeReturnPath(value: string | undefined) {
+  if (!value || value.startsWith("//")) return "/assignments";
+  if (value === "/assignments" || value.startsWith("/assignments?") || value.startsWith("/gradebook/assignments")) return value;
+  return "/assignments";
+}
+
 export default async function StudyResourcePage({ params, searchParams }: StudyPageProps) {
   const [{ assignmentId }, query] = await Promise.all([params, searchParams]);
+  const returnTo = safeReturnPath(query.returnTo);
   const sections = await getTeacherSections();
   if (!sections.length) redirect("/");
   const supabase = await createClient();
@@ -103,8 +110,8 @@ export default async function StudyResourcePage({ params, searchParams }: StudyP
     return <main className="app-shell">
       <header className="topbar"><div><p className="eyebrow">Study Resource Library</p><h1>{assignment.title}</h1><p className="subtle">{teacherSection.courseName} • {teacherSection.sectionName}</p><TeacherSectionSwitcher sections={sections} activeSectionId={teacherSection.sectionId} returnTo={`/assignments/${assignmentId}/study`}/></div></header>
       <TeacherPrimaryNav/>
+      <AssignmentWorkspaceNav assignmentId={assignmentId} active="study" returnTo={returnTo} archived={assignment.archived}/>
       <section className={`content-wrap ${styles.content}`}>
-        <div className={styles.backRow}><Link className="secondary-link" href={`/assignments/${assignmentId}`}><ArrowLeft size={17}/> Grade Entry</Link><Link className="secondary-link" href={`/assignments/${assignmentId}/edit`}>Edit Assignment</Link></div>
         {query.error ? <div className={styles.error}>{query.error}</div> : null}
         <article className={`panel ${styles.createCard}`}>
           <div className="panel-header"><div><p className="eyebrow">Study / Retake Preparation</p><h2>Create a shared study guide</h2></div><BookOpen size={26}/></div>
@@ -145,13 +152,12 @@ export default async function StudyResourcePage({ params, searchParams }: StudyP
   const reusableResources = libraryResources.filter((resource) => !attachedResourceIds.has(resource.id));
 
   const sharedAcrossLinked = linkedAssignments.filter((item) => item.study_guide_id === guideId).length;
-  const backHref = `/assignments/${assignmentId}`;
 
   return <main className="app-shell">
     <header className="topbar"><div><p className="eyebrow">Study Resource Library</p><h1>{assignment.title}</h1><p className="subtle">{teacherSection.courseName} • {teacherSection.sectionName}</p><TeacherSectionSwitcher sections={sections} activeSectionId={teacherSection.sectionId} returnTo={`/assignments/${assignmentId}/study`}/></div></header>
     <TeacherPrimaryNav/>
+    <AssignmentWorkspaceNav assignmentId={assignmentId} active="study" returnTo={returnTo} archived={assignment.archived}/>
     <section className={`content-wrap ${styles.content}`}>
-      <div className={styles.backRow}><Link className="secondary-link" href={backHref}><ArrowLeft size={17}/> Grade Entry</Link><Link className="secondary-link" href={`/assignments/${assignmentId}/edit`}>Edit Assignment</Link></div>
       {query.notice ? <div className={styles.notice}>{query.notice}</div> : null}
       {query.error ? <div className={styles.error}>{query.error}</div> : null}
 

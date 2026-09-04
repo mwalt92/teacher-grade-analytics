@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { GradebookWorkspaceNav } from "@/components/gradebook-workspace-nav";
+import { TeacherContextBar } from "@/components/teacher-context-bar";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
-import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getAssignmentMatrix } from "@/lib/data/assignment-matrix";
 import { getSectionGradingPeriods } from "@/lib/data/grade-calculation";
 import { getSectionRoster } from "@/lib/data/roster";
@@ -42,17 +42,19 @@ export default async function AssignmentMatrixPage({ searchParams }: PageProps) 
 
   return <main className="app-shell">
     <header className="topbar">
-      <div><p className="eyebrow">Teacher Gradebook</p><h1>Assignment matrix</h1><p className="subtle">{section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName} • {section.sectionName} • students × assignments</p><TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/></div>
+      <div><p className="eyebrow">Teacher Gradebook</p><h1>Score Matrix</h1><p className="subtle">{section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName} • {section.sectionName} • students × assignments</p></div>
     </header>
     <TeacherPrimaryNav/>
+    <GradebookWorkspaceNav active="matrix" period={selectedPeriod?.code}/>
+    <TeacherContextBar sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/>
 
     <section className={`content-wrap ${styles.content}`}>
       <article className={`panel ${styles.controls}`}>
-        <div className="panel-header"><div><p className="eyebrow">Spreadsheet view</p><h3>Students by assignment</h3></div><div className="grade-audit-header-actions"><Link className="secondary-link" href={`/gradebook${selectedPeriod ? `?period=${selectedPeriod.code}` : ""}`}>Overview</Link><Link className="secondary-link" href={`/gradebook/powerschool${selectedPeriod && selectedPeriod.periodRole !== "exam" ? `?period=${selectedPeriod.code}` : ""}`}>PowerSchool Comparison</Link></div></div>
+        <div className="panel-header"><div><p className="eyebrow">Spreadsheet view</p><h3>Students by assignment</h3></div></div>
         <form method="get" className={styles.filterForm}>
           <label><span>Grading period</span><select name="period" defaultValue={selectedPeriod?.code}>{selectablePeriods.map((period) => <option key={period.id} value={period.code}>{period.code} — {period.name}</option>)}</select></label>
           <label><span>Category</span><select name="category" defaultValue={selectedCategory}><option value="all">All categories</option>{configuredCategories.map((category) => <option value={category.code} key={category.code}>{category.name}</option>)}</select></label>
-          <button className="primary-button" type="submit">View Assignments</button>
+          <button className="primary-button" type="submit">View Scores</button>
         </form>
       </article>
 
