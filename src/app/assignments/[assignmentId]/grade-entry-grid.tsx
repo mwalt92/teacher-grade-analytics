@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Check, CircleEllipsis, CircleOff, Pencil, Plus, RotateCcw, Sparkles, TriangleAlert, X } from "lucide-react";
 import { restoreGradeEntriesBulk } from "./bulk-undo-actions";
@@ -30,7 +31,16 @@ type Snapshot = { studentId: string; points: number | null; missing: boolean; ex
 type UndoAction = { label: string; rows: Snapshot[] };
 type RetakeEditDraft = { attemptNumber: number; value: string };
 
-export function GradeEntryGrid({ assignmentId, pointsPossible, allowRetakes, students }: { assignmentId: string; pointsPossible: number; allowRetakes: boolean; students: StudentRow[] }) {
+type GradeEntryGridProps = {
+  assignmentId: string;
+  pointsPossible: number;
+  allowRetakes: boolean;
+  students: StudentRow[];
+  sectionId: string;
+  profileReturnTo: string;
+};
+
+export function GradeEntryGrid({ assignmentId, pointsPossible, allowRetakes, students, sectionId, profileReturnTo }: GradeEntryGridProps) {
   const [rows, setRows] = useState<LocalRow[]>(() => students.map((student) => ({
     ...student,
     value: student.points == null ? "" : String(student.points),
@@ -398,8 +408,9 @@ export function GradeEntryGrid({ assignmentId, pointsPossible, allowRetakes, stu
         const editDraft = retakeEdits[row.studentId];
         const editOpen = editDraft !== undefined;
         const rowClass = row.exempt ? styles.exemptRow : row.missing ? styles.missingRow : "";
+        const profileParams = new URLSearchParams({ sectionId, returnTo: profileReturnTo });
         return <div className={`${styles.row} ${rowClass}`} role="row" key={row.studentId}>
-          <strong>{row.displayName}</strong>
+          <Link className={styles.studentLink} href={`/students/${row.studentId}?${profileParams.toString()}`}><strong>{row.displayName}</strong></Link>
           <span className={styles.muted}>{row.externalStudentKey ?? "—"}</span>
           <label className={styles.scoreField}><input ref={(element) => { if (element) scoreInputs.current.set(row.studentId, element); else scoreInputs.current.delete(row.studentId); }} aria-label={`Score for ${row.displayName}`} type="number" min="0" step="0.5" value={row.value} onChange={(event) => changeScore(row.studentId, event.target.value)} onKeyDown={(event) => handleScoreKeyDown(event, rowIndex, row)} onBlur={() => handleBlur(row)}/><span>/ {pointsPossible}</span></label>
           <SaveBadge state={row.saveState} missing={row.missing} exempt={row.exempt}/>
