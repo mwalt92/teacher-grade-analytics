@@ -38,6 +38,10 @@
 .missingRow { background: var(--warning-soft); border-radius: 10px; }
 .exemptRow { background: var(--brand-soft); border-radius: 10px; }
 .muted { color: var(--muted); font-size: .84rem; }
+.studentLink { width: fit-content; max-width: 100%; border-radius: 6px; }
+.studentLink strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.studentLink:hover { color: var(--brand); text-decoration: underline; text-underline-offset: 2px; }
+.studentLink:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
 .scoreField { display: flex; align-items: center; gap: 8px; }
 .scoreField input { width: 92px; min-height: 40px; border: 1px solid var(--line); border-radius: 9px; padding: 0 10px; background: #fff; }
 .scoreField input:focus, .setAllGroup input:focus, .retakeEditor input:focus { outline: 2px solid var(--brand-soft); border-color: var(--brand); }
