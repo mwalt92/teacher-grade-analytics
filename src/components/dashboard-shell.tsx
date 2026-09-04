@@ -43,7 +43,6 @@ export function DashboardShell({ courseName, schoolYear, sectionName, sections, 
   const allHref = dashboardHref("all", selectedPeriod?.code);
   const attentionStudents = dashboard.attentionStudents.slice(0, 4);
   const recentAssignments = dashboard.recentAssignments.slice(0, 6);
-  const powerSchoolHref = selectedPeriod ? `/gradebook/powerschool?period=${encodeURIComponent(selectedPeriod.code)}` : "/gradebook/powerschool";
 
   return <main className="app-shell">
     <header className="topbar">
@@ -108,7 +107,7 @@ export function DashboardShell({ courseName, schoolYear, sectionName, sections, 
         </article>
 
         <article className="panel">
-          <div className="panel-header"><div><p className="eyebrow">Grade integrity</p><h3>PowerSchool comparison</h3></div><Link className="text-button" href={powerSchoolHref}>Open comparison <ArrowRight size={16}/></Link></div>
+          <div className="panel-header"><div><p className="eyebrow">Grade integrity</p><h3>PowerSchool comparison</h3></div><Link className="text-button" href={selectedPeriod ? `/gradebook/powerschool?period=${encodeURIComponent(selectedPeriod.code)}` : "/gradebook/powerschool"}>Open comparison <ArrowRight size={16}/></Link></div>
           <div className="integrity-stack">
             <div className="integrity-item success"><span>Within tolerance</span><strong>{dashboard.powerSchoolWithinTolerance}</strong></div>
             <div className="integrity-item warning"><span>Needs review</span><strong>{dashboard.powerSchoolMismatchCount}</strong></div>
