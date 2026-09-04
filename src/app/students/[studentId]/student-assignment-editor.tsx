@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, Check, CircleEllipsis, CircleOff, ExternalLink, TriangleAlert } from "lucide-react";
+import { AlertCircle, Check, CircleEllipsis, CircleOff, ExternalLink, Plus, TriangleAlert, X } from "lucide-react";
 import { saveGradeEntry, setGradeExempt } from "../../assignments/[assignmentId]/grade-entry-actions";
+import { addRetakeAttempt } from "../../assignments/[assignmentId]/retake-actions";
+import { getRetakeEligibility } from "./student-profile-actions";
 import styles from "./student-assignment-editor.module.css";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -36,6 +38,9 @@ export function StudentAssignmentEditor({ studentId, rows, profileHref }: Props)
   const [exempt, setExempt] = useState<Record<string, boolean>>(() => Object.fromEntries(rows.map((row) => [row.assignmentId, row.exempt])));
   const [saveState, setSaveState] = useState<Record<string, SaveState>>(() => Object.fromEntries(rows.map((row) => [row.assignmentId, row.attemptOnePoints == null && !row.missing && !row.exempt ? "idle" : "saved"])));
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
+  const [retakeEligibility, setRetakeEligibility] = useState<Record<string, boolean>>({});
+  const [retakeDrafts, setRetakeDrafts] = useState<Record<string, string | undefined>>({});
+  const [retakeBusy, setRetakeBusy] = useState<Record<string, boolean>>({});
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const inputs = useRef(new Map<string, HTMLInputElement>());
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,6 +49,14 @@ export function StudentAssignmentEditor({ studentId, rows, profileHref }: Props)
     timers.current.forEach((timer) => clearTimeout(timer));
     if (refreshTimer.current) clearTimeout(refreshTimer.current);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getRetakeEligibility(rows.map((row) => row.assignmentId)).then((result) => {
+      if (!cancelled) setRetakeEligibility(result);
+    });
+    return () => { cancelled = true; };
+  }, [rows]);
 
   function queueRefresh() {
     if (refreshTimer.current) clearTimeout(refreshTimer.current);
@@ -113,6 +126,7 @@ export function StudentAssignmentEditor({ studentId, rows, profileHref }: Props)
 
   function markRowMissing(row: AssignmentEditorRow) {
     clearTimer(row.assignmentId);
+    setRetakeDrafts((current) => ({ ...current, [row.assignmentId]: undefined }));
     setValues((current) => ({ ...current, [row.assignmentId]: "0" }));
     setMissing((current) => ({ ...current, [row.assignmentId]: true }));
     setExempt((current) => ({ ...current, [row.assignmentId]: false }));
@@ -121,6 +135,7 @@ export function StudentAssignmentEditor({ studentId, rows, profileHref }: Props)
 
   async function toggleRowExempt(row: AssignmentEditorRow) {
     clearTimer(row.assignmentId);
+    setRetakeDrafts((current) => ({ ...current, [row.assignmentId]: undefined }));
     const nextExempt = !(exempt[row.assignmentId] ?? row.exempt);
     setRowState(row.assignmentId, "saving");
     const result = await setGradeExempt({ assignmentId: row.assignmentId, studentId, exempt: nextExempt });
@@ -134,11 +149,37 @@ export function StudentAssignmentEditor({ studentId, rows, profileHref }: Props)
     queueRefresh();
   }
 
+  async function saveRetake(row: AssignmentEditorRow) {
+    const draft = retakeDrafts[row.assignmentId] ?? "";
+    const points = Number(draft);
+    if (draft.trim() === "" || !Number.isFinite(points) || points < 0) {
+      setErrors((current) => ({ ...current, [row.assignmentId]: "Enter a valid non-negative retake score." }));
+      return;
+    }
+
+    clearTimer(row.assignmentId);
+    setRetakeBusy((current) => ({ ...current, [row.assignmentId]: true }));
+    setErrors((current) => ({ ...current, [row.assignmentId]: undefined }));
+    const result = await addRetakeAttempt({ assignmentId: row.assignmentId, studentId, points });
+    if (!result.ok) {
+      setErrors((current) => ({ ...current, [row.assignmentId]: result.error }));
+      setRetakeBusy((current) => ({ ...current, [row.assignmentId]: false }));
+      return;
+    }
+
+    setMissing((current) => ({ ...current, [row.assignmentId]: false }));
+    setExempt((current) => ({ ...current, [row.assignmentId]: false }));
+    setRetakeDrafts((current) => ({ ...current, [row.assignmentId]: undefined }));
+    setRetakeBusy((current) => ({ ...current, [row.assignmentId]: false }));
+    setRowState(row.assignmentId, "saved");
+    queueRefresh();
+  }
+
   return <div className={styles.editor}>
     <div className={styles.editorIntro}>
       <div>
         <strong>Grade this student directly</strong>
-        <span>Scores use the same autosave and audit trail as assignment grade entry. Press Enter to save and move down.</span>
+        <span>Scores and retakes use the same autosave and audit trail as assignment grade entry. Press Enter to save and move down.</span>
       </div>
       <span className="status success-pill"><Check size={14}/> Autosave on</span>
     </div>
@@ -152,6 +193,9 @@ export function StudentAssignmentEditor({ studentId, rows, profileHref }: Props)
           const rowMissing = missing[row.assignmentId] ?? row.missing;
           const rowExempt = exempt[row.assignmentId] ?? row.exempt;
           const rowState = saveState[row.assignmentId] ?? "idle";
+          const retakeOpen = retakeDrafts[row.assignmentId] !== undefined;
+          const canAddRetake = Boolean(retakeEligibility[row.assignmentId]);
+          const hasOriginal = (values[row.assignmentId] ?? "").trim() !== "";
           const attempts = row.attempts.length
             ? row.attempts.map((attempt) => `A${attempt.attemptNumber}: ${attempt.earned}/${attempt.possible}${attempt.counted ? " ✓" : ""}`).join(" · ")
             : "No attempts";
@@ -179,7 +223,35 @@ export function StudentAssignmentEditor({ studentId, rows, profileHref }: Props)
             <span className={styles.actions}>
               <button type="button" aria-pressed={rowMissing} className={rowMissing ? styles.actionActiveWarning : styles.actionButton} onClick={() => markRowMissing(row)}><TriangleAlert size={14}/> Missing</button>
               <button type="button" aria-pressed={rowExempt} className={rowExempt ? styles.actionActiveBrand : styles.actionButton} onClick={() => void toggleRowExempt(row)}><CircleOff size={14}/> Exempt</button>
+              {canAddRetake && !retakeOpen ? <button
+                type="button"
+                className={styles.retakeButton}
+                disabled={!hasOriginal || rowMissing || rowExempt || rowState === "saving" || retakeBusy[row.assignmentId]}
+                title={!hasOriginal ? "Enter the original score before adding a retake." : undefined}
+                onClick={() => setRetakeDrafts((current) => ({ ...current, [row.assignmentId]: "" }))}
+              ><Plus size={14}/> Add Retake</button> : null}
               <Link className={styles.openLink} href={`/assignments/${row.assignmentId}?returnTo=${encodeURIComponent(profileHref)}`} aria-label={`Open ${row.title}`}><ExternalLink size={14}/></Link>
+              {canAddRetake && retakeOpen ? <span className={styles.retakeEditor}>
+                <input
+                  autoFocus
+                  aria-label={`Retake score for ${row.title}`}
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  placeholder="Retake"
+                  value={retakeDrafts[row.assignmentId] ?? ""}
+                  onChange={(event) => setRetakeDrafts((current) => ({ ...current, [row.assignmentId]: event.target.value }))}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void saveRetake(row);
+                    }
+                  }}
+                />
+                <span>/ {row.pointsPossible}</span>
+                <button type="button" disabled={retakeBusy[row.assignmentId]} onClick={() => void saveRetake(row)}>{retakeBusy[row.assignmentId] ? "Saving…" : "Save"}</button>
+                <button type="button" className={styles.cancelRetake} aria-label={`Cancel retake for ${row.title}`} onClick={() => setRetakeDrafts((current) => ({ ...current, [row.assignmentId]: undefined }))}><X size={13}/></button>
+              </span> : null}
             </span>
             <span className={styles.attempts}>{attempts}</span>
             {errors[row.assignmentId] ? <span className={styles.error}><AlertCircle size={14}/>{errors[row.assignmentId]}</span> : null}
