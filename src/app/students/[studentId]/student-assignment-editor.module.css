@@ -4,8 +4,8 @@
 .editorIntro strong { font-size: .9rem; }
 .editorIntro span { color: var(--muted); font-size: .76rem; }
 .tableScroll { overflow-x: auto; }
-.table { display: grid; min-width: 1140px; }
-.row { position: relative; display: grid; grid-template-columns: minmax(230px, 1.45fr) 145px 115px 120px 260px minmax(210px, 1.2fr); gap: 12px; align-items: center; padding: 12px 8px; border-top: 1px solid var(--line); font-size: .83rem; }
+.table { display: grid; min-width: 1220px; }
+.row { position: relative; display: grid; grid-template-columns: minmax(230px, 1.45fr) 145px 115px 120px minmax(300px, 1.25fr) minmax(210px, 1.2fr); gap: 12px; align-items: center; padding: 12px 8px; border-top: 1px solid var(--line); font-size: .83rem; }
 .head { border-top: 0; color: var(--muted); font-size: .72rem; font-weight: 800; }
 .missingRow { background: var(--warning-soft); border-radius: 10px; }
 .exemptRow { background: var(--brand-soft); border-radius: 10px; }
@@ -29,11 +29,20 @@
 .decision_missing, .decision_dropped { border-color: #efd6a8; background: var(--warning-soft); color: var(--warning); }
 .decision_exempt { border-color: #b9c8e6; background: var(--brand-soft); color: var(--brand); }
 .actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.actionButton, .actionActiveWarning, .actionActiveBrand, .openLink { min-height: 34px; border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-weight: 750; font-size: .72rem; cursor: pointer; }
-.actionButton:hover, .openLink:hover { border-color: #b9c8e6; background: var(--brand-soft); }
+.actionButton, .actionActiveWarning, .actionActiveBrand, .openLink, .retakeButton { min-height: 34px; border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-weight: 750; font-size: .72rem; cursor: pointer; }
+.actionButton:hover, .openLink:hover, .retakeButton:hover { border-color: #b9c8e6; background: var(--brand-soft); }
 .actionActiveWarning { border-color: #e1b66f; background: #fff7e8; color: var(--warning); }
 .actionActiveBrand { border-color: var(--brand); background: #fff; color: var(--brand); }
 .openLink { width: 34px; padding: 0; color: var(--muted); }
+.retakeButton { border-color: #b9c8e6; background: var(--brand-soft); color: var(--brand); }
+.retakeButton:disabled { opacity: .45; cursor: not-allowed; }
+.retakeEditor { display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap; width: 100%; }
+.retakeEditor input { width: 82px; min-height: 34px; border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; background: #fff; }
+.retakeEditor input:focus { outline: 2px solid var(--brand-soft); border-color: var(--brand); }
+.retakeEditor > span { color: var(--muted); font-size: .72rem; white-space: nowrap; }
+.retakeEditor > button { min-height: 34px; border: 1px solid var(--brand); border-radius: 8px; background: var(--brand); color: #fff; padding: 0 8px; font-weight: 750; font-size: .72rem; cursor: pointer; }
+.retakeEditor > button:disabled { opacity: .55; cursor: wait; }
+.retakeEditor > .cancelRetake { width: 34px; padding: 0; border-color: var(--line); background: #fff; color: var(--muted); }
 .attempts { color: var(--muted); font-size: .74rem; line-height: 1.45; }
 .error { grid-column: 2 / -1; display: inline-flex; align-items: center; gap: 5px; color: var(--danger); font-size: .74rem; margin-top: -5px; }
 
