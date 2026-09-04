@@ -64,7 +64,7 @@ export function AllSectionsDashboard({
         active: "all",
         sectionLabel: currentSectionLabel,
         sectionHref,
-        allLabel: `All Sections (${dashboard.sectionCount})`,
+        allLabel: "All Sections",
         allHref,
         ariaLabel: "Dashboard section scope",
       }}
