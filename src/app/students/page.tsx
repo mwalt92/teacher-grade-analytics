@@ -121,23 +121,29 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
           <div className="panel-header"><div><p className="eyebrow">{filter} roster</p><h2>{totalRows} {totalRows === 1 ? "student" : "students"}{scope === "all" ? ` across ${visibleOfferingSections.length} ${visibleOfferingSections.length === 1 ? "section" : "sections"}` : ""}</h2></div><span className="save-indicator">● Live Supabase data</span></div>
           {totalRows === 0 ? <div className="empty-state"><UserPlus size={30}/><h3>No students here yet</h3><p className="subtle">{scope === "all" ? "No enrollments match this combined-roster filter. Use the Import Center below to load one or more class periods." : "Add a student manually for testing, or preview a PowerSchool roster before importing."}</p></div> : scope === "all" ? <div className={styles.allRosterTable}>
             <div className={`${styles.allRosterRow} ${styles.allRosterHead}`}><span>Student</span><span>Section</span><span>Student #</span><span>Email</span><span>Status</span><span></span></div>
-            {combinedRows.map(({ student, section: rowSection }) => <div className={styles.allRosterRow} key={student.enrollmentId}>
-              <strong>{student.displayName}</strong>
-              <span className={styles.sectionCell}><strong>{rowSection.sectionName}</strong>{rowSection.periodNumber != null ? <small>Period {rowSection.periodNumber}</small> : null}</span>
-              <span>{student.externalStudentKey ? <details className={styles.studentNumber}><summary className="text-button"><span className={styles.showLabel}>Click to show</span><span className={styles.hideLabel}>Hide</span></summary><span className={styles.studentNumberValue}>{student.externalStudentKey}</span></details> : "—"}</span>
-              <span className={styles.emailCell}>{student.email ? <span className={styles.emailDisplay} title={student.email}>{student.email}</span> : "Not linked yet"}</span>
-              <span className={student.active ? "status success-pill" : "status neutral-pill"}>{student.active ? "Active" : "Inactive"}</span>
-              <form action={setEnrollmentActive}><input type="hidden" name="sectionId" value={rowSection.sectionId}/><input type="hidden" name="enrollmentId" value={student.enrollmentId}/><input type="hidden" name="active" value={student.active ? "false" : "true"}/><button className="text-button" type="submit">{student.active ? "Deactivate" : "Reactivate"}</button></form>
-            </div>)}
+            {combinedRows.map(({ student, section: rowSection }) => {
+              const profileParams = new URLSearchParams({ sectionId: rowSection.sectionId, returnTo });
+              return <div className={styles.allRosterRow} key={student.enrollmentId}>
+                <Link className={styles.studentProfileLink} href={`/students/${student.studentId}?${profileParams.toString()}`}>{student.displayName}</Link>
+                <span className={styles.sectionCell}><strong>{rowSection.sectionName}</strong>{rowSection.periodNumber != null ? <small>Period {rowSection.periodNumber}</small> : null}</span>
+                <span>{student.externalStudentKey ? <details className={styles.studentNumber}><summary className="text-button"><span className={styles.showLabel}>Click to show</span><span className={styles.hideLabel}>Hide</span></summary><span className={styles.studentNumberValue}>{student.externalStudentKey}</span></details> : "—"}</span>
+                <span className={styles.emailCell}>{student.email ? <span className={styles.emailDisplay} title={student.email}>{student.email}</span> : "Not linked yet"}</span>
+                <span className={student.active ? "status success-pill" : "status neutral-pill"}>{student.active ? "Active" : "Inactive"}</span>
+                <form action={setEnrollmentActive}><input type="hidden" name="sectionId" value={rowSection.sectionId}/><input type="hidden" name="enrollmentId" value={student.enrollmentId}/><input type="hidden" name="active" value={student.active ? "false" : "true"}/><button className="text-button" type="submit">{student.active ? "Deactivate" : "Reactivate"}</button></form>
+              </div>;
+            })}
           </div> : <div className="roster-table">
             <div className="roster-row roster-head"><span>Student</span><span>Student #</span><span>Email</span><span>Status</span><span></span></div>
-            {roster.map((student) => <div className="roster-row" key={student.enrollmentId}>
-              <strong>{student.displayName}</strong>
-              <span>{student.externalStudentKey ? <details className={styles.studentNumber}><summary className="text-button"><span className={styles.showLabel}>Click to show</span><span className={styles.hideLabel}>Hide</span></summary><span className={styles.studentNumberValue}>{student.externalStudentKey}</span></details> : "—"}</span>
-              <span className={styles.emailCell}>{student.email ? <span className={styles.emailDisplay} title={student.email}>{student.email}</span> : "Not linked yet"}</span>
-              <span className={student.active ? "status success-pill" : "status neutral-pill"}>{student.active ? "Active" : "Inactive"}</span>
-              <form action={setEnrollmentActive}><input type="hidden" name="sectionId" value={section.sectionId}/><input type="hidden" name="enrollmentId" value={student.enrollmentId}/><input type="hidden" name="active" value={student.active ? "false" : "true"}/><button className="text-button" type="submit">{student.active ? "Deactivate" : "Reactivate"}</button></form>
-            </div>)}
+            {roster.map((student) => {
+              const profileParams = new URLSearchParams({ sectionId: section.sectionId, returnTo });
+              return <div className="roster-row" key={student.enrollmentId}>
+                <Link className={styles.studentProfileLink} href={`/students/${student.studentId}?${profileParams.toString()}`}>{student.displayName}</Link>
+                <span>{student.externalStudentKey ? <details className={styles.studentNumber}><summary className="text-button"><span className={styles.showLabel}>Click to show</span><span className={styles.hideLabel}>Hide</span></summary><span className={styles.studentNumberValue}>{student.externalStudentKey}</span></details> : "—"}</span>
+                <span className={styles.emailCell}>{student.email ? <span className={styles.emailDisplay} title={student.email}>{student.email}</span> : "Not linked yet"}</span>
+                <span className={student.active ? "status success-pill" : "status neutral-pill"}>{student.active ? "Active" : "Inactive"}</span>
+                <form action={setEnrollmentActive}><input type="hidden" name="sectionId" value={section.sectionId}/><input type="hidden" name="enrollmentId" value={student.enrollmentId}/><input type="hidden" name="active" value={student.active ? "false" : "true"}/><button className="text-button" type="submit">{student.active ? "Deactivate" : "Reactivate"}</button></form>
+              </div>;
+            })}
           </div>}
         </article>
 

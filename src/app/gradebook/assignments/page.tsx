@@ -69,6 +69,7 @@ export default async function AssignmentMatrixPage({ searchParams }: PageProps) 
             roster={roster.map((student) => ({ studentId: student.studentId, displayName: student.displayName, email: student.email }))}
             rules={matrix.rules}
             periodCode={matrix.gradingPeriod.code}
+            sectionId={section.sectionId}
             returnTo={returnTo}
           />}
       </article>

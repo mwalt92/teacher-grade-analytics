@@ -17,6 +17,7 @@ type Props = {
   roster: RosterStudent[];
   rules: GradingRules;
   periodCode: string;
+  sectionId: string;
   returnTo: string;
 };
 
@@ -81,7 +82,7 @@ function recomputeStudent(student: AssignmentMatrixStudent, assignments: Assignm
   return { ...student, cells: nextCells };
 }
 
-export function AssignmentMatrixGrid({ assignments, students: initialStudents, roster, rules, periodCode, returnTo }: Props) {
+export function AssignmentMatrixGrid({ assignments, students: initialStudents, roster, rules, periodCode, sectionId, returnTo }: Props) {
   const [students, setStudents] = useState(initialStudents);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [saveStates, setSaveStates] = useState<Record<string, SaveState>>({});
@@ -224,8 +225,9 @@ export function AssignmentMatrixGrid({ assignments, students: initialStudents, r
           {students.map((studentRow, rowIndex) => {
             const student = rosterById.get(studentRow.studentId);
             if (!student) return null;
+            const profileParams = new URLSearchParams({ sectionId, period: periodCode, returnTo });
             return <tr key={studentRow.studentId}>
-              <th scope="row" className={styles.studentCell}><strong>{student.displayName}</strong>{student.email ? <small>{student.email}</small> : null}</th>
+              <th scope="row" className={styles.studentCell}><Link href={`/students/${student.studentId}?${profileParams.toString()}`}><strong>{student.displayName}</strong>{student.email ? <small>{student.email}</small> : null}</Link></th>
               {assignments.map((assignment) => {
                 const cell = studentRow.cells[assignment.id];
                 if (!cell) return <td key={assignment.id} className={styles.unenteredCell}>—</td>;

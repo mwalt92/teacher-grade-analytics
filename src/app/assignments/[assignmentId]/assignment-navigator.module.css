@@ -1,0 +1,13 @@
+.navigator { display: grid; grid-template-columns: auto minmax(260px, 1fr) auto; gap: 10px; align-items: end; margin-bottom: 14px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-soft); }
+.stepButton { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--text); font-weight: 750; white-space: nowrap; }
+.stepButton:hover { border-color: #b9c8e6; background: var(--brand-soft); color: var(--brand); }
+.disabled { color: var(--muted); opacity: .45; cursor: default; }
+.disabled:hover { border-color: var(--line); background: #fff; color: var(--muted); }
+.assignmentSelect { display: grid; gap: 5px; color: var(--muted); font-size: .72rem; font-weight: 800; }
+.assignmentSelect select { width: 100%; min-height: 42px; background: #fff; color: var(--text); }
+
+@media (max-width: 720px) {
+  .navigator { grid-template-columns: 1fr 1fr; align-items: stretch; }
+  .assignmentSelect { grid-column: 1 / -1; grid-row: 1; }
+  .stepButton { width: 100%; }
+}

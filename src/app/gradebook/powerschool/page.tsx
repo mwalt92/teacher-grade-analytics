@@ -139,8 +139,10 @@ export default async function PowerSchoolComparisonPage({ searchParams }: PagePr
               const powerSchool = snapshot?.powerSchoolPercent ?? null;
               const difference = website !== null && powerSchool !== null ? website - powerSchool : null;
               const mismatch = difference !== null && Math.abs(difference) >= POWERSCHOOL_TOLERANCE;
+              const profileParams = new URLSearchParams({ sectionId: section.sectionId, returnTo });
+              if (selectedPeriod) profileParams.set("period", selectedPeriod.code);
               return <div className={styles.row} role="row" key={student.studentId}>
-                <span className={styles.student}><strong>{student.displayName}</strong>{student.email ? <small>{student.email}</small> : null}</span>
+                <Link className={styles.student} href={`/students/${student.studentId}?${profileParams.toString()}`}><strong>{student.displayName}</strong>{student.email ? <small>{student.email}</small> : null}</Link>
                 <strong>{formatPercent(website)}</strong>
                 <span>{website === null ? <span className="subtle">No website grade</span> : <input className={styles.gradeInput} name={`powerschool:${student.studentId}`} type="number" min="0" max="200" step="0.01" defaultValue={powerSchool ?? ""} placeholder="Enter %" aria-label={`PowerSchool grade for ${student.displayName}`}/>}</span>
                 <strong className={mismatch ? styles.mismatchText : styles.matchText}>{formatDifference(difference)}</strong>

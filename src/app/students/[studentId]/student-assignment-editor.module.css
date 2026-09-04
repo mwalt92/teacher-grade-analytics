@@ -1,0 +1,62 @@
+.editor { display: grid; gap: 12px; }
+.editorIntro { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; border: 1px solid #c9d8ec; border-radius: 13px; background: #f6f9fd; }
+.editorIntro > div { display: grid; gap: 3px; }
+.editorIntro strong { font-size: .9rem; }
+.editorIntro span { color: var(--muted); font-size: .76rem; }
+.tableScroll { overflow-x: auto; }
+/* Keep this deliberately dense: this profile table is the reference pattern for a future compact full-assignment grading layout. */
+.table { display: grid; min-width: 1260px; }
+.row { position: relative; display: grid; grid-template-columns: minmax(230px, 1.45fr) 145px 115px 120px minmax(300px, 1.2fr) minmax(280px, 1.35fr); gap: 12px; align-items: center; padding: 12px 8px; border-top: 1px solid var(--line); font-size: .83rem; }
+.head { border-top: 0; color: var(--muted); font-size: .72rem; font-weight: 800; }
+.missingRow { background: var(--warning-soft); border-radius: 10px; }
+.exemptRow { background: var(--brand-soft); border-radius: 10px; }
+.assignment { display: grid; gap: 3px; min-width: 0; }
+.assignment a { width: fit-content; max-width: 100%; }
+.assignment strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.assignment a:hover strong { color: var(--brand); text-decoration: underline; text-underline-offset: 2px; }
+.assignment small { color: var(--muted); font-size: .69rem; }
+.scoreField { display: flex; align-items: center; gap: 7px; }
+.scoreField input { width: 86px; min-height: 38px; border: 1px solid var(--line); border-radius: 9px; padding: 0 9px; background: #fff; }
+.scoreField input:focus { outline: 2px solid var(--brand-soft); border-color: var(--brand); }
+.scoreField span { color: var(--muted); font-size: .78rem; white-space: nowrap; }
+.saveState { display: inline-flex; align-items: center; gap: 5px; width: fit-content; font-size: .75rem; font-weight: 750; white-space: nowrap; }
+.saving, .idle { color: var(--muted); }
+.saved { color: var(--success); }
+.errorText { color: var(--danger); }
+.missingText { color: var(--warning); }
+.exemptText { color: var(--brand); }
+.decision { width: fit-content; padding: 5px 8px; border-radius: 999px; font-size: .7rem; font-weight: 800; text-transform: capitalize; border: 1px solid var(--line); background: var(--surface-soft); color: var(--muted); }
+.decision_counted { border-color: #b8dfc9; background: var(--success-soft); color: var(--success); }
+.decision_missing, .decision_dropped { border-color: #efd6a8; background: var(--warning-soft); color: var(--warning); }
+.decision_exempt { border-color: #b9c8e6; background: var(--brand-soft); color: var(--brand); }
+.actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.actionButton, .actionActiveWarning, .actionActiveBrand, .openLink, .retakeButton { min-height: 34px; border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-weight: 750; font-size: .72rem; cursor: pointer; }
+.actionButton:hover, .openLink:hover, .retakeButton:hover { border-color: #b9c8e6; background: var(--brand-soft); }
+.actionActiveWarning { border-color: #e1b66f; background: #fff7e8; color: var(--warning); }
+.actionActiveBrand { border-color: var(--brand); background: #fff; color: var(--brand); }
+.openLink { width: 34px; padding: 0; color: var(--muted); }
+.retakeButton { border-color: #b9c8e6; background: var(--brand-soft); color: var(--brand); }
+.retakeButton:disabled { opacity: .45; cursor: not-allowed; }
+.retakeEditor { display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap; width: 100%; }
+.retakeEditor input { width: 82px; min-height: 34px; border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; background: #fff; }
+.retakeEditor input:focus { outline: 2px solid var(--brand-soft); border-color: var(--brand); }
+.retakeEditor > span { color: var(--muted); font-size: .72rem; white-space: nowrap; }
+.retakeEditor > button { min-height: 34px; border: 1px solid var(--brand); border-radius: 8px; background: var(--brand); color: #fff; padding: 0 8px; font-weight: 750; font-size: .72rem; cursor: pointer; }
+.retakeEditor > button:disabled { opacity: .55; cursor: wait; }
+.retakeEditor > .cancelRetake { width: 34px; padding: 0; border-color: var(--line); background: #fff; color: var(--muted); }
+.editLabel { font-size: .72rem; white-space: nowrap; }
+.attemptArea { display: grid; gap: 7px; min-width: 0; }
+.attemptList { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.attemptChip { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 4px 7px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--muted); font-size: .7rem; white-space: nowrap; }
+.attemptChip > strong { color: var(--text); }
+.attemptChip > em { font-style: normal; font-weight: 800; color: var(--success); }
+.countedAttempt { border-color: #b8dfc9; background: var(--success-soft); }
+.attemptEditButton { min-height: 22px; display: inline-flex; align-items: center; gap: 3px; border: 0; border-left: 1px solid currentColor; background: transparent; color: var(--brand); padding: 0 2px 0 6px; font-size: .68rem; font-weight: 800; cursor: pointer; }
+.attemptEditButton:hover { text-decoration: underline; text-underline-offset: 2px; }
+.attemptEditButton:disabled { opacity: .35; cursor: not-allowed; text-decoration: none; }
+.noAttempts { color: var(--muted); font-size: .72rem; }
+.error { grid-column: 2 / -1; display: inline-flex; align-items: center; gap: 5px; color: var(--danger); font-size: .74rem; margin-top: -5px; }
+
+@media (max-width: 720px) {
+  .editorIntro { align-items: flex-start; flex-direction: column; }
+}

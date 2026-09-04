@@ -1,0 +1,65 @@
+.content { padding-top: 24px; }
+.navigator { display: grid; grid-template-columns: auto minmax(260px, 1fr) auto; gap: 10px; align-items: end; margin-bottom: 16px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-soft); }
+.stepButton { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font-weight: 750; white-space: nowrap; }
+.stepButton:hover { border-color: #b9c8e6; background: var(--brand-soft); color: var(--brand); }
+.disabled { color: var(--muted); opacity: .45; cursor: default; }
+.disabled:hover { border-color: var(--line); background: #fff; color: var(--muted); }
+.studentSelect { display: grid; gap: 5px; color: var(--muted); font-size: .72rem; font-weight: 800; }
+.studentSelect select { width: 100%; min-height: 42px; background: #fff; color: var(--text); }
+.profileHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+.identity { display: grid; gap: 4px; }
+.identity h2 { font-size: 1.6rem; }
+.identityMeta { display: flex; gap: 8px 14px; flex-wrap: wrap; color: var(--muted); font-size: .82rem; }
+.headerActions { display: flex; gap: 9px; flex-wrap: wrap; justify-content: flex-end; }
+.periodOverview { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.periodCard, .periodCardActive { display: grid; gap: 5px; min-height: 118px; padding: 15px; border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: var(--shadow); }
+.periodCard:hover { border-color: #b9c8e6; }
+.periodCardActive { border-color: var(--brand); background: var(--brand-soft); box-shadow: inset 0 0 0 1px var(--brand); }
+.periodCard span, .periodCardActive span { color: var(--muted); font-size: .74rem; font-weight: 750; }
+.periodCard strong, .periodCardActive strong { font-size: 1.45rem; }
+.periodCard small, .periodCardActive small { color: var(--muted); font-size: .72rem; }
+.metricGrid { margin-top: 0; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.metricGrid :global(.metric-card) { cursor: default; }
+.detailGrid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); gap: 18px; margin-top: 18px; }
+.categoryList, .componentList { display: grid; gap: 10px; }
+.categoryRow, .componentRow { display: grid; grid-template-columns: minmax(160px, 1fr) auto; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+.categoryRow:first-child, .componentRow:first-child { border-top: 0; }
+.categoryRow > div, .componentRow > div { display: grid; gap: 3px; }
+.categoryRow small, .componentRow small { color: var(--muted); font-size: .72rem; }
+.categoryRow strong:last-child, .componentRow strong:last-child { font-size: 1.04rem; }
+.attentionStack { display: grid; gap: 10px; }
+.attentionItem { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-soft); }
+.attentionItem span { color: var(--muted); font-size: .8rem; }
+.attentionItem strong { font-size: 1.08rem; }
+.warningItem { border-color: #efd6a8; background: var(--warning-soft); }
+.tablePanel { overflow: hidden; }
+.tableScroll { overflow-x: auto; }
+.table { display: grid; min-width: 960px; }
+.row { display: grid; grid-template-columns: minmax(240px, 1.6fr) 120px 115px 120px minmax(220px, 1.2fr); gap: 14px; align-items: center; padding: 13px 8px; border-top: 1px solid var(--line); font-size: .85rem; }
+.head { border-top: 0; color: var(--muted); font-size: .74rem; font-weight: 800; }
+.assignment { display: grid; gap: 3px; min-width: 0; }
+.assignment strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.assignment small { color: var(--muted); font-size: .7rem; }
+.attempts { color: var(--muted); font-size: .76rem; line-height: 1.45; }
+.empty { padding: 28px; text-align: center; color: var(--muted); }
+.backRow { margin-bottom: 12px; }
+
+@media (max-width: 980px) {
+  .metricGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .detailGrid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .content { padding-top: 18px; }
+  .navigator { grid-template-columns: 1fr 1fr; }
+  .studentSelect { grid-column: 1 / -1; grid-row: 1; }
+  .stepButton { width: 100%; }
+  .profileHeader { flex-direction: column; }
+  .headerActions { width: 100%; justify-content: flex-start; }
+  .metricGrid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 460px) {
+  .metricGrid { grid-template-columns: 1fr; }
+  .periodOverview { grid-template-columns: 1fr 1fr; }
+}

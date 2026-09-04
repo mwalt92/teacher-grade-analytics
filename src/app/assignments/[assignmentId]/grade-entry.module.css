@@ -1,4 +1,21 @@
 .shell { display: grid; gap: 16px; }
+.hourScope { margin-bottom: 16px; padding: 13px 14px; border: 1px solid #c7d5e6; border-radius: 14px; background: #f5f8fc; }
+.hourScopeIntro { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.hourScopeIntro > div:first-child { display: grid; gap: 3px; }
+.hourScopeIntro > div:first-child strong { font-size: .92rem; }
+.hourScopeIntro > div:first-child span { color: var(--muted); font-size: .78rem; }
+.hourButtons { display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
+.hourButton, .hourButtonActive { min-height: 36px; display: inline-flex; align-items: center; justify-content: center; padding: 0 11px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--muted); font-size: .77rem; font-weight: 800; white-space: nowrap; }
+.hourButton:hover { border-color: #b9c8e6; color: var(--brand); }
+.hourButtonActive { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+.linkedSectionStack { display: grid; gap: 30px; }
+.linkedSectionBlock { display: grid; gap: 14px; scroll-margin-top: 16px; }
+.linkedSectionBlock + .linkedSectionBlock { padding-top: 4px; border-top: 2px solid #ccd7e5; }
+.linkedSectionBanner { position: sticky; top: 0; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 12px; border: 1px solid #b9cbe1; border-radius: 12px; background: rgba(245,248,252,.97); box-shadow: 0 8px 20px rgba(31,41,55,.08); backdrop-filter: blur(8px); }
+.linkedSectionBanner > div { display: grid; gap: 2px; }
+.linkedSectionBanner span { color: var(--brand); font-size: .68rem; font-weight: 850; text-transform: uppercase; letter-spacing: .08em; }
+.linkedSectionBanner strong { font-size: .98rem; }
+.linkedSectionBanner small { color: var(--muted); font-size: .73rem; }
 .summary { display: flex; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 14px; background: var(--surface-soft); border: 1px solid var(--line); }
 .summary > div { display: grid; min-width: 80px; }
 .summary strong { font-size: 1.15rem; }
@@ -21,6 +38,10 @@
 .missingRow { background: var(--warning-soft); border-radius: 10px; }
 .exemptRow { background: var(--brand-soft); border-radius: 10px; }
 .muted { color: var(--muted); font-size: .84rem; }
+.studentLink { width: fit-content; max-width: 100%; border-radius: 6px; }
+.studentLink strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.studentLink:hover { color: var(--brand); text-decoration: underline; text-underline-offset: 2px; }
+.studentLink:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
 .scoreField { display: flex; align-items: center; gap: 8px; }
 .scoreField input { width: 92px; min-height: 40px; border: 1px solid var(--line); border-radius: 9px; padding: 0 10px; background: #fff; }
 .scoreField input:focus, .setAllGroup input:focus, .retakeEditor input:focus { outline: 2px solid var(--brand-soft); border-color: var(--brand); }
@@ -60,6 +81,9 @@
 .retakeEditor .iconButton { width: 36px; padding: 0; background: #fff; color: var(--muted); border-color: var(--line); }
 
 @media (max-width: 850px) {
+  .hourScopeIntro { align-items: flex-start; flex-direction: column; }
+  .hourButtons { justify-content: flex-start; }
+  .linkedSectionBanner { align-items: flex-start; }
   .row { grid-template-columns: 1.4fr .7fr 1fr minmax(165px, .9fr); }
   .row > :nth-child(2), .head > :nth-child(2) { display: none; }
   .summary { align-items: flex-start; flex-wrap: wrap; }
@@ -71,6 +95,11 @@
 }
 
 @media (max-width: 620px) {
+  .hourButtons { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .hourButton, .hourButtonActive { width: 100%; }
+  .linkedSectionStack { gap: 24px; }
+  .linkedSectionBanner { position: static; flex-direction: column; }
+  .linkedSectionBanner :global(.secondary-link) { width: 100%; justify-content: center; }
   .bulkActions { display: grid; }
   .setAllGroup { width: 100%; }
   .setAllGroup input { flex: 0 0 88px; }
