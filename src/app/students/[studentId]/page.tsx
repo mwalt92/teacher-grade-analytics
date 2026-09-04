@@ -8,6 +8,7 @@ import { getSectionRoster } from "@/lib/data/roster";
 import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import type { GradeAuditLine, GradingRules } from "@/lib/grading/types";
 import { createClient } from "@/lib/supabase/server";
+import { StudentAssignmentEditor } from "./student-assignment-editor";
 import { StudentProfileNavigator } from "./student-profile-navigator";
 import styles from "./student-profile.module.css";
 
@@ -38,12 +39,6 @@ function profileHref(studentId: string, sectionId: string, period: string | unde
   const params = new URLSearchParams({ sectionId, returnTo });
   if (period) params.set("period", period);
   return `/students/${studentId}?${params.toString()}`;
-}
-
-function decisionClass(status: GradeAuditLine["status"]) {
-  if (status === "counted") return "status success-pill";
-  if (status === "missing" || status === "dropped") return "status warning-pill";
-  return "status neutral-pill";
 }
 
 export default async function StudentProfilePage({ params, searchParams }: PageProps) {
@@ -100,6 +95,25 @@ export default async function StudentProfilePage({ params, searchParams }: PageP
   const auditHref = selectedPeriod
     ? `/gradebook/audit?studentId=${encodeURIComponent(student.studentId)}&period=${encodeURIComponent(selectedPeriod.code)}`
     : `/gradebook/audit?studentId=${encodeURIComponent(student.studentId)}`;
+
+  const editableRows = selectedCalculation ? selectedAudit.map((line) => ({
+    assignmentId: line.assignmentId,
+    title: line.assignmentTitle ?? "Assignment",
+    assignmentDate: line.assignmentDate ?? null,
+    categoryLabel: categoryLabel(line.category, selectedCalculation.rules),
+    gradingPeriodCode: line.gradingPeriodCode ?? selectedPeriod?.code ?? "",
+    pointsPossible: line.pointsPossible,
+    status: line.status,
+    attemptOnePoints: line.attempts.find((attempt) => attempt.attemptNumber === 1)?.earned ?? null,
+    missing: line.missing,
+    exempt: line.exempt,
+    attempts: line.attempts.map((attempt) => ({
+      attemptNumber: attempt.attemptNumber,
+      earned: attempt.earned,
+      possible: attempt.possible,
+      counted: attempt.counted,
+    })),
+  })) : [];
 
   return <main className="app-shell">
     <header className="topbar">
@@ -181,23 +195,8 @@ export default async function StudentProfilePage({ params, searchParams }: PageP
         </section>
 
         <article className={`panel full-width ${styles.tablePanel}`}>
-          <div className="panel-header"><div><p className="eyebrow">Assignment history</p><h3>Complete {selectedPeriod.code} grade record</h3><p className="subtle">Every assignment in this grading-period calculation, including Missing, dropped, exempt, and unentered work.</p></div><Link className="secondary-link" href={auditHref}>Open calculation details</Link></div>
-          {selectedAudit.length ? <div className={styles.tableScroll}><div className={styles.table} role="table" aria-label={`${student.displayName} assignment history`}>
-            <div className={`${styles.row} ${styles.head}`} role="row"><span>Assignment</span><span>Period / Category</span><span>Counted score</span><span>Decision</span><span>Attempts</span></div>
-            {selectedAudit.map((line) => {
-              const score = line.countedPossible === null ? "—" : `${(line.countedEarned ?? 0).toFixed(1)}/${line.countedPossible.toFixed(1)}`;
-              const attempts = line.attempts.length
-                ? line.attempts.map((attempt) => `A${attempt.attemptNumber}: ${attempt.earned}/${attempt.possible}${attempt.counted ? " ✓" : ""}`).join(" · ")
-                : "No attempts";
-              return <div className={styles.row} role="row" key={`${line.gradingPeriodCode ?? selectedPeriod.code}:${line.assignmentId}`}>
-                <span className={styles.assignment}><Link href={`/assignments/${line.assignmentId}?returnTo=${encodeURIComponent(currentProfileHref)}`}><strong>{line.assignmentTitle ?? "Assignment"}</strong></Link><small>{line.assignmentDate ?? "No date"}</small></span>
-                <span>{line.gradingPeriodCode ?? selectedPeriod.code}<br/><small className="subtle">{categoryLabel(line.category, selectedCalculation.rules)}</small></span>
-                <span><strong>{score}</strong><br/><small className="subtle">{formatPercent(line.percent)}</small></span>
-                <span className={decisionClass(line.status)}>{line.status}{line.countedAttemptNumber ? ` • A${line.countedAttemptNumber}` : ""}</span>
-                <span className={styles.attempts}>{attempts}</span>
-              </div>;
-            })}
-          </div></div> : <div className={styles.empty}>No assignments are configured in this grading period yet.</div>}
+          <div className="panel-header"><div><p className="eyebrow">Assignment grades</p><h3>Grade {student.displayName} in {selectedPeriod.code}</h3><p className="subtle">Edit this student's original assignment scores directly here. Missing and Exempt use the same rules as normal grade entry; existing retake attempts remain visible for context.</p></div><Link className="secondary-link" href={auditHref}>Open calculation details</Link></div>
+          {editableRows.length ? <StudentAssignmentEditor studentId={student.studentId} rows={editableRows} profileHref={currentProfileHref}/> : <div className={styles.empty}>No assignments are configured in this grading period yet.</div>}
         </article>
       </> : <article className="panel"><h2>No grading periods are configured yet.</h2><p className="subtle">Once grading periods exist, this profile will show the student's complete grade picture here.</p></article>}
     </section>
