@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
+import { revalidatePath } from "next/cache";
 import { discoverPowerSchoolTeacher, getPowerSchoolConfigStatus, type PowerSchoolTeacherSection } from "@/lib/powerschool/client";
 import { createClient } from "@/lib/supabase/server";
 
@@ -28,6 +29,7 @@ async function appendConnectionEvent(
     payload,
     summary,
   });
+  revalidatePath("/settings/powerschool");
 }
 
 export async function testPowerSchoolConnection(
