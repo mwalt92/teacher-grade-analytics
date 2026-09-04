@@ -8,42 +8,186 @@ import { getSectionGradingPeriods, getStudentPeriodCalculation, type StudentPeri
 import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import type { CategoryCalculationMethod, GradingRules } from "@/lib/grading/types";
+import styles from "./grade-audit.module.css";
 
-function formatPercent(value:number|null){return value===null?"—":`${value.toFixed(2)}%`;}
-function categoryLabel(category:string,rules:GradingRules){return rules.categoryLabels?.[category]??category;}
-function methodLabel(method:CategoryCalculationMethod){return method==="total_points"?"Total points":"Equal assignment %";}
-type GradeAuditPageProps={searchParams:Promise<{studentId?:string;period?:string;fromPeriod?:string;fromSemester?:string}>};
-
-export default async function GradeAuditPage({searchParams}:GradeAuditPageProps){
- const supabase=await createClient(); const {data:claimsData,error:claimsError}=await supabase.auth.getClaims(); const userId=claimsData?.claims?.sub;
- if(claimsError||typeof userId!=="string")redirect("/login");
- const [sections,section]=await Promise.all([getTeacherSections(),getActiveTeacherSection()]); if(!section)return <main className="content-wrap"><article className="panel"><h1>No teacher section is available.</h1></article></main>;
- const [roster,periods,params]=await Promise.all([getSectionRoster(section.sectionId,"all"),getSectionGradingPeriods(section.sectionId),searchParams]);
- const selectedStudent=roster.find(student=>student.studentId===params.studentId)??roster[0];
- const selectedPeriod=periods.find(period=>period.code===params.period)??periods[0];
- const fromPeriodCode=params.fromPeriod??params.fromSemester;
- const fromPeriod=periods.find(period=>period.code===fromPeriodCode)??null;
- const calculation=selectedStudent&&selectedPeriod?await getStudentPeriodCalculation(section.sectionId,selectedStudent.studentId,selectedPeriod.code):null;
- const returnTo=selectedStudent&&selectedPeriod?`/gradebook/audit?studentId=${encodeURIComponent(selectedStudent.studentId)}&period=${encodeURIComponent(selectedPeriod.code)}`:"/gradebook/audit";
- return <main className="app-shell grade-audit-shell"><header className="topbar"><div><p className="eyebrow">Teacher Gradebook</p><h1>Grade calculation audit</h1><p className="subtle">{section.courseCode?`${section.courseName} ${section.courseCode}`:section.courseName} • {section.sectionName} • deterministic engine output</p></div></header>
- <TeacherPrimaryNav/>
- <GradebookWorkspaceNav active="audit" period={selectedPeriod?.code}/>
- <TeacherContextBar sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/>
- <section className="content-wrap grade-audit-content"><article className="panel grade-audit-controls"><div className="panel-header"><div><p className="eyebrow">Audit controls</p><h3>Choose a student and grading period</h3></div>{selectedStudent&&calculation&&fromPeriod?<div className="grade-audit-header-actions"><Link className="secondary-link" href={`?studentId=${selectedStudent.studentId}&period=${fromPeriod.code}`}>Back to {fromPeriod.code} audit</Link></div>:null}</div><form method="get" className="grade-audit-form"><label><span>Student</span><select name="studentId" defaultValue={selectedStudent?.studentId} aria-label="Select student">{roster.map(student=><option key={student.studentId} value={student.studentId}>{student.displayName}{student.active?"":" (Inactive)"}</option>)}</select></label><label><span>Grading period</span><select name="period" defaultValue={selectedPeriod?.code} aria-label="Select grading period">{periods.map(period=><option key={period.id} value={period.code}>{period.code} — {period.name}</option>)}</select></label><button className="primary-button grade-audit-submit" type="submit">View Calculation</button></form></article>
- {selectedStudent&&calculation?calculation.mode==="composite"?<CompositeAudit studentName={selectedStudent.displayName} calculation={calculation}/>:<DirectAudit studentName={selectedStudent.displayName} calculation={calculation} fromPeriod={fromPeriod}/>:<article className="panel full-width"><p className="subtle">No calculation data is available for this selection.</p></article>}
- </section></main>;
+function formatPercent(value: number | null) {
+  return value === null ? "—" : `${value.toFixed(2)}%`;
 }
 
-function CompositeAudit({studentName,calculation}:{studentName:string;calculation:Extract<StudentPeriodCalculation,{mode:"composite"}>}){
- return <><section className="metric-grid grade-audit-metrics" aria-label="Composite grade summary"><article className="metric-card"><span className="metric-label">Student</span><strong>{studentName}</strong></article><article className="metric-card"><span className="metric-label">Current {calculation.gradingPeriod.code}</span><strong>{formatPercent(calculation.result.overallPercent)}</strong></article>{calculation.result.components.map(component=><article className="metric-card" key={component.code}><span className="metric-label">{component.label}</span><strong>{formatPercent(component.percent)}</strong><span className="subtle">Weight {(component.weight*100).toFixed(0)}%</span></article>)}</section>
- <article className="panel full-width"><div className="panel-header"><div><p className="eyebrow">Composite arithmetic</p><h3>{calculation.gradingPeriod.name}: configured weighted components</h3></div></div><div className="integrity-stack">{calculation.result.components.map(component=><div className="integrity-item" key={component.code}><span>{component.label}: {formatPercent(component.percent)} × {(component.weight*100).toFixed(0)}%</span><strong>{component.percent===null?"Excluded":component.weightedContribution.toFixed(2)}</strong></div>)}<div className="integrity-item success"><span>Weighted total ÷ active weight ({(calculation.result.activeWeight*100).toFixed(0)}%)</span><strong>{formatPercent(calculation.result.overallPercent)}</strong></div></div><p className="subtle">This composition comes from the course&apos;s grading-period configuration. Components without data are excluded and the available weights are renormalized.</p></article>
- {calculation.components.map(({weight,calculation:component})=><article className="panel full-width" key={component.gradingPeriod.code}><div className="panel-header"><div><p className="eyebrow">{component.gradingPeriod.periodRole==="exam"?"Exam component":"Period component"}</p><h3>{component.gradingPeriod.code} — {component.gradingPeriod.name} — {formatPercent(component.result.overallPercent)}</h3><p className="subtle">Configured weight {(weight*100).toFixed(0)}%</p></div><Link className="text-button" href={`?studentId=${calculation.studentId}&period=${component.gradingPeriod.code}&fromPeriod=${calculation.gradingPeriod.code}`}>Open component audit →</Link></div></article>)}
- </>;
+function categoryLabel(category: string, rules: GradingRules) {
+  return rules.categoryLabels?.[category] ?? category;
 }
 
-function DirectAudit({studentName,calculation,fromPeriod}:{studentName:string;calculation:Extract<StudentPeriodCalculation,{mode:"direct"}>;fromPeriod:{code:string;name:string}|null}){
- const categoryCodes=Object.keys(calculation.rules.categoryWeights);
- return <>{fromPeriod?<div className="grade-audit-drillback"><span><strong>{calculation.gradingPeriod.code}</strong> within {fromPeriod.code}</span><Link className="secondary-link" href={`?studentId=${calculation.studentId}&period=${fromPeriod.code}`}>← Back to {fromPeriod.code} audit</Link></div>:null}<section className="metric-grid grade-audit-metrics" aria-label="Student grade summary"><article className="metric-card"><span className="metric-label">Student</span><strong>{studentName}</strong></article><article className="metric-card"><span className="metric-label">Current {calculation.gradingPeriod.code}</span><strong>{formatPercent(calculation.result.overallPercent)}</strong></article>{categoryCodes.map(category=>{const result=calculation.result.categories[category];const method=calculation.rules.calculationMethods[category]??"equal_assignment_percentage";return <article className="metric-card" key={category}><span className="metric-label">{categoryLabel(category,calculation.rules)}</span><strong>{formatPercent(result?.averagePercent??null)}</strong><span className="subtle">Weight {(calculation.rules.categoryWeights[category]*100).toFixed(0)}% • {methodLabel(method)}</span></article>})}</section>
- <article className="panel full-width"><div className="panel-header"><div><p className="eyebrow">Category arithmetic</p><h3>How each configured category is calculated</h3></div></div><div className="integrity-stack">{categoryCodes.map(category=>{const result=calculation.result.categories[category];const label=categoryLabel(category,calculation.rules);const method=calculation.rules.calculationMethods[category]??"equal_assignment_percentage";if(!result)return <div className="integrity-item" key={category}><span>{label} — {methodLabel(method)} — no current grade data</span><strong>Excluded</strong></div>;const arithmetic=method==="total_points"?`${result.pointsEarned.toFixed(2)} / ${result.pointsPossible.toFixed(2)} = ${result.averagePercent.toFixed(2)}%`:`${result.assignmentCount} equally weighted assignment percentage${result.assignmentCount===1?"":"s"} = ${result.averagePercent.toFixed(2)}%`;return <div className="integrity-item" key={category}><span><strong>{label}</strong> · {methodLabel(method)} · {arithmetic} · weight ${(result.configuredWeight*100).toFixed(0)}%</span><strong>{result.weightedContribution.toFixed(2)}</strong></div>})}<div className="integrity-item success"><span>Weighted total ÷ active weight ({(calculation.result.activeWeight*100).toFixed(0)}%)</span><strong>{formatPercent(calculation.result.overallPercent)}</strong></div></div><p className="subtle">Only categories with current counted or Missing grade data contribute to the active weight. Empty categories are excluded and the remaining category weights are renormalized.</p></article>
- <article className="panel full-width"><div className="panel-header"><div><p className="eyebrow">Assignment audit</p><h3>Exactly what counts</h3></div></div><div className="assignment-table" role="table" aria-label="Grade calculation audit"><div className="assignment-row table-head" role="row"><span>Assignment</span><span>Category</span><span>Counted score</span><span>Decision</span><span>Attempts</span></div>{calculation.result.audit.map(line=>{const countedPoints=line.countedPossible===null?"—":`${(line.countedEarned??0).toFixed(2)}/${line.countedPossible.toFixed(2)}`;return <div className="assignment-row" role="row" key={line.assignmentId}><span><strong>{line.assignmentTitle??line.assignmentId}</strong><br/><small>{line.assignmentDate??""}</small></span><span>{categoryLabel(line.category,calculation.rules)}</span><span>{countedPoints}<br/><small>{formatPercent(line.percent)}</small></span><span className={line.status==="counted"?"status success-pill":line.status==="missing"||line.status==="dropped"?"status warning-pill":"status"}>{line.status}{line.countedAttemptNumber?` · Attempt ${line.countedAttemptNumber}`:""}</span><span>{line.attempts.length===0?"—":line.attempts.map(attempt=>`${attempt.attemptNumber}: ${attempt.earned}/${attempt.possible} (${attempt.percent.toFixed(2)}%)${attempt.counted?" ✓":""}`).join(" · ")}</span></div>})}</div></article></>;
+function methodLabel(method: CategoryCalculationMethod) {
+  return method === "total_points" ? "Total points" : "Equal assignment %";
+}
+
+function decisionLabel(status: string) {
+  if (status === "counted") return "Counted";
+  if (status === "missing") return "Missing";
+  if (status === "dropped") return "Dropped";
+  if (status === "exempt") return "Exempt";
+  if (status === "unentered") return "Not entered";
+  return status.replaceAll("_", " ").replace(/^./, (value) => value.toUpperCase());
+}
+
+function decisionClass(status: string) {
+  if (status === "counted") return "status success-pill";
+  if (status === "missing" || status === "dropped") return "status warning-pill";
+  return "status neutral-pill";
+}
+
+type GradeAuditPageProps = {
+  searchParams: Promise<{ studentId?: string; period?: string; fromPeriod?: string; fromSemester?: string }>;
+};
+
+export default async function GradeAuditPage({ searchParams }: GradeAuditPageProps) {
+  const supabase = await createClient();
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
+  const userId = claimsData?.claims?.sub;
+  if (claimsError || typeof userId !== "string") redirect("/login");
+
+  const [sections, section] = await Promise.all([getTeacherSections(), getActiveTeacherSection()]);
+  if (!section) {
+    return <main className="content-wrap"><article className="panel"><h1>No teacher section is available.</h1></article></main>;
+  }
+
+  const [roster, periods, params] = await Promise.all([
+    getSectionRoster(section.sectionId, "all"),
+    getSectionGradingPeriods(section.sectionId),
+    searchParams,
+  ]);
+  const selectedStudent = roster.find((student) => student.studentId === params.studentId) ?? roster[0];
+  const selectedPeriod = periods.find((period) => period.code === params.period) ?? periods[0];
+  const fromPeriodCode = params.fromPeriod ?? params.fromSemester;
+  const fromPeriod = periods.find((period) => period.code === fromPeriodCode) ?? null;
+  const calculation = selectedStudent && selectedPeriod
+    ? await getStudentPeriodCalculation(section.sectionId, selectedStudent.studentId, selectedPeriod.code)
+    : null;
+  const returnTo = selectedStudent && selectedPeriod
+    ? `/gradebook/audit?studentId=${encodeURIComponent(selectedStudent.studentId)}&period=${encodeURIComponent(selectedPeriod.code)}`
+    : "/gradebook/audit";
+
+  return <main className="app-shell grade-audit-shell">
+    <header className="topbar">
+      <div>
+        <p className="eyebrow">Teacher Gradebook</p>
+        <h1>Grade calculation audit</h1>
+        <p className="subtle">{section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName} • {section.sectionName} • deterministic engine output</p>
+      </div>
+    </header>
+    <TeacherPrimaryNav/>
+    <GradebookWorkspaceNav active="audit" period={selectedPeriod?.code}/>
+    <TeacherContextBar sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/>
+
+    <section className="content-wrap grade-audit-content">
+      <article className="panel grade-audit-controls">
+        <div className="panel-header">
+          <div><p className="eyebrow">Audit controls</p><h3>Choose a student and grading period</h3></div>
+          {selectedStudent && calculation && fromPeriod ? <div className="grade-audit-header-actions"><Link className="secondary-link" href={`?studentId=${selectedStudent.studentId}&period=${fromPeriod.code}`}>Back to {fromPeriod.code} audit</Link></div> : null}
+        </div>
+        <form method="get" className="grade-audit-form">
+          <label><span>Student</span><select name="studentId" defaultValue={selectedStudent?.studentId} aria-label="Select student">{roster.map((student) => <option key={student.studentId} value={student.studentId}>{student.displayName}{student.active ? "" : " (Inactive)"}</option>)}</select></label>
+          <label><span>Grading period</span><select name="period" defaultValue={selectedPeriod?.code} aria-label="Select grading period">{periods.map((period) => <option key={period.id} value={period.code}>{period.code} — {period.name}</option>)}</select></label>
+          <button className="primary-button grade-audit-submit" type="submit">View Calculation</button>
+        </form>
+      </article>
+
+      {selectedStudent && calculation
+        ? calculation.mode === "composite"
+          ? <CompositeAudit studentName={selectedStudent.displayName} calculation={calculation}/>
+          : <DirectAudit studentName={selectedStudent.displayName} calculation={calculation} fromPeriod={fromPeriod}/>
+        : <article className="panel full-width"><p className="subtle">No calculation data is available for this selection.</p></article>}
+    </section>
+  </main>;
+}
+
+function CompositeAudit({ studentName, calculation }: { studentName: string; calculation: Extract<StudentPeriodCalculation, { mode: "composite" }> }) {
+  return <>
+    <section className={`metric-grid grade-audit-metrics ${styles.metrics}`} aria-label="Composite grade summary">
+      <article className="metric-card"><span className="metric-label">Student</span><strong>{studentName}</strong></article>
+      <article className="metric-card"><span className="metric-label">Current {calculation.gradingPeriod.code}</span><strong>{formatPercent(calculation.result.overallPercent)}</strong></article>
+      {calculation.result.components.map((component) => <article className="metric-card" key={component.code}><span className="metric-label">{component.label}</span><strong>{formatPercent(component.percent)}</strong><span className="subtle">Weight {(component.weight * 100).toFixed(0)}%</span></article>)}
+    </section>
+
+    <article className={`panel full-width ${styles.categoryPanel}`}>
+      <div className="panel-header"><div><p className="eyebrow">Composite arithmetic</p><h3>{calculation.gradingPeriod.name}: configured weighted components</h3></div></div>
+      <div className="integrity-stack">
+        {calculation.result.components.map((component) => <div className="integrity-item" key={component.code}><span>{component.label}: {formatPercent(component.percent)} × {(component.weight * 100).toFixed(0)}%</span><strong>{component.percent === null ? "Excluded" : component.weightedContribution.toFixed(2)}</strong></div>)}
+        <div className="integrity-item success"><span>Weighted total ÷ active weight ({(calculation.result.activeWeight * 100).toFixed(0)}%)</span><strong>{formatPercent(calculation.result.overallPercent)}</strong></div>
+      </div>
+      <p className="subtle">This composition comes from the course&apos;s grading-period configuration. Components without data are excluded and the available weights are renormalized.</p>
+    </article>
+
+    {calculation.components.map(({ weight, calculation: component }) => <article className="panel full-width" key={component.gradingPeriod.code}>
+      <div className="panel-header">
+        <div><p className="eyebrow">{component.gradingPeriod.periodRole === "exam" ? "Exam component" : "Period component"}</p><h3>{component.gradingPeriod.code} — {component.gradingPeriod.name} — {formatPercent(component.result.overallPercent)}</h3><p className="subtle">Configured weight {(weight * 100).toFixed(0)}%</p></div>
+        <Link className="text-button" href={`?studentId=${calculation.studentId}&period=${component.gradingPeriod.code}&fromPeriod=${calculation.gradingPeriod.code}`}>Open component audit →</Link>
+      </div>
+    </article>)}
+  </>;
+}
+
+function DirectAudit({ studentName, calculation, fromPeriod }: { studentName: string; calculation: Extract<StudentPeriodCalculation, { mode: "direct" }>; fromPeriod: { code: string; name: string } | null }) {
+  const categoryCodes = Object.keys(calculation.rules.categoryWeights);
+
+  return <>
+    {fromPeriod ? <div className="grade-audit-drillback"><span><strong>{calculation.gradingPeriod.code}</strong> within {fromPeriod.code}</span><Link className="secondary-link" href={`?studentId=${calculation.studentId}&period=${fromPeriod.code}`}>← Back to {fromPeriod.code} audit</Link></div> : null}
+
+    <section className={`metric-grid grade-audit-metrics ${styles.metrics}`} aria-label="Student grade summary">
+      <article className="metric-card"><span className="metric-label">Student</span><strong>{studentName}</strong></article>
+      <article className="metric-card"><span className="metric-label">Current {calculation.gradingPeriod.code}</span><strong>{formatPercent(calculation.result.overallPercent)}</strong></article>
+      {categoryCodes.map((category) => {
+        const result = calculation.result.categories[category];
+        const method = calculation.rules.calculationMethods[category] ?? "equal_assignment_percentage";
+        return <article className="metric-card" key={category}><span className="metric-label">{categoryLabel(category, calculation.rules)}</span><strong>{formatPercent(result?.averagePercent ?? null)}</strong><span className="subtle">Weight {(calculation.rules.categoryWeights[category] * 100).toFixed(0)}% • {methodLabel(method)}</span></article>;
+      })}
+    </section>
+
+    <article className={`panel full-width ${styles.categoryPanel}`}>
+      <div className="panel-header"><div><p className="eyebrow">Category arithmetic</p><h3>How each configured category is calculated</h3></div></div>
+      <div className="integrity-stack">
+        {categoryCodes.map((category) => {
+          const result = calculation.result.categories[category];
+          const label = categoryLabel(category, calculation.rules);
+          const method = calculation.rules.calculationMethods[category] ?? "equal_assignment_percentage";
+          if (!result) return <div className="integrity-item" key={category}><span>{label} — {methodLabel(method)} — no current grade data</span><strong>Excluded</strong></div>;
+          const arithmetic = method === "total_points"
+            ? `${result.pointsEarned.toFixed(2)} / ${result.pointsPossible.toFixed(2)} = ${result.averagePercent.toFixed(2)}%`
+            : `${result.assignmentCount} equally weighted assignment percentage${result.assignmentCount === 1 ? "" : "s"} = ${result.averagePercent.toFixed(2)}%`;
+          return <div className="integrity-item" key={category}><span><strong>{label}</strong> · {methodLabel(method)} · {arithmetic} · weight ${(result.configuredWeight * 100).toFixed(0)}%</span><strong>{result.weightedContribution.toFixed(2)}</strong></div>;
+        })}
+        <div className="integrity-item success"><span>Weighted total ÷ active weight ({(calculation.result.activeWeight * 100).toFixed(0)}%)</span><strong>{formatPercent(calculation.result.overallPercent)}</strong></div>
+      </div>
+      <p className="subtle">Only categories with current counted or Missing grade data contribute to the active weight. Empty categories are excluded and the remaining category weights are renormalized.</p>
+    </article>
+
+    <article className={`panel full-width ${styles.auditPanel}`}>
+      <div className="panel-header"><div><p className="eyebrow">Assignment audit</p><h3>Exactly what counts</h3><p className="subtle">Scan the grading decision first; expand attempts only when you need the history.</p></div></div>
+      <div className={styles.tableScroll}>
+        <div className={styles.auditTable} role="table" aria-label="Grade calculation audit">
+          <div className={styles.auditHead} role="row">
+            <span role="columnheader">Assignment</span><span role="columnheader">Category</span><span role="columnheader">Counted score</span><span role="columnheader">Decision</span><span role="columnheader">Attempts</span>
+          </div>
+          {calculation.result.audit.map((line) => {
+            const countedPoints = line.countedPossible === null ? "—" : `${(line.countedEarned ?? 0).toFixed(2)}/${line.countedPossible.toFixed(2)}`;
+            return <div className={styles.auditRow} role="row" key={line.assignmentId}>
+              <span className={styles.assignment} role="cell"><strong>{line.assignmentTitle ?? line.assignmentId}</strong><small>{line.assignmentDate ?? ""}</small></span>
+              <span role="cell">{categoryLabel(line.category, calculation.rules)}</span>
+              <span className={styles.score} role="cell"><strong>{countedPoints}</strong><small>{formatPercent(line.percent)}</small></span>
+              <span className={styles.decision} role="cell"><span className={decisionClass(line.status)}>{decisionLabel(line.status)}{line.countedAttemptNumber ? ` · A${line.countedAttemptNumber}` : ""}</span></span>
+              <span role="cell">
+                {line.attempts.length === 0 ? <span className="subtle">No attempts</span> : <details className={styles.attempts}>
+                  <summary>{line.attempts.length} attempt{line.attempts.length === 1 ? "" : "s"}</summary>
+                  <div className={styles.attemptList}>
+                    {line.attempts.map((attempt) => <div className={styles.attemptLine} key={attempt.attemptNumber}><strong>A{attempt.attemptNumber}</strong><span>{attempt.earned}/{attempt.possible} ({attempt.percent.toFixed(2)}%)</span>{attempt.counted ? <span className={styles.counted}>Counts</span> : null}</div>)}
+                  </div>
+                </details>}
+              </span>
+            </div>;
+          })}
+        </div>
+      </div>
+    </article>
+  </>;
 }
