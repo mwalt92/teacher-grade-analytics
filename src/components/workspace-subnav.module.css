@@ -1,0 +1,46 @@
+.shell {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.nav {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 10px 40px 0;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.item {
+  position: relative;
+  min-height: 42px;
+  padding: 0 14px 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: .84rem;
+  font-weight: 750;
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
+}
+
+.item:hover {
+  color: var(--brand);
+}
+
+.active {
+  color: var(--brand);
+  border-bottom-color: var(--brand);
+}
+
+.disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 720px) {
+  .nav { padding-left: 18px; padding-right: 18px; }
+}
