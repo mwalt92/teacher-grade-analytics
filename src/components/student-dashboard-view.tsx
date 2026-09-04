@@ -60,6 +60,8 @@ export function StudentDashboardView({
   studentHeaderActions,
 }: StudentDashboardViewProps) {
   const recentAssignments = data.assignments.slice(0, 10);
+  const firstMissingAssignment = data.assignments.find((assignment) => assignment.missing) ?? null;
+  const retakeCount = data.simulator.retakeOptions.length;
   const previewCarryFields = hiddenFields.filter((field) => field.name !== "studentId" && field.name !== "period");
   const categoryLabel = (category: string) => data.simulator.rules.categoryLabels?.[category] ?? category;
   const hasSeparateSummary = data.summaryPeriodCode !== data.periodCode;
@@ -135,19 +137,25 @@ export function StudentDashboardView({
         </article>
 
         <aside className="panel">
-          <div className="panel-header"><div><p className="eyebrow">Quick check</p><h3>Needs attention</h3></div></div>
+          <div className="panel-header"><div><p className="eyebrow">Next steps</p><h3>What to do next</h3></div></div>
           <div className={styles.attentionList}>
-            <div className={`${styles.attentionItem} ${data.missingCount ? styles.missingAttention : ""}`}><span>Missing assignments</span><strong>{data.missingCount}</strong></div>
-            <div className={styles.attentionItem}><span>Dropped assignments</span><strong>{data.droppedCount}</strong></div>
+            {firstMissingAssignment ? <Link className={`${styles.attentionItem} ${styles.missingAttention} ${styles.attentionLink}`} href={assignmentHref(firstMissingAssignment.assignmentId)}>
+              <div className={styles.attentionCopy}><strong>Missing assignments</strong><small>Open the first missing item</small></div><strong>{data.missingCount}</strong>
+            </Link> : <div className={styles.attentionItem}><div className={styles.attentionCopy}><strong>Missing assignments</strong><small>Nothing missing right now</small></div><strong>0</strong></div>}
+            {retakeCount ? <a className={`${styles.attentionItem} ${styles.retakeAttention} ${styles.attentionLink}`} href="#grade-simulator">
+              <div className={styles.attentionCopy}><strong>Retakes available</strong><small>Model a retake below</small></div><strong>{retakeCount}</strong>
+            </a> : <div className={styles.attentionItem}><div className={styles.attentionCopy}><strong>Retakes available</strong><small>No current retake options</small></div><strong>0</strong></div>}
+            <div className={styles.attentionItem}><div className={styles.attentionCopy}><strong>Dropped assignments</strong><small>Excluded by the configured drop rule</small></div><strong>{data.droppedCount}</strong></div>
           </div>
           <div className={styles.simulatorCard}>
             <strong>Grade Simulator</strong>
-            <p>Now available below. Try future scores without changing any real grade data.</p>
+            <p>Try future scores and retakes without changing any real grade data.</p>
+            <a className={styles.inlineAction} href="#grade-simulator">Open simulator ↓</a>
           </div>
         </aside>
       </section>
 
-      <GradeSimulator data={data.simulator}/>
+      <div id="grade-simulator" className={styles.simulatorAnchor}><GradeSimulator data={data.simulator}/></div>
 
       <article className={`panel full-width ${styles.assignmentsPanel}`}>
         <div className="panel-header"><div><p className="eyebrow">Recent work</p><h3>{data.periodCode} assignments</h3></div><span className="subtle">Most recent 10</span></div>
