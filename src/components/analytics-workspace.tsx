@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { setActiveTeacherSection } from "@/app/teacher-section-actions";
 import { SectionScopeNav } from "@/components/section-scope-nav";
@@ -50,6 +51,7 @@ export function AnalyticsWorkspace(props: AnalyticsWorkspaceProps) {
     ? "Average student performance in each component of the selected composite period."
     : "Average student performance by configured grading category.";
   const maxBandCount = Math.max(1, ...analytics.gradeBands.map((band) => band.count));
+  const currentReturnTo = scope === "all" ? allHref : sectionHref;
 
   return <main className="app-shell">
     <header className="topbar">
@@ -146,14 +148,12 @@ export function AnalyticsWorkspace(props: AnalyticsWorkspaceProps) {
           {analytics.students.map((student) => {
             const studentSectionId = "sectionId" in student ? student.sectionId : activeSectionId;
             const studentSectionName = "sectionName" in student ? periodNumberLabel(student.sectionName, student.periodNumber) : sectionName;
-            const auditHref = selectedPeriod ? `/gradebook/audit?studentId=${student.studentId}&period=${encodeURIComponent(selectedPeriod.code)}` : `/gradebook/audit?studentId=${student.studentId}`;
+            const profileParams = new URLSearchParams({ sectionId: studentSectionId, returnTo: currentReturnTo });
+            if (selectedPeriod) profileParams.set("period", selectedPeriod.code);
             return <div className={styles.studentRow} role="row" key={`${studentSectionId}:${student.studentId}`}>
               <div className={styles.studentName}>
-                {scope === "all" ? <form action={setActiveTeacherSection}>
-                  <input type="hidden" name="sectionId" value={studentSectionId}/><input type="hidden" name="returnTo" value={auditHref}/>
-                  <button type="submit" className={styles.studentButton}>{student.displayName}</button>
-                </form> : <a className={styles.studentButton} href={auditHref}>{student.displayName}</a>}
-                <small>{student.overallPercent === null ? "No calculated grade yet" : "Open grade audit"}</small>
+                <Link className={styles.studentButton} href={`/students/${student.studentId}?${profileParams.toString()}`}>{student.displayName}</Link>
+                <small>{student.overallPercent === null ? "No calculated grade yet" : "Open student profile"}</small>
               </div>
               <span className={styles.muted}>{studentSectionName}</span>
               <span className={styles.gradeValue}>{formatPercent(student.overallPercent)}</span>
