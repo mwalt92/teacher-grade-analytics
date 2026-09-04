@@ -27,7 +27,10 @@
 .bulkButton:hover, .undoButton:hover { border-color: #b9c8e6; background: var(--brand-soft); }
 .bulkButton:disabled, .undoButton:disabled { opacity: .5; cursor: not-allowed; }
 .setAllGroup { display: flex; align-items: stretch; }
-.setAllGroup input { width: 88px; min-height: 40px; border: 1px solid var(--line); border-right: 0; border-radius: 10px 0 0 10px; padding: 0 10px; background: #fff; }
+.setAllGroup input, .setAllGroup select { min-height: 40px; border: 1px solid var(--line); border-right: 0; border-radius: 0; padding: 0 10px; background: #fff; color: var(--text); }
+.setAllGroup input { width: 88px; border-radius: 10px 0 0 10px; }
+.setAllGroup select { min-width: 130px; font-size: .8rem; font-weight: 700; }
+.setAllGroup input:disabled, .setAllGroup select:disabled { background: var(--surface-soft); color: var(--muted); }
 .setAllGroup .bulkButton { border-radius: 0 10px 10px 0; }
 .undoArea { display: flex; gap: 10px; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 10px; }
 .bulkMessage { color: var(--muted); font-size: .82rem; }
@@ -44,7 +47,7 @@
 .studentLink:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
 .scoreField { display: flex; align-items: center; gap: 8px; }
 .scoreField input { width: 92px; min-height: 40px; border: 1px solid var(--line); border-radius: 9px; padding: 0 10px; background: #fff; }
-.scoreField input:focus, .setAllGroup input:focus, .retakeEditor input:focus { outline: 2px solid var(--brand-soft); border-color: var(--brand); }
+.scoreField input:focus, .setAllGroup input:focus, .setAllGroup select:focus, .retakeEditor input:focus { outline: 2px solid var(--brand-soft); border-color: var(--brand); }
 .scoreField span { color: var(--muted); font-size: .84rem; white-space: nowrap; }
 .saveState { display: inline-flex; align-items: center; gap: 5px; width: fit-content; font-size: .8rem; font-weight: 700; }
 .saving, .idle { color: var(--muted); }
@@ -101,9 +104,10 @@
   .linkedSectionBanner { position: static; flex-direction: column; }
   .linkedSectionBanner :global(.secondary-link) { width: 100%; justify-content: center; }
   .bulkActions { display: grid; }
-  .setAllGroup { width: 100%; }
-  .setAllGroup input { flex: 0 0 88px; }
-  .setAllGroup .bulkButton { flex: 1; }
+  .setAllGroup { width: 100%; flex-wrap: wrap; }
+  .setAllGroup input { flex: 0 0 88px; border-radius: 10px 0 0 10px; }
+  .setAllGroup select { flex: 1; min-width: 120px; border-right: 1px solid var(--line); border-radius: 0 10px 10px 0; }
+  .setAllGroup .bulkButton { flex: 1 0 100%; margin-top: 6px; border-radius: 10px; }
   .bulkButton { width: 100%; }
   .row { grid-template-columns: 1fr minmax(140px, .9fr); }
   .head span:nth-child(4), .head span:nth-child(5) { display: none; }
