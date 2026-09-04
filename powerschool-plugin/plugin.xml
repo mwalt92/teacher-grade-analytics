@@ -2,8 +2,8 @@
 <plugin xmlns="http://plugin.powerschool.pearson.com"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://plugin.powerschool.pearson.com plugin.xsd"
-  name="Teacher Grade Analytics Read-Only Connector"
-  version="0.1.0"
+  name="Teacher Grade Analytics Read-Only"
+  version="0.1.1"
   description="Read-only OAuth and PowerQuery access for teacher-owned course and roster discovery during Teacher Grade Analytics integration development.">
   <publisher name="Teacher Grade Analytics">
     <contact email="replace-with-district-contact@example.invalid" />
