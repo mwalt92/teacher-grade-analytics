@@ -107,12 +107,12 @@ export function DashboardShell({ courseName, schoolYear, sectionName, sections, 
         </article>
 
         <article className="panel">
-          <div className="panel-header"><div><p className="eyebrow">Grade integrity</p><h3>PowerSchool comparison</h3></div></div>
+          <div className="panel-header"><div><p className="eyebrow">Grade integrity</p><h3>PowerSchool comparison</h3></div><Link className="text-button" href={selectedPeriod ? `/gradebook/powerschool?period=${encodeURIComponent(selectedPeriod.code)}` : "/gradebook/powerschool"}>Open comparison <ArrowRight size={16}/></Link></div>
           <div className="integrity-stack">
             <div className="integrity-item success"><span>Within tolerance</span><strong>{dashboard.powerSchoolWithinTolerance}</strong></div>
             <div className="integrity-item warning"><span>Needs review</span><strong>{dashboard.powerSchoolMismatchCount}</strong></div>
             <div className="integrity-item"><span>Not captured</span><strong>{dashboard.powerSchoolNotCapturedCount}</strong></div>
-            <Link className="secondary-link dashboard-audit-link" href={selectedPeriod ? `/gradebook/powerschool?period=${encodeURIComponent(selectedPeriod.code)}` : "/gradebook/powerschool"}>Open PowerSchool Comparison <ArrowRight size={16}/></Link>
+            <div className="integrity-item"><span>Retake attempts</span><strong>{dashboard.retakeCount}</strong></div>
           </div>
         </article>
       </section>

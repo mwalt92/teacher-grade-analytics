@@ -61,7 +61,7 @@ export default async function AssignmentMatrixPage({ searchParams }: PageProps) 
       <article className={`panel full-width ${styles.matrixPanel}`}>
         <div className="panel-header">
           <div><p className="eyebrow">{selectedPeriod?.code ?? "Gradebook"}</p><h3>{selectedCategory === "all" ? "All assignments" : `${categoryByCode.get(selectedCategory) ?? selectedCategory} assignments`}</h3></div>
-          <span className="subtle">Edit Attempt 1 directly. Open an assignment for retakes, bulk actions, or deeper editing.</span>
+          <span className="subtle">Edit Attempt 1 directly. Use Enter to save and move down; open an assignment for retakes or bulk actions.</span>
         </div>
 
         {!matrix || visibleAssignments.length === 0 ? <div className={styles.emptyState}>No assignments are configured for this grading period and category yet.</div> :
