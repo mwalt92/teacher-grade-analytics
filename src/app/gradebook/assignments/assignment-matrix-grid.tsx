@@ -197,14 +197,14 @@ export function AssignmentMatrixGrid({ assignments, students: initialStudents, r
       <article className="metric-card"><span className="metric-label">Assignments shown</span><strong>{assignments.length}</strong></article>
       <article className="metric-card"><span className="metric-label">Entered scores</span><strong>{totals.entered}</strong></article>
       <article className="metric-card"><span className="metric-label">Missing</span><strong>{totals.missing}</strong></article>
-      <article className="metric-card"><span className="metric-label">Unentered</span><strong>{totals.unentered}</strong></article>
+      <article className="metric-card"><span className="metric-label">Not entered</span><strong>{totals.unentered}</strong></article>
       <article className="metric-card"><span className="metric-label">Dropped</span><strong>{totals.dropped}</strong></article>
     </section>
 
     <div className={styles.legend} aria-label="Gradebook status legend">
       <span><i className={styles.legendMissing}/> Missing</span>
       <span><i className={styles.legendDropped}/> Dropped</span>
-      <span><i className={styles.legendBest}/> Multiple attempts / best counts</span>
+      <span><i className={styles.legendBest}/> Best attempt counts</span>
       <span><i className={styles.legendExempt}/> Exempt</span>
       <span className={styles.inlineHint}>Edit Attempt 1 directly • Enter saves and moves down</span>
     </div>
