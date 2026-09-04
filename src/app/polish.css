@@ -1,0 +1,58 @@
+:root {
+  --focus-ring: #2454c6;
+  --focus-shadow: rgba(36, 84, 198, .2);
+  --touch-target: 44px;
+}
+
+/* One consistent, high-contrast keyboard focus treatment across the teacher app. */
+:is(a, button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--focus-shadow);
+}
+
+/* Dashboard snapshot cards are informational, not phantom buttons. */
+.metric-card {
+  cursor: default;
+}
+
+/* Interactive rows and controls should communicate that they can be opened. */
+:is(.student-row, a.assignment-row, .secondary-link, .text-button, .nav-button) {
+  transition: background-color .14s ease, border-color .14s ease, color .14s ease, box-shadow .14s ease, transform .14s ease;
+}
+
+@media (hover: hover) {
+  .student-row:hover {
+    background: var(--brand-soft);
+  }
+
+  a.assignment-row:hover {
+    background: var(--surface-soft);
+  }
+
+  .secondary-link:hover,
+  .text-button:hover {
+    color: var(--brand-dark);
+  }
+}
+
+/* Keep controls comfortably tappable on Chromebooks/tablets/phones without inflating desktop density. */
+@media (pointer: coarse) {
+  :is(.primary-button, .secondary-button, .secondary-link, .nav-button, .text-button) {
+    min-height: var(--touch-target);
+  }
+
+  .text-button {
+    padding-inline: 8px;
+  }
+}
+
+/* Respect operating-system motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
