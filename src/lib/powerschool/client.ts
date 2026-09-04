@@ -32,17 +32,24 @@ const ALLOWED_POWERQUERIES = new Set([TEACHER_SECTIONS_QUERY]);
 const REQUEST_TIMEOUT_MS = 10_000;
 const MAX_DISCOVERED_SECTIONS = 24;
 
+function envValue(name: "POWERSCHOOL_BASE_URL" | "POWERSCHOOL_CLIENT_ID" | "POWERSCHOOL_CLIENT_SECRET") {
+  return process.env[name]?.trim() ?? "";
+}
+
 export function getPowerSchoolConfigStatus() {
+  const baseUrl = envValue("POWERSCHOOL_BASE_URL");
+  const clientId = envValue("POWERSCHOOL_CLIENT_ID");
+  const clientSecret = envValue("POWERSCHOOL_CLIENT_SECRET");
   const missing = [
-    ["POWERSCHOOL_BASE_URL", process.env.POWERSCHOOL_BASE_URL],
-    ["POWERSCHOOL_CLIENT_ID", process.env.POWERSCHOOL_CLIENT_ID],
-    ["POWERSCHOOL_CLIENT_SECRET", process.env.POWERSCHOOL_CLIENT_SECRET],
+    ["POWERSCHOOL_BASE_URL", baseUrl],
+    ["POWERSCHOOL_CLIENT_ID", clientId],
+    ["POWERSCHOOL_CLIENT_SECRET", clientSecret],
   ].filter(([, value]) => !value).map(([name]) => name);
 
   let host: string | null = null;
-  if (process.env.POWERSCHOOL_BASE_URL) {
+  if (baseUrl) {
     try {
-      host = new URL(process.env.POWERSCHOOL_BASE_URL).host;
+      host = new URL(baseUrl).host;
     } catch {
       host = null;
     }
@@ -55,13 +62,16 @@ function getConfig(): PowerSchoolConfig {
   const status = getPowerSchoolConfigStatus();
   if (!status.configured) throw new Error(`PowerSchool connector is not configured (${status.missing.join(", ")}).`);
 
-  const parsed = new URL(process.env.POWERSCHOOL_BASE_URL as string);
+  const baseUrl = envValue("POWERSCHOOL_BASE_URL");
+  const clientId = envValue("POWERSCHOOL_CLIENT_ID");
+  const clientSecret = envValue("POWERSCHOOL_CLIENT_SECRET");
+  const parsed = new URL(baseUrl);
   if (parsed.protocol !== "https:") throw new Error("PowerSchool base URL must use HTTPS.");
 
   return {
     baseUrl: parsed.origin,
-    clientId: process.env.POWERSCHOOL_CLIENT_ID as string,
-    clientSecret: process.env.POWERSCHOOL_CLIENT_SECRET as string,
+    clientId,
+    clientSecret,
   };
 }
 
