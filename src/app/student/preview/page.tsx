@@ -29,11 +29,6 @@ function myCoursesHref(studentId: string, anchorSectionId: string) {
   return `/student/preview?${params.toString()}`;
 }
 
-function studyLibraryHref(studentId: string, sectionId: string) {
-  const params = new URLSearchParams({ studentId, sectionId });
-  return `/student/preview/study-library?${params.toString()}`;
-}
-
 export default async function StudentPreviewPage({ searchParams }: PreviewPageProps) {
   const supabase = await createClient();
   const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
@@ -95,7 +90,7 @@ export default async function StudentPreviewPage({ searchParams }: PreviewPagePr
         { name: "anchorSectionId", value: anchorSection.sectionId },
         { name: "view", value: "courses" },
       ]}
-      previewHeaderActions={<>{anchorSwitcher}<Link className="secondary-link" href={studyLibraryHref(student.studentId, anchorSection.sectionId)}>Study Library</Link></>}
+      previewHeaderActions={anchorSwitcher}
     />;
   }
 
@@ -110,7 +105,6 @@ export default async function StudentPreviewPage({ searchParams }: PreviewPagePr
 
   const headerActions = <>
     {sectionSwitcher}
-    <Link className="secondary-link" href={studyLibraryHref(sectionStudent.studentId, section.sectionId)}>Study Library</Link>
     {hasMultipleCourses ? <Link className="secondary-link" href={myCoursesHref(student.studentId, anchorSection.sectionId)}>My Courses</Link> : null}
   </>;
 
