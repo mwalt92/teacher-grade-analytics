@@ -27,11 +27,11 @@ function isActive(pathname: string, matchPath: string) {
   return pathname === matchPath || pathname.startsWith(`${matchPath}/`);
 }
 
-export function TeacherPrimaryNav() {
+export function TeacherPrimaryNav({ rootOnly = false }: { rootOnly?: boolean }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const inStudentPreview = pathname === "/student/preview" || pathname.startsWith("/student/preview/");
-  const inRootWorkspace = pathname === "/" || pathname === "/home";
+  const inRootWorkspace = rootOnly || pathname === "/" || pathname === "/home";
   const visibleItems = inRootWorkspace ? items.filter((item) => item.rootLevel) : items;
 
   const previewBase = new URLSearchParams();
