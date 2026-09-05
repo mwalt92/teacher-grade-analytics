@@ -127,7 +127,7 @@ export function StudentGradesView({
       <article className={`panel ${styles.historyPanel}`}>
         <div className="panel-header"><div><p className="eyebrow">Complete history</p><h3>{data.periodCode} grade details</h3></div><span className="subtle">Newest first</span></div>
         {data.assignments.length ? <div className={styles.tableWrap}>
-          <table className={styles.table}>
+          <table className={styles.table} aria-label={`${data.periodCode} complete grade history`}>
             <thead><tr><th scope="col">Assignment</th><th scope="col">Category</th><th scope="col">Score</th><th scope="col">Status</th><th scope="col">Attempts</th></tr></thead>
             <tbody>{data.assignments.map((assignment) => <tr key={assignment.assignmentId}>
               <th scope="row"><Link className={styles.assignmentLink} href={assignmentHref(assignment.assignmentId)}><strong>{assignment.title}</strong><small>{assignment.date ?? "No date"}</small></Link></th>
