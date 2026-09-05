@@ -181,7 +181,28 @@
 .emptyPanel {
   grid-column: 1 / -1;
   text-align: center;
-  padding: 2rem;
+  padding: clamp(2.25rem, 6vw, 4.5rem) 1.5rem;
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+}
+
+.emptyPanel h3 {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.3rem, 2.5vw, 1.65rem);
+}
+
+.emptyPanel p {
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.emptyAction {
+  min-height: 52px;
+  padding: 0 1.4rem;
+  font-size: 1rem;
+  justify-content: center;
+  white-space: nowrap;
 }
 
 @media (max-width: 1050px) {
@@ -216,5 +237,10 @@
   .summaryGrid,
   .courseMetrics {
     grid-template-columns: 1fr;
+  }
+
+  .emptyAction {
+    width: 100%;
+    white-space: normal;
   }
 }
