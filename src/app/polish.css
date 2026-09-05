@@ -30,28 +30,37 @@ nav.main-nav[aria-label="Roster filters"] {
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 8px max(40px, calc((100vw - 1400px) / 2 + 40px)) 10px !important;
+  padding: 6px max(40px, calc((100vw - 1400px) / 2 + 40px)) 0 !important;
   border: 0 !important;
   border-bottom: 1px solid var(--line) !important;
   background: var(--surface-soft) !important;
   box-shadow: none !important;
   justify-content: flex-start;
-  gap: 8px;
+  gap: 4px;
 }
 
+/* Use the same tab language as Roster / Import Center above, just slightly smaller so this
+   remains clearly tertiary navigation rather than a second workspace row. */
 nav.main-nav[aria-label="Roster filters"] .nav-button {
-  min-height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface);
+  min-height: 38px;
+  padding: 0 12px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
   color: var(--muted);
   box-shadow: none;
+  font-size: .82rem;
+  font-weight: 750;
 }
 
 nav.main-nav[aria-label="Roster filters"] .nav-button.active {
-  border-color: rgba(36, 84, 198, .28);
-  background: var(--brand-soft);
+  border-bottom-color: var(--brand);
+  background: transparent;
   color: var(--brand);
 }
 
@@ -75,8 +84,7 @@ nav.main-nav[aria-label="Roster filters"] .nav-button.active {
   }
 
   nav.main-nav[aria-label="Roster filters"] .nav-button:hover {
-    border-color: rgba(36, 84, 198, .28);
-    background: var(--surface-soft);
+    background: transparent;
     color: var(--brand);
   }
 }
