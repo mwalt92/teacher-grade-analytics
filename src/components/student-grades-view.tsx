@@ -20,6 +20,7 @@ type StudentGradesViewProps = {
   preview?: boolean;
   previewLabel?: string;
   previewHeaderActions?: ReactNode;
+  previewBannerActions?: ReactNode;
   previewStudents?: { studentId: string; displayName: string }[];
   previewStudentId?: string;
   previewActionPath?: string;
@@ -61,6 +62,7 @@ export function StudentGradesView({
   preview = false,
   previewLabel,
   previewHeaderActions,
+  previewBannerActions,
   previewStudents = [],
   previewStudentId,
   previewActionPath = "/student/preview/grades",
@@ -97,11 +99,14 @@ export function StudentGradesView({
     <section className={`content-wrap ${styles.content}`}>
       {preview ? <div className={styles.previewBanner}>
         <div><span>Teacher preview</span><small>{previewLabel ?? "This is the complete grade history the selected student will see for this grading period."}</small></div>
-        {previewStudents.length > 0 && previewStudentId ? <form method="get" action={previewActionPath} className={styles.previewForm}>
-          {hiddenFields.filter((field) => field.name !== "studentId").map((field) => <input key={field.name} type="hidden" name={field.name} value={field.value}/>)}
-          <label><span>Preview student</span><select name="studentId" defaultValue={previewStudentId}>{previewStudents.map((student) => <option key={student.studentId} value={student.studentId}>{student.displayName}</option>)}</select></label>
-          <button className="secondary-link" type="submit">Switch</button>
-        </form> : null}
+        <div className={styles.previewTools}>
+          {previewStudents.length > 0 && previewStudentId ? <form method="get" action={previewActionPath} className={styles.previewForm}>
+            {hiddenFields.filter((field) => field.name !== "studentId").map((field) => <input key={field.name} type="hidden" name={field.name} value={field.value}/>)}
+            <label><span>Preview student</span><select name="studentId" defaultValue={previewStudentId}>{previewStudents.map((student) => <option key={student.studentId} value={student.studentId}>{student.displayName}</option>)}</select></label>
+            <button className="secondary-link" type="submit">Switch</button>
+          </form> : null}
+          {previewBannerActions}
+        </div>
       </div> : null}
 
       <article className={`panel ${styles.controls}`}>
