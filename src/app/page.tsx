@@ -46,8 +46,8 @@ export default async function TeacherHomePage() {
       <div className={styles.homeHeader}>
         <div>
           <p className="eyebrow">Your courses</p>
-          <h2>What needs your attention today?</h2>
-          <p className="subtle">Live summaries from the same canonical grade calculations used inside each course.</p>
+          <h2>Choose a course to open its workspace</h2>
+          <p className="subtle">Opening a course establishes the context used by Course Dashboard, Students, Assignments, Study Library, Gradebook, and Analytics. Your last opened course is remembered for convenience.</p>
         </div>
         <div className={styles.headingActions}>
           <Link className="primary-button" href="/settings/course-setup"><ClipboardPlus size={18}/> Create Course</Link>
@@ -80,7 +80,7 @@ export default async function TeacherHomePage() {
                 <h3 className={styles.courseTitle}>{displayCourseName(course.courseName, course.courseCode)}</h3>
                 <p className={styles.courseMeta}>{course.sections.length} section{course.sections.length === 1 ? "" : "s"}{course.selectedPeriod ? ` • ${course.selectedPeriod.code} — ${course.selectedPeriod.name}` : " • No grading period configured"}</p>
               </div>
-              {isCurrent ? <span className={styles.currentBadge}>Current course</span> : null}
+              {isCurrent ? <span className={styles.currentBadge}>Last opened</span> : null}
             </div>
 
             <div className={styles.courseMetrics}>
