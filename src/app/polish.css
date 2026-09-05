@@ -23,6 +23,34 @@
   padding-bottom: 10px;
 }
 
+/* Roster state is a local filter inside the Students workspace, not another application nav bar. */
+nav.main-nav[aria-label="Roster filters"] {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px 40px 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+nav.main-nav[aria-label="Roster filters"] .nav-button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  box-shadow: none;
+}
+
+nav.main-nav[aria-label="Roster filters"] .nav-button.active {
+  border-color: rgba(36, 84, 198, .28);
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
 /* Interactive rows and controls should communicate that they can be opened. */
 :is(.student-row, a.assignment-row, .secondary-link, .text-button, .nav-button) {
   transition: background-color .14s ease, border-color .14s ease, color .14s ease, box-shadow .14s ease, transform .14s ease;
@@ -40,6 +68,21 @@
   .secondary-link:hover,
   .text-button:hover {
     color: var(--brand-dark);
+  }
+
+  nav.main-nav[aria-label="Roster filters"] .nav-button:hover {
+    border-color: rgba(36, 84, 198, .28);
+    background: var(--surface-soft);
+    color: var(--brand);
+  }
+}
+
+@media (max-width: 720px) {
+  nav.main-nav[aria-label="Roster filters"] {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+    overflow-x: auto;
+    flex-wrap: nowrap;
   }
 }
 
