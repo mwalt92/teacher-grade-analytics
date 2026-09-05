@@ -1,9 +1,12 @@
 import { redirect } from "next/navigation";
 import { StudentStudyLibraryView, type StudentStudyGuideCard } from "@/components/student-study-library-view";
 import { getCurrentStudentSections, type StudentSectionSummary } from "@/lib/data/student-context";
+import { bestAttemptPercent, selectSuggestedStudyGuide, type StudyRecommendationCandidate } from "@/lib/study/recommendations";
 import { createClient } from "@/lib/supabase/server";
 
 type StudentStudyLibraryPageProps = { searchParams: Promise<{ sectionId?: string }> };
+
+type StudyCardCandidate = StudentStudyGuideCard & StudyRecommendationCandidate;
 
 function displayCourseName(courseName: string, courseCode: string | null) {
   if (!courseCode) return courseName;
@@ -63,8 +66,12 @@ export default async function StudentStudyLibraryPage({ searchParams }: StudentS
 
   const guideById = new Map(guides.map((guide) => [guide.id, guide]));
   const recordByAssignment = new Map((gradeRecords ?? []).map((record) => [record.assignment_id, record]));
-  const attemptCountByRecord = new Map<string, number>();
-  for (const attempt of attemptsData ?? []) attemptCountByRecord.set(attempt.grade_record_id, (attemptCountByRecord.get(attempt.grade_record_id) ?? 0) + 1);
+  const attemptsByRecord = new Map<string, Array<number | string>>();
+  for (const attempt of attemptsData ?? []) {
+    const existing = attemptsByRecord.get(attempt.grade_record_id) ?? [];
+    existing.push(attempt.points_earned);
+    attemptsByRecord.set(attempt.grade_record_id, existing);
+  }
   const skillCountByGuide = new Map<string, number>();
   for (const row of skillRows ?? []) skillCountByGuide.set(row.guide_id, (skillCountByGuide.get(row.guide_id) ?? 0) + 1);
   const resourceCountByGuide = new Map<string, number>();
@@ -74,13 +81,16 @@ export default async function StudentStudyLibraryPage({ searchParams }: StudentS
     if (row.featured) recommendedCountByGuide.set(row.guide_id, (recommendedCountByGuide.get(row.guide_id) ?? 0) + 1);
   }
 
-  const cards: StudentStudyGuideCard[] = visibleAssignments.flatMap((assignment) => {
+  const candidates: StudyCardCandidate[] = visibleAssignments.flatMap((assignment) => {
     if (!assignment.study_guide_id) return [];
     const guide = guideById.get(assignment.study_guide_id);
     if (!guide) return [];
     const record = recordByAssignment.get(assignment.id);
-    const attemptCount = record ? attemptCountByRecord.get(record.id) ?? 0 : 0;
+    const attempts = record ? attemptsByRecord.get(record.id) ?? [] : [];
+    const attemptCount = attempts.length;
+    const bestPercent = bestAttemptPercent(Number(assignment.points_possible), attempts);
     const recommendedCount = recommendedCountByGuide.get(guide.id) ?? 0;
+    const resourceCount = resourceCountByGuide.get(guide.id) ?? 0;
     const status: StudentStudyGuideCard["status"] = attemptCount === 0
       ? "Not attempted"
       : assignment.allow_retakes
@@ -95,13 +105,24 @@ export default async function StudentStudyLibraryPage({ searchParams }: StudentS
       guideTitle: guide.title,
       description: guide.description,
       skillCount: skillCountByGuide.get(guide.id) ?? 0,
-      resourceCount: resourceCountByGuide.get(guide.id) ?? 0,
+      resourceCount,
       recommendedCount,
       attemptCount,
+      bestPercent,
       status,
       href: `/student/assignments/${assignment.id}`,
+      allowRetakes: assignment.allow_retakes,
+      missing: record?.missing ?? false,
+      exempt: record?.exempt ?? false,
+      visibleToStudent: true,
     }];
   });
+
+  const suggested = selectSuggestedStudyGuide(candidates);
+  const cards: StudentStudyGuideCard[] = candidates.map(({ allowRetakes: _allowRetakes, missing: _missing, exempt: _exempt, visibleToStudent: _visibleToStudent, ...card }) => ({
+    ...card,
+    suggested: card.assignmentId === suggested?.assignmentId,
+  }));
 
   return <StudentStudyLibraryView
     studentName={section.studentName}
