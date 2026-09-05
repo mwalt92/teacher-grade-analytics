@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 type StudentPrimaryNavProps = {
   preview?: boolean;
@@ -19,11 +19,24 @@ export function StudentPrimaryNav({
   studyLibraryHref,
 }: StudentPrimaryNavProps = {}) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const sectionId = searchParams.get("sectionId");
+  const period = searchParams.get("period");
+
+  function studentHref(base: string, includePeriod = true) {
+    if (preview) return base;
+    const params = new URLSearchParams();
+    if (sectionId) params.set("sectionId", sectionId);
+    if (includePeriod && period) params.set("period", period);
+    const query = params.toString();
+    return query ? `${base}?${query}` : base;
+  }
+
   const items = [
-    { key: "dashboard", label: "Dashboard", href: dashboardHref ?? (preview ? "/student/preview" : "/student") },
-    { key: "grades", label: "Grades", href: gradesHref ?? (preview ? "/student/preview/grades" : "/student/grades") },
-    { key: "simulator", label: "Grade Simulator", href: simulatorHref ?? (preview ? "/student/preview/simulator" : "/student/simulator") },
-    { key: "study", label: "Study Library", href: studyLibraryHref ?? (preview ? "/student/preview/study-library" : "/student/study-library") },
+    { key: "dashboard", label: "Dashboard", href: dashboardHref ?? (preview ? "/student/preview" : studentHref("/student")) },
+    { key: "grades", label: "Grades", href: gradesHref ?? (preview ? "/student/preview/grades" : studentHref("/student/grades")) },
+    { key: "simulator", label: "Grade Simulator", href: simulatorHref ?? (preview ? "/student/preview/simulator" : studentHref("/student/simulator")) },
+    { key: "study", label: "Study Library", href: studyLibraryHref ?? (preview ? "/student/preview/study-library" : studentHref("/student/study-library", false)) },
   ];
 
   const dashboardActive = preview
