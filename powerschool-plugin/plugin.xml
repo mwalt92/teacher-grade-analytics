@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://plugin.powerschool.pearson.com"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://plugin.powerschool.pearson.com plugin.xsd"
+  name="Teacher Grade Analytics Read-Only"
+  version="0.1.1"
+  description="Read-only OAuth and PowerQuery access for teacher-owned course and roster discovery during Teacher Grade Analytics integration development.">
+  <publisher name="Teacher Grade Analytics">
+    <contact email="replace-with-district-contact@example.invalid" />
+  </publisher>
+
+  <oauth></oauth>
+
+  <access_request>
+    <!-- Teacher identity -->
+    <field table="USERS" field="DCID" access="ViewOnly" />
+    <field table="USERS" field="FIRST_NAME" access="ViewOnly" />
+    <field table="USERS" field="LAST_NAME" access="ViewOnly" />
+    <field table="USERS" field="EMAIL_ADDR" access="ViewOnly" />
+    <field table="SCHOOLSTAFF" field="ID" access="ViewOnly" />
+    <field table="SCHOOLSTAFF" field="USERS_DCID" access="ViewOnly" />
+
+    <!-- Teacher sections -->
+    <field table="SECTIONS" field="ID" access="ViewOnly" />
+    <field table="SECTIONS" field="COURSE_NUMBER" access="ViewOnly" />
+    <field table="SECTIONS" field="ROOM" access="ViewOnly" />
+    <field table="SECTIONS" field="TEACHER" access="ViewOnly" />
+    <field table="SECTIONS" field="EXPRESSION" access="ViewOnly" />
+    <field table="COURSES" field="COURSE_NUMBER" access="ViewOnly" />
+    <field table="COURSES" field="COURSE_NAME" access="ViewOnly" />
+
+    <!-- Current roster counting only. Student Number is never returned to the browser. -->
+    <field table="CC" field="STUDENTID" access="ViewOnly" />
+    <field table="CC" field="SECTIONID" access="ViewOnly" />
+    <field table="CC" field="DATEENROLLED" access="ViewOnly" />
+    <field table="CC" field="DATELEFT" access="ViewOnly" />
+    <field table="STUDENTS" field="ID" access="ViewOnly" />
+    <field table="STUDENTS" field="STUDENT_NUMBER" access="ViewOnly" />
+    <field table="STUDENTS" field="ENROLL_STATUS" access="ViewOnly" />
+  </access_request>
+</plugin>

@@ -1,0 +1,46 @@
+<queries>
+  <query name="com.unorth.teacher_grade_analytics.teacher_sections_by_email" coreTable="USERS" flattened="true">
+    <description>Returns current rostered sections and Student Numbers for one teacher matched by exact school email. Student Numbers are used server-side only to compute roster counts.</description>
+    <args>
+      <arg name="teacher_email" column="USERS.EMAIL_ADDR" type="primitive" required="true" description="Teacher school email address" />
+    </args>
+    <columns>
+      <column column="USERS.DCID">teacher_users_dcid</column>
+      <column column="USERS.FIRST_NAME">teacher_first_name</column>
+      <column column="USERS.LAST_NAME">teacher_last_name</column>
+      <column column="USERS.EMAIL_ADDR">teacher_email</column>
+      <column column="SCHOOLSTAFF.ID">schoolstaff_id</column>
+      <column column="SECTIONS.ID">section_id</column>
+      <column column="SECTIONS.COURSE_NUMBER">course_number</column>
+      <column column="SECTIONS.ROOM">room</column>
+      <column column="SECTIONS.EXPRESSION">expression</column>
+      <column column="COURSES.COURSE_NAME">course_name</column>
+      <column column="STUDENTS.STUDENT_NUMBER">student_number</column>
+    </columns>
+    <sql><![CDATA[
+      SELECT
+        USERS.DCID,
+        USERS.FIRST_NAME,
+        USERS.LAST_NAME,
+        USERS.EMAIL_ADDR,
+        SCHOOLSTAFF.ID,
+        SECTIONS.ID,
+        SECTIONS.COURSE_NUMBER,
+        SECTIONS.ROOM,
+        SECTIONS.EXPRESSION,
+        COURSES.COURSE_NAME,
+        STUDENTS.STUDENT_NUMBER
+      FROM USERS
+      JOIN SCHOOLSTAFF ON SCHOOLSTAFF.USERS_DCID = USERS.DCID
+      JOIN SECTIONS ON SECTIONS.TEACHER = SCHOOLSTAFF.ID
+      LEFT JOIN COURSES ON COURSES.COURSE_NUMBER = SECTIONS.COURSE_NUMBER
+      JOIN CC ON CC.SECTIONID = SECTIONS.ID
+        AND CC.DATEENROLLED <= TRUNC(SYSDATE)
+        AND CC.DATELEFT >= TRUNC(SYSDATE)
+      JOIN STUDENTS ON STUDENTS.ID = CC.STUDENTID
+        AND STUDENTS.ENROLL_STATUS = 0
+      WHERE LOWER(USERS.EMAIL_ADDR) = LOWER(:teacher_email)
+      ORDER BY SECTIONS.COURSE_NUMBER, SECTIONS.EXPRESSION, SECTIONS.ID, STUDENTS.STUDENT_NUMBER
+    ]]></sql>
+  </query>
+</queries>
