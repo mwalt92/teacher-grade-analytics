@@ -18,6 +18,7 @@ const items: NavItem[] = [
   { label: "Assignments", href: "/assignments", matchPath: "/assignments" },
   { label: "Study Library", href: "/study-library", matchPath: "/study-library" },
   { label: "Gradebook", href: "/gradebook", matchPath: "/gradebook" },
+  { label: "AI Grader", href: "/ai-grading", matchPath: "/ai-grading" },
   { label: "Analytics", href: "/analytics", matchPath: "/analytics" },
   { label: "Settings", href: "/settings?area=course-sections", matchPath: "/settings", rootLevel: true },
 ];
