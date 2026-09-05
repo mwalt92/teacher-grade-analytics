@@ -1,8 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { ArrowDown, ArrowUp, BookOpen, ExternalLink, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
 import { AssignmentWorkspaceNav } from "@/components/assignment-workspace-nav";
+import { TeacherContextBar } from "@/components/teacher-context-bar";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
-import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -108,8 +108,9 @@ export default async function StudyResourcePage({ params, searchParams }: StudyP
 
   if (!assignment.study_guide_id) {
     return <main className="app-shell">
-      <header className="topbar"><div><p className="eyebrow">Study Resource Library</p><h1>{assignment.title}</h1><p className="subtle">{teacherSection.courseName} • {teacherSection.sectionName}</p><TeacherSectionSwitcher sections={sections} activeSectionId={teacherSection.sectionId} returnTo={`/assignments/${assignmentId}/study`}/></div></header>
+      <header className="topbar"><div><p className="eyebrow">Study Resource Library</p><h1>{assignment.title}</h1><p className="subtle">{teacherSection.courseName} • {teacherSection.sectionName}</p></div></header>
       <TeacherPrimaryNav/>
+      <TeacherContextBar sections={sections} activeSectionId={teacherSection.sectionId} returnTo={`/assignments/${assignmentId}/study`}/>
       <AssignmentWorkspaceNav assignmentId={assignmentId} active="study" returnTo={returnTo} archived={assignment.archived}/>
       <section className={`content-wrap ${styles.content}`}>
         {query.error ? <div className={styles.error}>{query.error}</div> : null}
@@ -154,8 +155,9 @@ export default async function StudyResourcePage({ params, searchParams }: StudyP
   const sharedAcrossLinked = linkedAssignments.filter((item) => item.study_guide_id === guideId).length;
 
   return <main className="app-shell">
-    <header className="topbar"><div><p className="eyebrow">Study Resource Library</p><h1>{assignment.title}</h1><p className="subtle">{teacherSection.courseName} • {teacherSection.sectionName}</p><TeacherSectionSwitcher sections={sections} activeSectionId={teacherSection.sectionId} returnTo={`/assignments/${assignmentId}/study`}/></div></header>
+    <header className="topbar"><div><p className="eyebrow">Study Resource Library</p><h1>{assignment.title}</h1><p className="subtle">{teacherSection.courseName} • {teacherSection.sectionName}</p></div></header>
     <TeacherPrimaryNav/>
+    <TeacherContextBar sections={sections} activeSectionId={teacherSection.sectionId} returnTo={`/assignments/${assignmentId}/study`}/>
     <AssignmentWorkspaceNav assignmentId={assignmentId} active="study" returnTo={returnTo} archived={assignment.archived}/>
     <section className={`content-wrap ${styles.content}`}>
       {query.notice ? <div className={styles.notice}>{query.notice}</div> : null}
