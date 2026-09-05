@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Archive, Edit3, Layers3, Plus, RotateCcw, Search } from "lucide-react";
+import { TeacherContextBar } from "@/components/teacher-context-bar";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
-import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getAssignmentManagementData, type AssignmentManagementRow } from "@/lib/data/assignment-management";
 import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
@@ -166,6 +166,8 @@ export default async function AssignmentsPage({ searchParams }: AssignmentPagePr
   const showingCount = scope === "all" ? visibleGroups.length : visibleAssignments.length;
 
   const returnTo = currentReturnPath({ q, period, kind, status, scope, sectionFilter });
+  const sectionHref = currentReturnPath({ q, period, kind, status, scope: "section", sectionFilter: "all" });
+  const allHref = currentReturnPath({ q, period, kind, status, scope: "all", sectionFilter: "all" });
   const clearHref = currentReturnPath({ q: "", period: "all", kind: "all", status: "active", scope, sectionFilter });
   const filterKey = `${q}|${period}|${kind}|${status}|${scope}|${sectionFilter}`;
   const notice = params.notice === "archived"
@@ -183,15 +185,22 @@ export default async function AssignmentsPage({ searchParams }: AssignmentPagePr
         <p className="eyebrow">Teacher Grade Analytics</p>
         <h1>Assignments</h1>
         <p className="subtle">{courseLabel} • {scope === "all" ? "All Sections" : section.sectionName}</p>
-        <TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/>
       </div>
     </header>
     <TeacherPrimaryNav/>
-
-    {canShowAllSections ? <nav className="main-nav" aria-label="Assignment section scope" style={{ background: "var(--surface-soft)", paddingTop: 8, paddingBottom: 4 }}>
-      <Link className={scope === "section" ? "nav-button active" : "nav-button"} href={currentReturnPath({ q, period, kind, status, scope: "section", sectionFilter: "all" })}>{section.sectionName}</Link>
-      <Link className={scope === "all" ? "nav-button active" : "nav-button"} href={currentReturnPath({ q, period, kind, status, scope: "all", sectionFilter: "all" })}>All Sections ({offeringSections.length})</Link>
-    </nav> : null}
+    <TeacherContextBar
+      sections={sections}
+      activeSectionId={section.sectionId}
+      returnTo={returnTo}
+      scope={canShowAllSections ? {
+        active: scope,
+        sectionLabel: section.sectionName,
+        sectionHref,
+        allLabel: `All Sections (${offeringSections.length})`,
+        allHref,
+        ariaLabel: "Assignment section scope",
+      } : undefined}
+    />
 
     <section className={`content-wrap ${styles.content}`}>
       {scope === "all" ? <div className={styles.sectionFilterBar}>
