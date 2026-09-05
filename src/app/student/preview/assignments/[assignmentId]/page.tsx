@@ -128,6 +128,7 @@ export default async function PreviewStudentAssignmentPage({ params, searchParam
   const backParams = new URLSearchParams({ studentId: student.studentId, sectionId: assignment.section_id, view: "course" });
   if (query.anchorSectionId) backParams.set("anchorSectionId", query.anchorSectionId);
   const backHref = `/student/preview?${backParams.toString()}`;
+  const studentProfileHref = `/students/${student.studentId}?sectionId=${encodeURIComponent(assignment.section_id)}`;
 
   return <main className="app-shell">
     <header className="topbar"><div><p className="eyebrow">Student Assessment Preview</p><h1>{assignment.title}</h1><p className="subtle">{student.displayName} • {courseName} • {teacherSection.sectionName}</p></div></header>
@@ -135,11 +136,12 @@ export default async function PreviewStudentAssignmentPage({ params, searchParam
     <section className={`content-wrap ${styles.content}`}>
       <div className={styles.backRow}><Link className="secondary-link" href={backHref}><ArrowLeft size={17}/> Back to Student Preview</Link></div>
 
-      <div style={{ padding: "14px 16px", border: "1px solid var(--border)", borderRadius: 14, background: "var(--panel)", marginBottom: 16 }}>
-        <strong>Teacher preview</strong>
-        <p className="subtle" style={{ margin: "4px 0 0" }}>
-          This simulates what {student.displayName} can access. Teacher-only and attempt-locked resources are excluded. {guide && !guide.student_visible ? "This guide is still a draft, so students cannot open it yet; the preview below shows how it will look once published." : "This guide is currently published to students."}{lockedCount ? ` ${lockedCount} resource${lockedCount === 1 ? " is" : "s are"} currently hidden from this student by release rules.` : ""}
-        </p>
+      <div className={styles.previewBanner}>
+        <div>
+          <span>Teacher preview</span>
+          <small>This simulates what {student.displayName} can access. Teacher-only and attempt-locked resources are excluded. {guide && !guide.student_visible ? "This guide is still a draft, so students cannot open it yet; the preview below shows how it will look once published." : "This guide is currently published to students."}{lockedCount ? ` ${lockedCount} resource${lockedCount === 1 ? " is" : "s are"} currently hidden from this student by release rules.` : ""}</small>
+        </div>
+        <Link className="secondary-link" href={studentProfileHref}>Student Profile</Link>
       </div>
 
       <section className={styles.hero}>
