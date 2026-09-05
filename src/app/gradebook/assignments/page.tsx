@@ -45,8 +45,8 @@ export default async function AssignmentMatrixPage({ searchParams }: PageProps) 
       <div><p className="eyebrow">Teacher Gradebook</p><h1>Score Matrix</h1><p className="subtle">{section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName} • {section.sectionName} • students × assignments</p></div>
     </header>
     <TeacherPrimaryNav/>
-    <GradebookWorkspaceNav active="matrix" period={selectedPeriod?.code}/>
     <TeacherContextBar sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/>
+    <GradebookWorkspaceNav active="matrix" period={selectedPeriod?.code}/>
 
     <section className={`content-wrap ${styles.content}`}>
       <article className={`panel ${styles.controls}`}>
