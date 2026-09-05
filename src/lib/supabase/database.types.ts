@@ -43,6 +43,7 @@ export type Database = {
       create_teacher_section: { Args: { p_offering_id:string; p_name:string; p_period_number?:number|null }; Returns:string };
       delete_empty_assignment: { Args: { p_assignment_id:string }; Returns:boolean };
       save_grading_period_settings: { Args: { p_section_id:string; p_periods:Json; p_components:Json }; Returns:void };
+      set_teacher_course_offering_active: { Args: { p_offering_id:string; p_active:boolean }; Returns:boolean };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
