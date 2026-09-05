@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { setActiveTeacherSection } from "@/app/teacher-section-actions";
-import { SectionScopeNav } from "@/components/section-scope-nav";
+import { TeacherContextBar } from "@/components/teacher-context-bar";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
-import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import type { OfferingAnalyticsData, SectionAnalyticsData } from "@/lib/data/analytics";
 import type { TeacherSectionSummary } from "@/lib/data/teacher-context";
 import styles from "./analytics-workspace.module.css";
@@ -59,18 +58,22 @@ export function AnalyticsWorkspace(props: AnalyticsWorkspaceProps) {
         <p className="eyebrow">Teacher Grade Analytics</p>
         <h1>Analytics</h1>
         <p className="subtle">{courseName} • {scope === "all" ? "All Sections" : sectionName}{selectedPeriod ? ` • ${selectedPeriod.code}` : ""}</p>
-        <TeacherSectionSwitcher sections={sections} activeSectionId={activeSectionId} returnTo={scope === "all" ? allHref : sectionHref}/>
       </div>
     </header>
     <TeacherPrimaryNav/>
-    {canShowAllSections ? <SectionScopeNav
-      sectionLabel={sectionName}
-      sectionHref={sectionHref}
-      allLabel={`All Sections (${offeringSections.length})`}
-      allHref={allHref}
-      activeScope={scope}
-      ariaLabel="Analytics section scope"
-    /> : null}
+    <TeacherContextBar
+      sections={sections}
+      activeSectionId={activeSectionId}
+      returnTo={currentReturnTo}
+      scope={canShowAllSections ? {
+        active: scope,
+        sectionLabel: sectionName,
+        sectionHref,
+        allLabel: `All Sections (${offeringSections.length})`,
+        allHref,
+        ariaLabel: "Analytics section scope",
+      } : undefined}
+    />
 
     <section className="content-wrap">
       <div className="section-heading">
@@ -92,7 +95,7 @@ export function AnalyticsWorkspace(props: AnalyticsWorkspaceProps) {
         <SummaryCard label="Average" value={formatPercent(analytics.classAverage)} detail={selectedPeriod?.name ?? "No grading period"}/>
         <SummaryCard label="Median" value={formatPercent(analytics.median)} detail="Middle calculated student grade"/>
         <SummaryCard label="Missing" value={String(analytics.missingCount)} detail="Assignments marked Missing"/>
-        <SummaryCard label="Unentered" value={String(analytics.unenteredCount)} detail={`${analytics.assignmentCount} assignment${analytics.assignmentCount === 1 ? "" : "s"} in scope`}/>
+        <SummaryCard label="Not entered" value={String(analytics.unenteredCount)} detail={`${analytics.assignmentCount} assignment${analytics.assignmentCount === 1 ? "" : "s"} in scope`}/>
       </section>
 
       {scope === "all" ? <section className={styles.sectionGrid} aria-label="Section comparison">
@@ -144,7 +147,7 @@ export function AnalyticsWorkspace(props: AnalyticsWorkspaceProps) {
           <span className="status neutral-pill">{analytics.students.length} active</span>
         </div>
         {analytics.students.length ? <div className={styles.studentTable} role="table" aria-label="Student analytics">
-          <div className={`${styles.studentRow} ${styles.studentRowHead}`} role="row"><span>Student</span><span>Section</span><span>Grade</span><span>Missing</span><span>Unentered</span></div>
+          <div className={`${styles.studentRow} ${styles.studentRowHead}`} role="row"><span>Student</span><span>Section</span><span>Grade</span><span>Missing</span><span>Not entered</span></div>
           {analytics.students.map((student) => {
             const studentSectionId = "sectionId" in student ? student.sectionId : activeSectionId;
             const studentSectionName = "sectionName" in student ? periodNumberLabel(student.sectionName, student.periodNumber) : sectionName;
