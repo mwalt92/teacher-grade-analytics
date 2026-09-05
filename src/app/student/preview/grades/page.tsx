@@ -41,6 +41,7 @@ export default async function PreviewGradesPage({ searchParams }: PreviewGradesP
   gradesParams.set("period", data.periodCode);
   const studyParams = new URLSearchParams({ studentId: student.studentId, sectionId: section.sectionId });
   const sectionSwitcher = <TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo="/student/preview/grades"/>;
+  const studentProfileHref = `/students/${student.studentId}?sectionId=${encodeURIComponent(section.sectionId)}&period=${encodeURIComponent(data.periodCode)}`;
 
   return <StudentGradesView
     studentName={student.displayName}
@@ -58,7 +59,8 @@ export default async function PreviewGradesPage({ searchParams }: PreviewGradesP
     courseOptions={sections.map((item) => ({ sectionId: item.sectionId, label: `${displayCourseName(item.courseName, item.courseCode)} • ${item.sectionName}` }))}
     preview
     previewLabel="This is the complete period grade history the selected student will see."
-    previewHeaderActions={<>{sectionSwitcher}<Link className="secondary-link" href={`/students/${student.studentId}?sectionId=${encodeURIComponent(section.sectionId)}&period=${encodeURIComponent(data.periodCode)}`}>Student Profile</Link></>}
+    previewHeaderActions={sectionSwitcher}
+    previewBannerActions={<Link className="secondary-link" href={studentProfileHref}>Student Profile</Link>}
     previewStudents={roster.map((item) => ({ studentId: item.studentId, displayName: item.displayName }))}
     previewStudentId={student.studentId}
     previewActionPath="/student/preview/grades"
