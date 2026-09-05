@@ -92,10 +92,7 @@ export function StudentGradesView({
         {preview ? previewHeaderActions : null}
       </div>
     </header>
-    {preview ? <>
-      <TeacherPrimaryNav/>
-      <StudentPrimaryNav preview dashboardHref={dashboardHref} gradesHref={gradesHref} studyLibraryHref={studyLibraryHref}/>
-    </> : <StudentPrimaryNav dashboardHref={dashboardHref} gradesHref={gradesHref} studyLibraryHref={studyLibraryHref}/>}
+    {preview ? <TeacherPrimaryNav/> : <StudentPrimaryNav dashboardHref={dashboardHref} gradesHref={gradesHref} studyLibraryHref={studyLibraryHref}/>}
 
     <section className={`content-wrap ${styles.content}`}>
       {preview ? <div className={styles.previewBanner}>
