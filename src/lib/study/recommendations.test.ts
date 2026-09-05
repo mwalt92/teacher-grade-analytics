@@ -22,6 +22,7 @@ describe("selectSuggestedStudyGuide", () => {
     recommendedCount: 0,
     missing: false,
     exempt: false,
+    visibleToStudent: true,
   };
 
   it("prioritizes an actionable retake before a non-retake guide", () => {
@@ -40,13 +41,14 @@ describe("selectSuggestedStudyGuide", () => {
     expect(result?.assignmentId).toBe("lower");
   });
 
-  it("does not suggest missing, exempt, unattempted, resourceless, or perfect-score guides", () => {
+  it("does not suggest missing, exempt, unattempted, resourceless, perfect-score, or draft guides", () => {
     const result = selectSuggestedStudyGuide([
       { ...base, assignmentId: "missing", missing: true },
       { ...base, assignmentId: "exempt", exempt: true },
       { ...base, assignmentId: "unattempted", attemptCount: 0, bestPercent: null },
       { ...base, assignmentId: "empty", resourceCount: 0 },
       { ...base, assignmentId: "perfect", bestPercent: 100 },
+      { ...base, assignmentId: "draft", visibleToStudent: false },
     ]);
     expect(result).toBeNull();
   });
