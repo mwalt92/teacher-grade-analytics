@@ -7,6 +7,7 @@ export type StudyRecommendationCandidate = {
   recommendedCount: number;
   missing: boolean;
   exempt: boolean;
+  visibleToStudent?: boolean;
 };
 
 export function bestAttemptPercent(pointsPossible: number, attempts: Array<number | string | null | undefined>) {
@@ -22,7 +23,8 @@ export function bestAttemptPercent(pointsPossible: number, attempts: Array<numbe
 
 export function selectSuggestedStudyGuide<T extends StudyRecommendationCandidate>(guides: T[]) {
   const eligible = guides.filter((guide) =>
-    !guide.missing
+    guide.visibleToStudent !== false
+    && !guide.missing
     && !guide.exempt
     && guide.attemptCount > 0
     && guide.resourceCount > 0
