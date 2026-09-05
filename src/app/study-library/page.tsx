@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BookOpen, ExternalLink, Eye, EyeOff, Star } from "lucide-react";
+import { TeacherContextBar } from "@/components/teacher-context-bar";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
-import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import styles from "./study-library.module.css";
@@ -106,10 +106,10 @@ export default async function StudyLibraryPage() {
         <p className="eyebrow">Study Resource Library</p>
         <h1>{courseLabel}</h1>
         <p className="subtle">{activeSection.sectionName} • {activeSection.schoolYearLabel}</p>
-        <TeacherSectionSwitcher sections={sections} activeSectionId={activeSection.sectionId} returnTo="/study-library"/>
       </div>
     </header>
     <TeacherPrimaryNav/>
+    <TeacherContextBar sections={sections} activeSectionId={activeSection.sectionId} returnTo="/study-library"/>
 
     <section className={`content-wrap ${styles.content}`}>
       <section className={styles.statsGrid} aria-label="Study library overview">

@@ -77,8 +77,8 @@ export default async function GradeAuditPage({ searchParams }: GradeAuditPagePro
       </div>
     </header>
     <TeacherPrimaryNav/>
-    <GradebookWorkspaceNav active="audit" period={selectedPeriod?.code}/>
     <TeacherContextBar sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/>
+    <GradebookWorkspaceNav active="audit" period={selectedPeriod?.code}/>
 
     <section className="content-wrap grade-audit-content">
       <article className="panel grade-audit-controls">

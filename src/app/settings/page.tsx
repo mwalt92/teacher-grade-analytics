@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { TeacherContextBar } from "@/components/teacher-context-bar";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
-import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
-import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
+import { ACTIVE_TEACHER_SECTION_COOKIE, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import { AssignmentTypeManager } from "./assignment-type-manager";
 import { CourseSectionManager } from "./course-section-manager";
@@ -21,6 +22,10 @@ function displayCourseName(courseName: string, courseCode: string | null) {
   return `${courseName} ${courseCode}`;
 }
 
+function settingsHref(area: SettingsArea) {
+  return `/settings?area=${area}`;
+}
+
 export default async function SettingsPage({ searchParams }: SettingsPageProps) {
   const supabase = await createClient();
   const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
@@ -28,16 +33,42 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
 
   const params = await searchParams;
   const requestedArea = Array.isArray(params.area) ? params.area[0] : params.area;
-  const area: SettingsArea = requestedArea === "course-sections"
-    ? "course-sections"
+  const area: SettingsArea = requestedArea === "assignment-types"
+    ? "assignment-types"
     : requestedArea === "grading-categories"
       ? "grading-categories"
       : requestedArea === "grading-periods"
         ? "grading-periods"
-        : "assignment-types";
+        : "course-sections";
 
-  const [sections, section] = await Promise.all([getTeacherSections(), getActiveTeacherSection()]);
-  if (!section) redirect("/");
+  const sections = await getTeacherSections();
+  const cookieStore = await cookies();
+  const rememberedSectionId = cookieStore.get(ACTIVE_TEACHER_SECTION_COOKIE)?.value;
+  const section = rememberedSectionId
+    ? sections.find((candidate) => candidate.sectionId === rememberedSectionId) ?? null
+    : null;
+
+  if (!section) {
+    const hasCourses = sections.length > 0;
+    return <main className="app-shell">
+      <header className="topbar"><div><p className="eyebrow">Teacher Grade Analytics</p><h1>Settings</h1><p className="subtle">Choose a course before editing course-specific settings.</p></div></header>
+      <TeacherPrimaryNav rootOnly/>
+      <section className="content-wrap">
+        <article className={`panel ${styles.settingsIntro}`}>
+          <p className="eyebrow">Course context required</p>
+          <h2>{hasCourses ? "Open a course to manage its settings" : "Create your first course"}</h2>
+          <p className="subtle">{hasCourses
+            ? "Course & Sections, Assignment Types, Grading Categories, Grading Periods, and related tools depend on a selected course. Open one from Courses first so there is no hidden default context."
+            : "There are no active course workspaces yet. Create the first course for the current school year, then its course-specific settings will become available here."}</p>
+          <div className="grade-audit-header-actions">
+            {hasCourses ? <Link className="primary-button" href="/">Choose a course</Link> : null}
+            <Link className={hasCourses ? "secondary-link" : "primary-button"} href="/settings/course-setup">{hasCourses ? "Create another course" : "Create your first course"}</Link>
+          </div>
+        </article>
+      </section>
+    </main>;
+  }
+
   const courseName = displayCourseName(section.courseName, section.courseCode);
 
   const { data: offeringSections, error: sectionsError } = await supabase
@@ -129,28 +160,22 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     componentsByParent.set(component.parent_period_id, list);
   });
 
-  const returnTo = area === "course-sections"
-    ? "/settings?area=course-sections"
-    : area === "grading-categories"
-      ? "/settings?area=grading-categories"
-      : area === "grading-periods"
-        ? "/settings?area=grading-periods"
-        : "/settings";
-
+  const returnTo = settingsHref(area);
   const sharedScope = <div className={styles.scopeBanner}>
     <strong>Shared course settings</strong>
     <span>Changes apply to every active section of {courseName} in {section.schoolYearLabel}. Rosters, assignments, and student grades remain section-specific.</span>
   </div>;
 
   return <main className="app-shell">
-    <header className="topbar"><div><p className="eyebrow">Teacher Grade Analytics</p><h1>Settings</h1><p className="subtle">{courseName} • {section.sectionName}</p><TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/></div></header>
+    <header className="topbar"><div><p className="eyebrow">Teacher Grade Analytics</p><h1>Settings</h1><p className="subtle">{courseName} • {section.sectionName}</p></div></header>
     <TeacherPrimaryNav/>
+    <TeacherContextBar sections={sections} activeSectionId={section.sectionId} returnTo={returnTo}/>
     <section className="content-wrap">
       <nav className={styles.settingsNav} aria-label="Course settings sections">
-        <Link className={area === "course-sections" ? styles.settingsNavActive : ""} href="/settings?area=course-sections">Course &amp; Sections</Link>
-        <Link className={area === "assignment-types" ? styles.settingsNavActive : ""} href="/settings">Assignment Types</Link>
-        <Link className={area === "grading-categories" ? styles.settingsNavActive : ""} href="/settings?area=grading-categories">Grading Categories</Link>
-        <Link className={area === "grading-periods" ? styles.settingsNavActive : ""} href="/settings?area=grading-periods">Grading Periods</Link>
+        <Link className={area === "course-sections" ? styles.settingsNavActive : ""} href={settingsHref("course-sections")}>Course &amp; Sections</Link>
+        <Link className={area === "assignment-types" ? styles.settingsNavActive : ""} href={settingsHref("assignment-types")}>Assignment Types</Link>
+        <Link className={area === "grading-categories" ? styles.settingsNavActive : ""} href={settingsHref("grading-categories")}>Grading Categories</Link>
+        <Link className={area === "grading-periods" ? styles.settingsNavActive : ""} href={settingsHref("grading-periods")}>Grading Periods</Link>
         <Link href="/settings/powerschool">PowerSchool Sync</Link>
       </nav>
 

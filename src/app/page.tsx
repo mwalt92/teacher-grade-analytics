@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { ArrowRight, BookOpenCheck, ClipboardPlus, RotateCcw, ShieldCheck, Users } from "lucide-react";
 import { setActiveTeacherSection } from "@/app/teacher-section-actions";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import { getTeacherHomeData } from "@/lib/data/teacher-home";
-import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
+import { ACTIVE_TEACHER_SECTION_COOKIE, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import styles from "./home/teacher-home.module.css";
 
@@ -29,8 +30,12 @@ export default async function TeacherHomePage() {
   }
   if (profile.role !== "teacher" && profile.role !== "admin") redirect("/student");
 
-  const [sections, activeSection] = await Promise.all([getTeacherSections(), getActiveTeacherSection()]);
+  const sections = await getTeacherSections();
+  const cookieStore = await cookies();
+  const rememberedSectionId = cookieStore.get(ACTIVE_TEACHER_SECTION_COOKIE)?.value;
+  const rememberedSection = rememberedSectionId ? sections.find((section) => section.sectionId === rememberedSectionId) ?? null : null;
   const home = await getTeacherHomeData(sections);
+  const hasCourses = home.courses.length > 0;
 
   return <main className="app-shell">
     <header className="topbar">
@@ -46,27 +51,26 @@ export default async function TeacherHomePage() {
       <div className={styles.homeHeader}>
         <div>
           <p className="eyebrow">Your courses</p>
-          <h2>What needs your attention today?</h2>
-          <p className="subtle">Live summaries from the same canonical grade calculations used inside each course.</p>
-        </div>
-        <div className={styles.headingActions}>
-          <Link className="primary-button" href="/settings/course-setup"><ClipboardPlus size={18}/> Create Course</Link>
+          <h2>{hasCourses ? "Choose a course to open its workspace" : "Start your first course workspace"}</h2>
+          <p className="subtle">{hasCourses
+            ? "Opening a course establishes the context used by Course Dashboard, Students, Assignments, Study Library, Gradebook, and Analytics. Your last opened course is remembered for convenience."
+            : "Create the first active course for this school year. Once a course exists, this page becomes a clean course selector and future course creation moves to Settings."}</p>
         </div>
       </div>
 
-      <section className={styles.summaryGrid} aria-label="Teacher course summary">
+      {hasCourses ? <section className={styles.summaryGrid} aria-label="Teacher course summary">
         <SummaryCard label="Active Courses" value={String(home.courseCount)}/>
         <SummaryCard label="Sections" value={String(home.sectionCount)}/>
         <SummaryCard label="Active Enrollments" value={String(home.activeEnrollmentCount)}/>
         <SummaryCard label="Missing Work" value={String(home.missingCount)}/>
         <SummaryCard label="PS Mismatches" value={String(home.powerSchoolMismatchCount)}/>
-      </section>
+      </section> : null}
 
       <section className={styles.courseGrid} aria-label="Active courses">
-        {home.courses.length ? home.courses.map((course) => {
-          const isCurrent = activeSection?.offeringId === course.offeringId;
-          const preferredSection = isCurrent
-            ? course.sections.find((section) => section.sectionId === activeSection?.sectionId) ?? course.sections[0]
+        {hasCourses ? home.courses.map((course) => {
+          const isRemembered = rememberedSection?.offeringId === course.offeringId;
+          const preferredSection = isRemembered
+            ? course.sections.find((section) => section.sectionId === rememberedSection?.sectionId) ?? course.sections[0]
             : course.sections[0];
           const courseReturnTo = course.sections.length > 1 ? "/dashboard?scope=all" : "/dashboard";
           const recentText = course.recentWorkTitle
@@ -80,7 +84,7 @@ export default async function TeacherHomePage() {
                 <h3 className={styles.courseTitle}>{displayCourseName(course.courseName, course.courseCode)}</h3>
                 <p className={styles.courseMeta}>{course.sections.length} section{course.sections.length === 1 ? "" : "s"}{course.selectedPeriod ? ` • ${course.selectedPeriod.code} — ${course.selectedPeriod.name}` : " • No grading period configured"}</p>
               </div>
-              {isCurrent ? <span className={styles.currentBadge}>Current course</span> : null}
+              {isRemembered ? <span className={styles.currentBadge}>Last opened</span> : null}
             </div>
 
             <div className={styles.courseMetrics}>
@@ -111,9 +115,12 @@ export default async function TeacherHomePage() {
             </div>
           </article>;
         }) : <article className={`panel ${styles.emptyPanel}`}>
-          <BookOpenCheck size={30}/>
-          <h3>No active courses yet</h3>
-          <p className="subtle">Create a course to start building sections, rosters, assignments, and live grade analytics.</p>
+          <BookOpenCheck size={40}/>
+          <div>
+            <h3>No active courses yet</h3>
+            <p className="subtle">Create a course and its first section to begin the school-year workspace. You can reuse an existing course configuration or start blank.</p>
+          </div>
+          <Link className={`primary-button ${styles.emptyAction}`} href="/settings/course-setup"><ClipboardPlus size={20}/> Create your first course</Link>
         </article>}
       </section>
     </section>

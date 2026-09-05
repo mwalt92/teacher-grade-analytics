@@ -23,6 +23,47 @@
   padding-bottom: 10px;
 }
 
+/* Roster state is a tertiary filter inside the Students workspace, not another app nav bar.
+   Keep the shell full-width, while aligning its controls to the same 1400px content grid as
+   Working Context and the Students workspace tabs above it. */
+nav.main-nav[aria-label="Roster filters"] {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 6px max(40px, calc((100vw - 1400px) / 2 + 40px)) 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--line) !important;
+  background: var(--surface-soft) !important;
+  box-shadow: none !important;
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+/* Use the same tab language as Roster / Import Center above, just slightly smaller so this
+   remains clearly tertiary navigation rather than a second workspace row. */
+nav.main-nav[aria-label="Roster filters"] .nav-button {
+  min-height: 38px;
+  padding: 0 12px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+  font-size: .82rem;
+  font-weight: 750;
+}
+
+nav.main-nav[aria-label="Roster filters"] .nav-button.active {
+  border-bottom-color: var(--brand);
+  background: transparent;
+  color: var(--brand);
+}
+
 /* Interactive rows and controls should communicate that they can be opened. */
 :is(.student-row, a.assignment-row, .secondary-link, .text-button, .nav-button) {
   transition: background-color .14s ease, border-color .14s ease, color .14s ease, box-shadow .14s ease, transform .14s ease;
@@ -40,6 +81,20 @@
   .secondary-link:hover,
   .text-button:hover {
     color: var(--brand-dark);
+  }
+
+  nav.main-nav[aria-label="Roster filters"] .nav-button:hover {
+    background: transparent;
+    color: var(--brand);
+  }
+}
+
+@media (max-width: 720px) {
+  nav.main-nav[aria-label="Roster filters"] {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+    overflow-x: auto;
+    flex-wrap: nowrap;
   }
 }
 

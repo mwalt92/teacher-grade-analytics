@@ -4,26 +4,35 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { StudentPrimaryNav } from "@/components/student-primary-nav";
 
-const items = [
-  { label: "Courses", href: "/" },
-  { label: "Course Dashboard", href: "/dashboard" },
-  { label: "Students", href: "/students" },
-  { label: "Assignments", href: "/assignments" },
-  { label: "Study Library", href: "/study-library" },
-  { label: "Gradebook", href: "/gradebook" },
-  { label: "Analytics", href: "/analytics" },
-  { label: "Settings", href: "/settings" },
+type NavItem = {
+  label: string;
+  href: string;
+  matchPath: string;
+  rootLevel?: boolean;
+};
+
+const items: NavItem[] = [
+  { label: "Courses", href: "/", matchPath: "/", rootLevel: true },
+  { label: "Course Dashboard", href: "/dashboard", matchPath: "/dashboard" },
+  { label: "Students", href: "/students", matchPath: "/students" },
+  { label: "Assignments", href: "/assignments", matchPath: "/assignments" },
+  { label: "Study Library", href: "/study-library", matchPath: "/study-library" },
+  { label: "Gradebook", href: "/gradebook", matchPath: "/gradebook" },
+  { label: "Analytics", href: "/analytics", matchPath: "/analytics" },
+  { label: "Settings", href: "/settings?area=course-sections", matchPath: "/settings", rootLevel: true },
 ];
 
-function isActive(pathname: string, href: string) {
-  if (href === "/") return pathname === "/" || pathname === "/home";
-  return pathname === href || pathname.startsWith(`${href}/`);
+function isActive(pathname: string, matchPath: string) {
+  if (matchPath === "/") return pathname === "/" || pathname === "/home";
+  return pathname === matchPath || pathname.startsWith(`${matchPath}/`);
 }
 
-export function TeacherPrimaryNav() {
+export function TeacherPrimaryNav({ rootOnly = false }: { rootOnly?: boolean }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const inStudentPreview = pathname === "/student/preview" || pathname.startsWith("/student/preview/");
+  const inRootWorkspace = rootOnly || pathname === "/" || pathname === "/home";
+  const visibleItems = inRootWorkspace ? items.filter((item) => item.rootLevel) : items;
 
   const previewBase = new URLSearchParams();
   for (const key of ["studentId", "sectionId", "anchorSectionId"]) {
@@ -50,10 +59,10 @@ export function TeacherPrimaryNav() {
 
   return <>
     <nav className="main-nav" aria-label="Teacher navigation">
-      {items.map((item) => {
-        const active = isActive(pathname, item.href);
+      {visibleItems.map((item) => {
+        const active = isActive(pathname, item.matchPath);
         return <Link
-          key={item.href}
+          key={item.matchPath}
           href={item.href}
           className={active ? "nav-button active" : "nav-button"}
           aria-current={active ? "page" : undefined}

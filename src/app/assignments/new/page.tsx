@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, Settings2 } from "lucide-react";
+import { TeacherContextBar } from "@/components/teacher-context-bar";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
-import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
 import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import { AssignmentForm } from "../assignment-form";
@@ -46,10 +46,10 @@ export default async function NewAssignmentPage() {
         <p className="eyebrow">Teacher Grade Analytics</p>
         <h1>Assignment Creation</h1>
         <p className="subtle">{displayCourseName(section.courseName, section.courseCode)} • {section.sectionName}</p>
-        <TeacherSectionSwitcher sections={sections} activeSectionId={section.sectionId} returnTo="/assignments/new"/>
       </div>
     </header>
     <TeacherPrimaryNav/>
+    <TeacherContextBar sections={sections} activeSectionId={section.sectionId} returnTo="/assignments/new"/>
     <section className="content-wrap assignment-create-wrap">
       <article className="panel">
         <div className="panel-header">
