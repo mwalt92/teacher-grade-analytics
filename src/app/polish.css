@@ -23,13 +23,14 @@
   padding-bottom: 10px;
 }
 
-/* Roster state is a local filter inside the Students workspace, not another application nav bar. */
+/* Roster state is a tertiary filter inside the Students workspace, not another app nav bar. */
 nav.main-nav[aria-label="Roster filters"] {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 16px 40px 0 !important;
+  padding: 8px 40px 10px !important;
   border: 0 !important;
-  background: transparent !important;
+  border-bottom: 1px solid var(--line) !important;
+  background: var(--surface-soft) !important;
   box-shadow: none !important;
   justify-content: flex-start;
   gap: 6px;
