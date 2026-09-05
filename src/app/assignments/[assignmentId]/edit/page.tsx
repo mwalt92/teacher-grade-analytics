@@ -34,8 +34,8 @@ export default async function EditAssignmentPage({ params, searchParams }: EditA
   return <main className="app-shell">
     <header className="topbar"><div><p className="eyebrow">Assignment Management</p><h1>Edit {assignment.title}</h1><p className="subtle">{section.courseCode ? `${section.courseName} ${section.courseCode}` : section.courseName} • {section.sectionName}</p></div></header>
     <TeacherPrimaryNav/>
-    <AssignmentWorkspaceNav assignmentId={assignmentId} active="edit" returnTo={returnTo} archived={assignment.archived}/>
     <TeacherContextBar sections={sections} activeSectionId={section.sectionId} returnTo="/assignments"/>
+    <AssignmentWorkspaceNav assignmentId={assignmentId} active="edit" returnTo={returnTo} archived={assignment.archived}/>
     <section className={`content-wrap ${styles.content}`}>
       <div className="section-heading"><div><p className="eyebrow">Assignment setup</p><h2>Edit grading behavior and metadata</h2></div></div>
       {query.saved ? <div className={styles.notice}>{query.saved === "linked" ? `Assignment changes saved across ${savedCount ?? linkedCount} linked sections.` : `Assignment changes saved for ${section.sectionName}.`} Grade calculations now use the updated setup.</div> : null}
