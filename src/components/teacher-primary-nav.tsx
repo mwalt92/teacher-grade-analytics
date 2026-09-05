@@ -31,7 +31,7 @@ export function TeacherPrimaryNav() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const inStudentPreview = pathname === "/student/preview" || pathname.startsWith("/student/preview/");
-  const inRootWorkspace = pathname === "/" || pathname === "/home" || pathname === "/settings" || pathname.startsWith("/settings/");
+  const inRootWorkspace = pathname === "/" || pathname === "/home";
   const visibleItems = inRootWorkspace ? items.filter((item) => item.rootLevel) : items;
 
   const previewBase = new URLSearchParams();
