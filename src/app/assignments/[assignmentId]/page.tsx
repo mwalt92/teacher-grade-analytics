@@ -116,8 +116,8 @@ export default async function AssignmentGradePage({ params, searchParams }: {
   return <main className="app-shell">
     <header className="topbar"><div><p className="eyebrow">Grade Entry</p><h1>{assignment.title}</h1><p className="subtle">{assignment.assignment_date} • {assignment.points_possible} points • {assignmentTypeLabel} → {categoryLabel}{assignment.allow_retakes ? " • Retakes allowed" : " • Single attempt"}</p></div></header>
     <TeacherPrimaryNav/>
-    <AssignmentWorkspaceNav assignmentId={assignmentId} active="grade" returnTo={returnTo}/>
     <TeacherContextBar sections={sections} activeSectionId={section.sectionId} returnTo="/assignments"/>
+    <AssignmentWorkspaceNav assignmentId={assignmentId} active="grade" returnTo={returnTo}/>
     <section className="content-wrap">
       <AssignmentNavigator items={navigatorItems} currentKey={currentGroupKey} previousHref={previousHref} nextHref={nextHref}/>
       {linkedAssignments.length > 1 ? <section className={styles.hourScope} aria-label="Assignment section view"><div className={styles.hourScopeIntro}><div><strong>{showAllHours ? "All Hours" : sectionDisplay(section)}</strong><span>{showAllHours ? `${totalVisibleStudents} students across ${linkedAssignments.length} sections. Scroll continuously from the earliest hour to the latest.` : "Showing one section of this linked assignment."}</span></div><nav className={styles.hourButtons} aria-label="Choose assignment hour"><Link className={showAllHours ? styles.hourButtonActive : styles.hourButton} href={assignmentHref(assignmentId, returnTo)}>All Hours</Link>{linkedAssignments.map((linked) => <Link key={linked.assignmentId} className={!showAllHours && linked.assignmentId === assignmentId ? styles.hourButtonActive : styles.hourButton} href={assignmentHref(linked.assignmentId, returnTo, "section")}>{sectionDisplay(linked.section)}</Link>)}</nav></div></section> : null}
