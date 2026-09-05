@@ -17,7 +17,18 @@ export default async function CourseSetupPage() {
   if (claimsError || typeof claims?.claims?.sub !== "string") redirect("/login");
 
   const [sections, activeSection] = await Promise.all([getTeacherSections(), getActiveTeacherSection()]);
-  if (!activeSection) redirect("/");
+  const { data: latestSchoolYear, error: schoolYearError } = activeSection
+    ? { data: { id: activeSection.schoolYearId, label: activeSection.schoolYearLabel }, error: null }
+    : await supabase.from("school_years").select("id,label").order("label", { ascending: false }).limit(1).maybeSingle();
+  if (schoolYearError) throw schoolYearError;
+
+  if (!latestSchoolYear) {
+    return <main className="app-shell">
+      <header className="topbar"><div><p className="eyebrow">Teacher Grade Analytics</p><h1>Create Course</h1><p className="subtle">A school year must be configured before courses can be created.</p></div></header>
+      <TeacherPrimaryNav/>
+      <section className="content-wrap"><article className="panel"><h2>No school year is available</h2><p className="subtle">Create or activate the school year first, then return here to build the first course workspace.</p><Link className="secondary-link" href="/">Back to Courses</Link></article></section>
+    </main>;
+  }
 
   const uniqueOfferings = Array.from(new Map(sections.map((section) => [section.offeringId, section])).values());
   const sources = await Promise.all(uniqueOfferings.map(async (section) => {
@@ -40,16 +51,16 @@ export default async function CourseSetupPage() {
     <header className="topbar"><div>
       <p className="eyebrow">Teacher Grade Analytics</p>
       <h1>Create Course</h1>
-      <p className="subtle">{activeSection.schoolYearLabel} • start blank or reuse an existing course configuration</p>
-      <TeacherSectionSwitcher sections={sections} activeSectionId={activeSection.sectionId} returnTo="/settings/course-setup"/>
+      <p className="subtle">{latestSchoolYear.label} • start blank or reuse an existing course configuration</p>
+      {activeSection ? <TeacherSectionSwitcher sections={sections} activeSectionId={activeSection.sectionId} returnTo="/settings/course-setup"/> : null}
     </div></header>
     <TeacherPrimaryNav/>
     <section className="content-wrap">
       <div className="section-heading">
         <div><p className="eyebrow">Course setup</p><h2>Create once, then add class periods</h2><p className="subtle">The first section is created with the course. Additional sections share its course configuration while keeping separate rosters, assignments, and grades.</p></div>
-        <Link className="secondary-link" href="/settings?area=course-sections">Back to Settings</Link>
+        <Link className="secondary-link" href={activeSection ? "/settings?area=course-sections" : "/"}>{activeSection ? "Back to Settings" : "Back to Courses"}</Link>
       </div>
-      <CourseSetupForm schoolYearId={activeSection.schoolYearId} schoolYearLabel={activeSection.schoolYearLabel} sources={sources}/>
+      <CourseSetupForm schoolYearId={latestSchoolYear.id} schoolYearLabel={latestSchoolYear.label} sources={sources}/>
     </section>
   </main>;
 }
