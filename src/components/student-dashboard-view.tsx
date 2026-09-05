@@ -117,7 +117,7 @@ export function StudentDashboardView({
         {preview ? previewHeaderActions : studentHeaderActions}
       </div>
     </header>
-    {preview ? <><TeacherPrimaryNav/><StudentPrimaryNav preview dashboardHref={contextualDashboardHref} gradesHref={contextualGradesHref} studyLibraryHref={contextualStudyHref}/></> : <StudentPrimaryNav dashboardHref={contextualDashboardHref} gradesHref={contextualGradesHref} studyLibraryHref={contextualStudyHref}/>}
+    {preview ? <TeacherPrimaryNav/> : <StudentPrimaryNav dashboardHref={contextualDashboardHref} gradesHref={contextualGradesHref} studyLibraryHref={contextualStudyHref}/>}
 
     <section className={`content-wrap ${styles.content}`}>
       {preview ? <div className={styles.previewBanner}>
