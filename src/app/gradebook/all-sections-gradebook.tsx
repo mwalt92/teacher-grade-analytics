@@ -82,7 +82,6 @@ export async function AllSectionsGradebook({
       <p className="subtle">All Sections • live grades from the canonical grading engine</p>
     </div></header>
     <TeacherPrimaryNav/>
-    <GradebookWorkspaceNav active="overview" period={selectedPeriod.code}/>
     <TeacherContextBar
       sections={sections}
       activeSectionId={activeSection.sectionId}
@@ -96,6 +95,7 @@ export async function AllSectionsGradebook({
         ariaLabel:"Gradebook section scope",
       }}
     />
+    <GradebookWorkspaceNav active="overview" period={selectedPeriod.code}/>
     <section className={`content-wrap ${styles.content}`}>
       <article className={`panel ${styles.controls}`}>
         <div className="panel-header">
@@ -113,7 +113,7 @@ export async function AllSectionsGradebook({
         <article className="metric-card"><span className="metric-label">Active students</span><strong>{pooledRows.length}</strong></article>
         <article className="metric-card"><span className="metric-label">Course average</span><strong>{formatPercent(courseAverage)}</strong></article>
         <article className="metric-card"><span className="metric-label">Missing flags</span><strong>{missingCount}</strong></article>
-        <article className="metric-card"><span className="metric-label">Unentered scores</span><strong>{unenteredCount}</strong></article>
+        <article className="metric-card"><span className="metric-label">Not entered</span><strong>{unenteredCount}</strong></article>
       </section>
 
       <section className={styles.sectionSummaryGrid} aria-label="Section gradebook summaries">
@@ -142,7 +142,7 @@ export async function AllSectionsGradebook({
             <span className={styles.student}><strong>{student.displayName}</strong><small>{sectionLabel(section)}{student.email ? ` • ${student.email}` : ""}</small></span>
             <strong className={styles.overall}>{formatPercent(row?.overallPercent ?? null)}</strong>
             {detailColumns.map((column) => <span key={column.key}>{formatPercent(calculation?.mode === "composite" ? row?.componentPercents[column.key] ?? null : row?.categoryPercents[column.key] ?? null)}</span>)}
-            <span className={styles.flags}>{row?.missingCount ? <span className="status warning-pill">{row.missingCount} missing</span> : <span className="status neutral-pill">0 missing</span>}{row?.unenteredCount ? <small>{row.unenteredCount} unentered</small> : null}</span>
+            <span className={styles.flags}>{row?.missingCount ? <span className="status warning-pill">{row.missingCount} missing</span> : <span className="status neutral-pill">0 missing</span>}{row?.unenteredCount ? <small>{row.unenteredCount} not entered</small> : null}</span>
             <form action={setActiveTeacherSection} className={styles.auditForm}><input type="hidden" name="sectionId" value={section.sectionId}/><input type="hidden" name="returnTo" value={`/gradebook/audit?studentId=${student.studentId}&period=${encodeURIComponent(selectedPeriod.code)}`}/><button className="text-button" type="submit">Audit →</button></form>
           </div>)}
         </div></div>
