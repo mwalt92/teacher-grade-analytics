@@ -7,6 +7,7 @@ type StudentPrimaryNavProps = {
   preview?: boolean;
   dashboardHref?: string;
   gradesHref?: string;
+  simulatorHref?: string;
   studyLibraryHref?: string;
 };
 
@@ -14,12 +15,14 @@ export function StudentPrimaryNav({
   preview = false,
   dashboardHref,
   gradesHref,
+  simulatorHref,
   studyLibraryHref,
 }: StudentPrimaryNavProps = {}) {
   const pathname = usePathname();
   const items = [
     { key: "dashboard", label: "Dashboard", href: dashboardHref ?? (preview ? "/student/preview" : "/student") },
     { key: "grades", label: "Grades", href: gradesHref ?? (preview ? "/student/preview/grades" : "/student/grades") },
+    { key: "simulator", label: "Grade Simulator", href: simulatorHref ?? (preview ? "/student/preview/simulator" : "/student/simulator") },
     { key: "study", label: "Study Library", href: studyLibraryHref ?? (preview ? "/student/preview/study-library" : "/student/study-library") },
   ];
 
@@ -29,13 +32,22 @@ export function StudentPrimaryNav({
   const gradesActive = preview
     ? pathname === "/student/preview/grades" || pathname.startsWith("/student/preview/grades/")
     : pathname === "/student/grades" || pathname.startsWith("/student/grades/");
+  const simulatorActive = preview
+    ? pathname === "/student/preview/simulator" || pathname.startsWith("/student/preview/simulator/")
+    : pathname === "/student/simulator" || pathname.startsWith("/student/simulator/");
   const studyActive = preview
     ? pathname === "/student/preview/study-library" || pathname.startsWith("/student/preview/study-library/")
     : pathname === "/student/study-library" || pathname.startsWith("/student/study-library/");
 
   return <nav className="main-nav" aria-label={preview ? "Previewed student navigation" : "Student navigation"}>
     {items.map((item) => {
-      const active = item.key === "dashboard" ? dashboardActive : item.key === "grades" ? gradesActive : studyActive;
+      const active = item.key === "dashboard"
+        ? dashboardActive
+        : item.key === "grades"
+          ? gradesActive
+          : item.key === "simulator"
+            ? simulatorActive
+            : studyActive;
       return <Link
         key={item.key}
         href={item.href}
