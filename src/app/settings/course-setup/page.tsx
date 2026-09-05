@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { TeacherContextBar } from "@/components/teacher-context-bar";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
-import { TeacherSectionSwitcher } from "@/components/teacher-section-switcher";
-import { getActiveTeacherSection, getTeacherSections } from "@/lib/data/teacher-context";
+import { ACTIVE_TEACHER_SECTION_COOKIE, getTeacherSections } from "@/lib/data/teacher-context";
 import { createClient } from "@/lib/supabase/server";
 import { CourseSetupForm } from "./course-setup-form";
 
@@ -16,7 +17,12 @@ export default async function CourseSetupPage() {
   const { data: claims, error: claimsError } = await supabase.auth.getClaims();
   if (claimsError || typeof claims?.claims?.sub !== "string") redirect("/login");
 
-  const [sections, activeSection] = await Promise.all([getTeacherSections(), getActiveTeacherSection()]);
+  const sections = await getTeacherSections();
+  const cookieStore = await cookies();
+  const rememberedSectionId = cookieStore.get(ACTIVE_TEACHER_SECTION_COOKIE)?.value;
+  const activeSection = rememberedSectionId
+    ? sections.find((section) => section.sectionId === rememberedSectionId) ?? null
+    : null;
   const { data: latestSchoolYear, error: schoolYearError } = activeSection
     ? { data: { id: activeSection.schoolYearId, label: activeSection.schoolYearLabel }, error: null }
     : await supabase.from("school_years").select("id,label").order("label", { ascending: false }).limit(1).maybeSingle();
@@ -25,7 +31,7 @@ export default async function CourseSetupPage() {
   if (!latestSchoolYear) {
     return <main className="app-shell">
       <header className="topbar"><div><p className="eyebrow">Teacher Grade Analytics</p><h1>Create Course</h1><p className="subtle">A school year must be configured before courses can be created.</p></div></header>
-      <TeacherPrimaryNav/>
+      <TeacherPrimaryNav rootOnly/>
       <section className="content-wrap"><article className="panel"><h2>No school year is available</h2><p className="subtle">Create or activate the school year first, then return here to build the first course workspace.</p><Link className="secondary-link" href="/">Back to Courses</Link></article></section>
     </main>;
   }
@@ -52,9 +58,9 @@ export default async function CourseSetupPage() {
       <p className="eyebrow">Teacher Grade Analytics</p>
       <h1>Create Course</h1>
       <p className="subtle">{latestSchoolYear.label} • start blank or reuse an existing course configuration</p>
-      {activeSection ? <TeacherSectionSwitcher sections={sections} activeSectionId={activeSection.sectionId} returnTo="/settings/course-setup"/> : null}
     </div></header>
-    <TeacherPrimaryNav/>
+    <TeacherPrimaryNav rootOnly={!activeSection}/>
+    {activeSection ? <TeacherContextBar sections={sections} activeSectionId={activeSection.sectionId} returnTo="/settings/course-setup"/> : null}
     <section className="content-wrap">
       <div className="section-heading">
         <div><p className="eyebrow">Course setup</p><h2>Create once, then add class periods</h2><p className="subtle">The first section is created with the course. Additional sections share its course configuration while keeping separate rosters, assignments, and grades.</p></div>
