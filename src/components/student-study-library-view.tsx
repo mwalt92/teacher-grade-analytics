@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { BookOpen, Star } from "lucide-react";
+import { BookOpen, Star, Target } from "lucide-react";
 import { StudentPrimaryNav } from "@/components/student-primary-nav";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import styles from "./student-study-library-view.module.css";
@@ -15,9 +15,11 @@ export type StudentStudyGuideCard = {
   resourceCount: number;
   recommendedCount: number;
   attemptCount: number;
+  bestPercent: number | null;
   status: "Not attempted" | "Retake available" | "Recommended practice" | "Completed";
   href: string;
   draft?: boolean;
+  suggested?: boolean;
 };
 
 type CourseOption = { sectionId: string; label: string };
@@ -47,6 +49,11 @@ function statusClass(status: StudentStudyGuideCard["status"]) {
   return styles.notAttempted;
 }
 
+function formatPercent(value: number) {
+  const rounded = Math.round(value * 10) / 10;
+  return Number.isInteger(rounded) ? `${rounded.toFixed(0)}%` : `${rounded.toFixed(1)}%`;
+}
+
 export function StudentStudyLibraryView({
   studentName,
   courseName,
@@ -67,6 +74,7 @@ export function StudentStudyLibraryView({
   const retakeCount = guides.filter((guide) => guide.status === "Retake available").length;
   const recommendedCount = guides.filter((guide) => guide.recommendedCount > 0).length;
   const availableResourceCount = guides.reduce((sum, guide) => sum + guide.resourceCount, 0);
+  const suggestedGuide = guides.find((guide) => guide.suggested);
 
   return <main className="app-shell">
     <header className="topbar">
@@ -104,11 +112,22 @@ export function StudentStudyLibraryView({
         <article className={styles.summaryCard}><span>Resources available now</span><strong>{availableResourceCount}</strong><small>{recommendedCount} guide{recommendedCount === 1 ? " has" : "s have"} recommended practice</small></article>
       </section>
 
+      {suggestedGuide ? <article className={styles.suggestedPanel} aria-label="Suggested next study guide">
+        <div className={styles.suggestedIcon}><Target size={22}/></div>
+        <div className={styles.suggestedCopy}>
+          <span className={styles.suggestedLabel}>Suggested next</span>
+          <h2>{suggestedGuide.title}</h2>
+          <p>Your best recorded attempt is <strong>{formatPercent(suggestedGuide.bestPercent ?? 0)}</strong>. This suggestion prioritizes attempted assessments that have study resources available now: retake-ready guides first, then the lower best-attempt percentage. Teacher-selected <em>Recommended first</em> resources still tell you where to begin inside the guide.</p>
+        </div>
+        <Link className="primary-button" href={suggestedGuide.href}>Start here</Link>
+      </article> : null}
+
       <section className={styles.guideGrid} aria-label="Available study guides">
-        {guides.length ? guides.map((guide) => <article className={styles.guideCard} key={guide.assignmentId}>
+        {guides.length ? guides.map((guide) => <article className={`${styles.guideCard} ${guide.suggested ? styles.suggestedCard : ""}`} key={guide.assignmentId}>
           <div className={styles.guideTop}>
             <div><p className="eyebrow">{guide.date ?? "Assessment"}</p><h3>{guide.title}</h3><p>{guide.guideTitle}</p></div>
-            <div style={{ display: "grid", gap: 6, justifyItems: "end" }}>
+            <div className={styles.statusStack}>
+              {guide.suggested ? <span className={`${styles.status} ${styles.suggestedBadge}`}><Target size={13}/> Suggested next</span> : null}
               <span className={`${styles.status} ${statusClass(guide.status)}`}>{guide.status}</span>
               {guide.draft ? <span className={`${styles.status} ${styles.draft}`}>Draft preview</span> : null}
             </div>
@@ -118,9 +137,10 @@ export function StudentStudyLibraryView({
             <span><BookOpen size={13}/> {guide.skillCount} skill{guide.skillCount === 1 ? "" : "s"}</span>
             <span>{guide.resourceCount} resource{guide.resourceCount === 1 ? "" : "s"} now</span>
             <span>{guide.attemptCount} attempt{guide.attemptCount === 1 ? "" : "s"}</span>
+            {guide.bestPercent != null ? <span>Best attempt {formatPercent(guide.bestPercent)}</span> : null}
             {guide.recommendedCount ? <span><Star size={13}/> {guide.recommendedCount} recommended first</span> : null}
           </div>
-          <div className={styles.guideFooter}><span className="subtle">Open this guide for skill-by-skill study resources and attempt history.</span><Link className="primary-button" href={guide.href}>Open Study Guide</Link></div>
+          <div className={styles.guideFooter}><span className="subtle">Open this guide for skill-by-skill study resources and attempt history.</span><Link className="primary-button" href={guide.href}>{guide.suggested ? "Start here" : "Open Study Guide"}</Link></div>
         </article>) : <div className={styles.empty}>No study guides are available for this course yet. Published guides will appear here automatically.</div>}
       </section>
     </section>
