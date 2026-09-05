@@ -16,6 +16,13 @@
   cursor: default;
 }
 
+/* Student workspace navigation is a true secondary row. Give it balanced breathing room
+   so it never crowds the teacher navigation when rendered in preview mode. */
+.student-workspace-nav {
+  padding-top: 8px;
+  padding-bottom: 10px;
+}
+
 /* Interactive rows and controls should communicate that they can be opened. */
 :is(.student-row, a.assignment-row, .secondary-link, .text-button, .nav-button) {
   transition: background-color .14s ease, border-color .14s ease, color .14s ease, box-shadow .14s ease, transform .14s ease;

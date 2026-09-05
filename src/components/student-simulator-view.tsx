@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { GradeSimulator } from "@/components/grade-simulator";
 import { StudentPrimaryNav } from "@/components/student-primary-nav";
@@ -88,8 +87,6 @@ export function StudentSimulatorView({
       </article>
 
       <GradeSimulator data={data.simulator}/>
-
-      <div className={styles.backLink}><Link className="secondary-link" href={dashboardHref ?? "/student"}>Back to Dashboard</Link></div>
     </section>
   </main>;
 }

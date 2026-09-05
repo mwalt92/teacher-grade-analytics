@@ -52,7 +52,7 @@ export function StudentPrimaryNav({
     ? pathname === "/student/preview/study-library" || pathname.startsWith("/student/preview/study-library/")
     : pathname === "/student/study-library" || pathname.startsWith("/student/study-library/");
 
-  return <nav className="main-nav" aria-label={preview ? "Previewed student navigation" : "Student navigation"}>
+  return <nav className="main-nav student-workspace-nav" aria-label={preview ? "Previewed student navigation" : "Student navigation"}>
     {items.map((item) => {
       const active = item.key === "dashboard"
         ? dashboardActive
