@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { GradeSimulator } from "@/components/grade-simulator";
 import { StudentPrimaryNav } from "@/components/student-primary-nav";
 import { TeacherPrimaryNav } from "@/components/teacher-primary-nav";
 import type { StudentDashboardData } from "@/lib/data/student-dashboard";
@@ -70,23 +69,28 @@ export function StudentDashboardView({
 
   const dashboardParams = new URLSearchParams();
   const gradesParams = new URLSearchParams();
+  const simulatorParams = new URLSearchParams();
   const studyParams = new URLSearchParams();
   if (previewStudentId) {
     dashboardParams.set("studentId", previewStudentId);
     gradesParams.set("studentId", previewStudentId);
+    simulatorParams.set("studentId", previewStudentId);
     studyParams.set("studentId", previewStudentId);
   }
   if (previewSectionId) {
     dashboardParams.set("sectionId", previewSectionId);
     gradesParams.set("sectionId", previewSectionId);
+    simulatorParams.set("sectionId", previewSectionId);
     studyParams.set("sectionId", previewSectionId);
   }
   if (previewAnchorSectionId) {
     dashboardParams.set("anchorSectionId", previewAnchorSectionId);
     gradesParams.set("anchorSectionId", previewAnchorSectionId);
+    simulatorParams.set("anchorSectionId", previewAnchorSectionId);
   }
   dashboardParams.set("period", data.periodCode);
   gradesParams.set("period", data.periodCode);
+  simulatorParams.set("period", data.periodCode);
   if (preview) dashboardParams.set("view", "course");
   const contextualDashboardHref = preview
     ? `/student/preview?${dashboardParams.toString()}`
@@ -94,6 +98,9 @@ export function StudentDashboardView({
   const contextualGradesHref = preview
     ? `/student/preview/grades?${gradesParams.toString()}`
     : previewSectionId ? `/student/grades?sectionId=${encodeURIComponent(previewSectionId)}&period=${encodeURIComponent(data.periodCode)}` : `/student/grades?period=${encodeURIComponent(data.periodCode)}`;
+  const contextualSimulatorHref = preview
+    ? `/student/preview/simulator?${simulatorParams.toString()}`
+    : previewSectionId ? `/student/simulator?sectionId=${encodeURIComponent(previewSectionId)}&period=${encodeURIComponent(data.periodCode)}` : `/student/simulator?period=${encodeURIComponent(data.periodCode)}`;
   const contextualStudyHref = preview
     ? `/student/preview/study-library?${studyParams.toString()}`
     : previewSectionId ? `/student/study-library?sectionId=${encodeURIComponent(previewSectionId)}` : "/student/study-library";
@@ -117,7 +124,7 @@ export function StudentDashboardView({
         {preview ? previewHeaderActions : studentHeaderActions}
       </div>
     </header>
-    {preview ? <TeacherPrimaryNav/> : <StudentPrimaryNav dashboardHref={contextualDashboardHref} gradesHref={contextualGradesHref} studyLibraryHref={contextualStudyHref}/>}
+    {preview ? <TeacherPrimaryNav/> : <StudentPrimaryNav dashboardHref={contextualDashboardHref} gradesHref={contextualGradesHref} simulatorHref={contextualSimulatorHref} studyLibraryHref={contextualStudyHref}/>}
 
     <section className={`content-wrap ${styles.content}`}>
       {preview ? <div className={styles.previewBanner}>
@@ -172,20 +179,18 @@ export function StudentDashboardView({
             {firstMissingAssignment ? <Link className={`${styles.attentionItem} ${styles.missingAttention} ${styles.attentionLink}`} href={assignmentHref(firstMissingAssignment.assignmentId)}>
               <div className={styles.attentionCopy}><strong>Missing assignments</strong><small>Open the first missing item</small></div><strong>{data.missingCount}</strong>
             </Link> : <div className={styles.attentionItem}><div className={styles.attentionCopy}><strong>Missing assignments</strong><small>Nothing missing right now</small></div><strong>0</strong></div>}
-            {retakeCount ? <a className={`${styles.attentionItem} ${styles.retakeAttention} ${styles.attentionLink}`} href="#grade-simulator">
-              <div className={styles.attentionCopy}><strong>Retakes available</strong><small>Model a retake below</small></div><strong>{retakeCount}</strong>
-            </a> : <div className={styles.attentionItem}><div className={styles.attentionCopy}><strong>Retakes available</strong><small>No current retake options</small></div><strong>0</strong></div>}
+            {retakeCount ? <Link className={`${styles.attentionItem} ${styles.retakeAttention} ${styles.attentionLink}`} href={contextualSimulatorHref}>
+              <div className={styles.attentionCopy}><strong>Retakes available</strong><small>Model a retake in the simulator</small></div><strong>{retakeCount}</strong>
+            </Link> : <div className={styles.attentionItem}><div className={styles.attentionCopy}><strong>Retakes available</strong><small>No current retake options</small></div><strong>0</strong></div>}
             <div className={styles.attentionItem}><div className={styles.attentionCopy}><strong>Dropped assignments</strong><small>Excluded by the configured drop rule</small></div><strong>{data.droppedCount}</strong></div>
           </div>
           <div className={styles.simulatorCard}>
             <strong>Grade Simulator</strong>
             <p>Try future scores and retakes without changing any real grade data.</p>
-            <a className={styles.inlineAction} href="#grade-simulator">Open simulator ↓</a>
+            <Link className={styles.inlineAction} href={contextualSimulatorHref}>Open Grade Simulator →</Link>
           </div>
         </aside>
       </section>
-
-      <div id="grade-simulator" className={styles.simulatorAnchor}><GradeSimulator data={data.simulator}/></div>
 
       <article className={`panel full-width ${styles.assignmentsPanel}`}>
         <div className="panel-header"><div><p className="eyebrow">Recent work</p><h3>{data.periodCode} assignments</h3></div><Link className="secondary-link" href={contextualGradesHref}>View all grades</Link></div>

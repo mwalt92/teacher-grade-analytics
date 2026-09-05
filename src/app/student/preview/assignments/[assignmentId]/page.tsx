@@ -116,6 +116,7 @@ export default async function PreviewStudentAssignmentPage({ params, searchParam
   });
 
   const generalResources = visibleResources.filter((item) => !item.skill_id);
+  const featuredCount = visibleResources.filter((item) => item.featured).length;
   const resourcesBySkill = new Map<string, typeof visibleResources>();
   for (const item of visibleResources) {
     if (!item.skill_id) continue;
@@ -128,6 +129,7 @@ export default async function PreviewStudentAssignmentPage({ params, searchParam
   const backParams = new URLSearchParams({ studentId: student.studentId, sectionId: assignment.section_id, view: "course" });
   if (query.anchorSectionId) backParams.set("anchorSectionId", query.anchorSectionId);
   const backHref = `/student/preview?${backParams.toString()}`;
+  const studentProfileHref = `/students/${student.studentId}?sectionId=${encodeURIComponent(assignment.section_id)}`;
 
   return <main className="app-shell">
     <header className="topbar"><div><p className="eyebrow">Student Assessment Preview</p><h1>{assignment.title}</h1><p className="subtle">{student.displayName} • {courseName} • {teacherSection.sectionName}</p></div></header>
@@ -135,23 +137,30 @@ export default async function PreviewStudentAssignmentPage({ params, searchParam
     <section className={`content-wrap ${styles.content}`}>
       <div className={styles.backRow}><Link className="secondary-link" href={backHref}><ArrowLeft size={17}/> Back to Student Preview</Link></div>
 
-      <div style={{ padding: "14px 16px", border: "1px solid var(--border)", borderRadius: 14, background: "var(--panel)", marginBottom: 16 }}>
-        <strong>Teacher preview</strong>
-        <p className="subtle" style={{ margin: "4px 0 0" }}>
-          This simulates what {student.displayName} can access. Teacher-only and attempt-locked resources are excluded. {guide && !guide.student_visible ? "This guide is still a draft, so students cannot open it yet; the preview below shows how it will look once published." : "This guide is currently published to students."}{lockedCount ? ` ${lockedCount} resource${lockedCount === 1 ? " is" : "s are"} currently hidden from this student by release rules.` : ""}
-        </p>
+      <div className={styles.previewBanner}>
+        <div>
+          <span>Teacher preview</span>
+          <small>This simulates what {student.displayName} can access. Teacher-only and attempt-locked resources are excluded. {guide && !guide.student_visible ? "This guide is still a draft, so students cannot open it yet; the preview below shows how it will look once published." : "This guide is currently published to students."}{lockedCount ? ` ${lockedCount} resource${lockedCount === 1 ? " is" : "s are"} currently hidden from this student by release rules.` : ""}</small>
+        </div>
+        <Link className="secondary-link" href={studentProfileHref}>Student Profile</Link>
       </div>
 
       <section className={styles.hero}>
         <article className={`panel ${styles.scoreCard}`}>
-          <p className="eyebrow">Your result</p>
+          <p className="eyebrow">Best result</p>
           <strong className={styles.scoreValue}>{gradeRecord?.missing ? "0.0%" : bestPercent === null ? "—" : `${bestPercent.toFixed(1)}%`}</strong>
-          <p className="subtle">Best recorded attempt • {possible} points possible</p>
-          <div className={styles.statusRow}>{gradeRecord?.missing ? <span className={`${styles.pill} ${styles.missing}`}>Missing</span> : null}{gradeRecord?.exempt ? <span className={styles.pill}>Exempt</span> : null}{assignment.allow_retakes ? <span className={styles.pill}>Retakes available</span> : null}<span className={styles.pill}>{attempts.length} attempt{attempts.length === 1 ? "" : "s"}</span></div>
+          <p className={`subtle ${styles.scoreContext}`}>Best recorded attempt • {possible} points possible</p>
+          <div className={styles.statusRow}>{gradeRecord?.missing ? <span className={`${styles.pill} ${styles.missing}`}>Missing</span> : null}{gradeRecord?.exempt ? <span className={styles.pill}>Exempt</span> : null}{assignment.allow_retakes ? <span className={`${styles.pill} ${styles.retake}`}>Retakes enabled</span> : null}<span className={styles.pill}>{attempts.length} attempt{attempts.length === 1 ? "" : "s"}</span></div>
         </article>
-        <article className="panel">
-          <p className="eyebrow">Attempt history</p><h3>Previous attempts</h3>
-          <div className={styles.attemptList}>{attempts.length ? attempts.map((attempt) => <div className={styles.attemptRow} key={attempt.attempt_number}><span>Attempt {attempt.attempt_number}<small className="subtle"> • {attempt.occurred_on}</small></span><strong>{Number(attempt.points_earned)}/{possible} • {formatPercent(Number(attempt.points_earned), possible)}</strong></div>) : <div className={styles.empty}>No score has been entered yet.</div>}</div>
+        <article className={`panel ${styles.attemptPanel}`}>
+          <div><p className="eyebrow">Attempt history</p><h3>How your attempts compare</h3></div>
+          <div className={styles.attemptList}>{attempts.length ? attempts.map((attempt) => {
+            const isBest = bestPoints !== null && Number(attempt.points_earned) === bestPoints;
+            return <div className={`${styles.attemptRow} ${isBest ? styles.attemptBest : ""}`} key={attempt.attempt_number}>
+              <span className={styles.attemptIdentity}><strong>Attempt {attempt.attempt_number}</strong>{isBest ? <span className={styles.bestBadge}>Best</span> : null}<small className="subtle">{attempt.occurred_on}</small></span>
+              <strong className={styles.attemptScore}>{Number(attempt.points_earned)}/{possible} • {formatPercent(Number(attempt.points_earned), possible)}</strong>
+            </div>;
+          }) : <div className={styles.empty}>No score has been entered yet.</div>}</div>
         </article>
       </section>
 
@@ -159,6 +168,7 @@ export default async function PreviewStudentAssignmentPage({ params, searchParam
         <div className="panel-header"><div><p className="eyebrow">Study / Retake Preparation</p><h2>{guide?.title ?? "Study resources"}</h2></div><BookOpen size={26}/></div>
         {guide ? <>
           {guide.description ? <p className={styles.guideIntro}>{guide.description}</p> : null}
+          {visibleResources.length ? <div className={styles.studySummary}><div><strong>{visibleResources.length} resource{visibleResources.length === 1 ? "" : "s"} visible to this student now</strong><span>{featuredCount ? "Start with anything marked Recommended first, then work through the skill sections below." : "Work through the skill sections below in the order provided."}</span></div>{featuredCount ? <span className={styles.recommendationCount}>{featuredCount} recommended first</span> : null}</div> : null}
           {generalResources.length ? <section className={styles.generalResources}><div className={styles.skillHeading}><h3>Start here</h3><p>General resources for this assessment.</p></div><div className={styles.resourceGrid}>{generalResources.map((item) => <ResourceCard key={item.id} item={item}/>)}</div></section> : null}
           {skills.map((skill) => {
             const items = resourcesBySkill.get(skill.id) ?? [];
@@ -177,9 +187,11 @@ export default async function PreviewStudentAssignmentPage({ params, searchParam
 function ResourceCard({ item }: { item: { id: string; featured: boolean; teacher_note: string | null; resource: { title: string; description: string | null; url: string | null; external_code: string | null; resource_type: string }; provider: string } }) {
   const body = <>
     <div className={styles.resourceTop}><strong>{item.resource.title}</strong>{item.resource.url ? <ExternalLink size={16}/> : null}</div>
-    <div className={styles.resourceMeta}><span>{item.provider}</span><span>{resourceTypeLabels[item.resource.resource_type] ?? item.resource.resource_type}</span>{item.resource.external_code ? <span>{item.resource.external_code}</span> : null}{item.featured ? <span className={styles.featured}>Recommended first</span> : null}</div>
+    {item.featured ? <span className={styles.recommendedCallout}>Recommended first</span> : null}
+    <div className={styles.resourceMeta}><span>{item.provider}</span><span>{resourceTypeLabels[item.resource.resource_type] ?? item.resource.resource_type}</span>{item.resource.external_code ? <span>{item.resource.external_code}</span> : null}</div>
     {item.resource.description ? <small className="subtle">{item.resource.description}</small> : null}
-    {item.teacher_note ? <small>{item.teacher_note}</small> : null}
+    {item.teacher_note ? <small className={styles.teacherNote}>{item.teacher_note}</small> : null}
   </>;
-  return item.resource.url ? <a className={styles.resourceCard} href={item.resource.url} target="_blank" rel="noreferrer">{body}</a> : <div className={styles.resourceCard}>{body}</div>;
+  const className = `${styles.resourceCard} ${item.featured ? styles.resourceCardFeatured : ""}`;
+  return item.resource.url ? <a className={className} href={item.resource.url} target="_blank" rel="noreferrer">{body}</a> : <div className={className}>{body}</div>;
 }

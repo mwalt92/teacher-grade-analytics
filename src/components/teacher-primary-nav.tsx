@@ -37,11 +37,15 @@ export function TeacherPrimaryNav() {
   if (period) dashboardParams.set("period", period);
   const gradesParams = new URLSearchParams(previewBase);
   if (period) gradesParams.set("period", period);
+  const simulatorParams = new URLSearchParams(previewBase);
+  if (period) simulatorParams.set("period", period);
   const dashboardQuery = dashboardParams.toString();
   const gradesQuery = gradesParams.toString();
+  const simulatorQuery = simulatorParams.toString();
   const studyQuery = previewBase.toString();
   const dashboardHref = dashboardQuery ? `/student/preview?${dashboardQuery}` : "/student/preview";
   const gradesHref = gradesQuery ? `/student/preview/grades?${gradesQuery}` : "/student/preview/grades";
+  const simulatorHref = simulatorQuery ? `/student/preview/simulator?${simulatorQuery}` : "/student/preview/simulator";
   const studyLibraryHref = studyQuery ? `/student/preview/study-library?${studyQuery}` : "/student/preview/study-library";
 
   return <>
@@ -58,6 +62,6 @@ export function TeacherPrimaryNav() {
         </Link>;
       })}
     </nav>
-    {inStudentPreview ? <StudentPrimaryNav preview dashboardHref={dashboardHref} gradesHref={gradesHref} studyLibraryHref={studyLibraryHref}/> : null}
+    {inStudentPreview ? <StudentPrimaryNav preview dashboardHref={dashboardHref} gradesHref={gradesHref} simulatorHref={simulatorHref} studyLibraryHref={studyLibraryHref}/> : null}
   </>;
 }
